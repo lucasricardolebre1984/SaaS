@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 01 owner memory reembed scheduler slice)
-Active feature: mod-01-owner-memory-reembed-scheduler-slice
+Active phase: Implement (module 01 owner memory reembed hardening slice)
+Active feature: mod-01-owner-memory-reembed-hardening-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -214,9 +214,28 @@ Active feature: mod-01-owner-memory-reembed-scheduler-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-01-owner-memory-reembed-hardening-slice` for production-grade scheduler controls before Milestone 2.
+- Scheduler hardening runtime implemented:
+  - `POST /internal/maintenance/owner-memory/reembed/schedules/pause`
+  - `POST /internal/maintenance/owner-memory/reembed/schedules/resume`
+  - `GET /internal/maintenance/owner-memory/reembed/runs`
+  - `POST /internal/maintenance/owner-memory/reembed/schedules/run-due` with `max_concurrency` and `lock_ttl_seconds`
+- Tenant lock behavior implemented with stale-lock recovery and deterministic `skipped_locked` path.
+- Owner memory maintenance persistence now supports backend parity:
+  - file adapter
+  - postgres adapter (`owner_memory_reembed_schedules`, `owner_memory_reembed_runs`)
+- Orchestration contracts expanded with maintenance events:
+  - `owner.memory.reembed.started`
+  - `owner.memory.reembed.completed`
+  - `owner.memory.reembed.failed`
+- Postgres smoke expanded to validate scheduler operational flow and persisted scheduler rows.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 01 re-embed scheduler closure.
+Close final Milestone 1 hardening checklist and start Milestone 2 shared SaaS UI template shell.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

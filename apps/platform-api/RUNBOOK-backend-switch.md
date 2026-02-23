@@ -5,7 +5,7 @@ Scope: `app-platform-api` orchestration persistence
 
 ## Goal
 
-Switch runtime persistence (`orchestration` + `customers` + `agenda` + `billing` + `crm leads` + `owner memory`) from `file` backend to `postgres` backend with validated smoke flow.
+Switch runtime persistence (`orchestration` + `customers` + `agenda` + `billing` + `crm leads` + `owner memory` + `owner memory maintenance scheduler`) from `file` backend to `postgres` backend with validated smoke flow.
 
 ## Preconditions
 
@@ -30,6 +30,11 @@ What this does:
    - `POST /v1/owner-concierge/memory/entries`
    - `POST /v1/owner-concierge/context/promotions`
    - `POST /v1/owner-concierge/context/retrieve`
+   - `POST /internal/maintenance/owner-memory/reembed/schedules`
+   - `POST /internal/maintenance/owner-memory/reembed/schedules/pause`
+   - `POST /internal/maintenance/owner-memory/reembed/schedules/resume`
+   - `POST /internal/maintenance/owner-memory/reembed/schedules/run-due`
+   - `GET /internal/maintenance/owner-memory/reembed/runs`
    - `POST /v1/billing/charges`
    - `POST /v1/billing/charges/:id/collection-request`
    - `POST /v1/billing/payments`
@@ -41,6 +46,8 @@ What this does:
    - `public.orchestration_module_task_queue`
    - `public.billing_charges`
    - `public.billing_payments`
+   - `public.owner_memory_reembed_schedules`
+   - `public.owner_memory_reembed_runs`
 5. Stops containers and removes volumes (default behavior)
 
 Isolation note:
@@ -95,3 +102,7 @@ Also includes Module 02 lead baseline table:
 Also includes Module 01 owner memory baseline tables:
 - `public.owner_memory_entries`
 - `public.owner_context_promotions`
+
+Also includes owner memory maintenance scheduler tables:
+- `public.owner_memory_reembed_schedules`
+- `public.owner_memory_reembed_runs`

@@ -201,6 +201,25 @@ function createOwnerContextPromotedEvent(entry, correlationId, traceId, causatio
   };
 }
 
+function createOwnerMemoryReembedMaintenanceEvent(name, tenantId, correlationId, traceId, payload) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name,
+    tenant_id: tenantId,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    trace_id: traceId,
+    status: name === 'owner.memory.reembed.failed' ? 'failed' : (
+      name === 'owner.memory.reembed.completed' ? 'completed' : 'info'
+    ),
+    payload
+  };
+}
+
 function createModuleTaskCommand(request, ownerCommand, taskPlan) {
   if (!taskPlan) return null;
   const taskId = randomUUID();
@@ -816,6 +835,14 @@ function ownerMemoryInfo(store, embeddingProvider) {
 }
 
 function ownerMemoryMaintenanceInfo(store) {
+  if (store?.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null,
+      schedules_path: null
+    };
+  }
+
   return {
     backend: 'file',
     storage_dir: store?.storageDir ?? null,
@@ -838,6 +865,33 @@ function parseMaintenanceLimit(value, fallback = 50) {
     return Math.min(Math.floor(requested), 500);
   }
   return fallback;
+}
+
+function parseMaintenanceConcurrency(value, fallback = 1) {
+  if (value == null) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return Math.min(Math.floor(parsed), 20);
+}
+
+function parseMaintenanceLockTtlSeconds(value, fallback = 120) {
+  if (value == null) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 30 || parsed > 3600) {
+    return null;
+  }
+  return Math.floor(parsed);
+}
+
+function parseMaintenanceRunsLimit(value, fallback = 50) {
+  if (value == null) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return Math.min(Math.floor(parsed), 200);
 }
 
 export function createApp(options = {}) {
@@ -897,7 +951,11 @@ export function createApp(options = {}) {
     pgAutoMigrate
   });
   const ownerMemoryMaintenanceStore = createOwnerMemoryMaintenanceStore({
-    storageDir: options.ownerMemoryMaintenanceStorageDir
+    backend,
+    storageDir: options.ownerMemoryMaintenanceStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
   });
   const ownerEmbeddingProviderConfig = {
     mode: options.ownerEmbeddingMode,
@@ -1510,9 +1568,77 @@ export function createApp(options = {}) {
         }
       }
 
+      if (method === 'POST' && path === '/internal/maintenance/owner-memory/reembed/schedules/pause') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const tenantId = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : '';
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        try {
+          const paused = await ownerMemoryMaintenanceStore.setScheduleEnabled(tenantId, false);
+          if (!paused.ok && paused.code === 'not_found') {
+            return json(res, 404, { error: 'not_found' });
+          }
+          if (!paused.ok) {
+            return json(res, 400, { error: paused.code });
+          }
+          return json(res, 200, { schedule: paused.schedule });
+        } catch (error) {
+          return json(res, 400, { error: String(error.message ?? error) });
+        }
+      }
+
+      if (method === 'POST' && path === '/internal/maintenance/owner-memory/reembed/schedules/resume') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const tenantId = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : '';
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        try {
+          const resumed = await ownerMemoryMaintenanceStore.setScheduleEnabled(tenantId, true, {
+            run_now: body.run_now === true
+          });
+          if (!resumed.ok && resumed.code === 'not_found') {
+            return json(res, 404, { error: 'not_found' });
+          }
+          if (!resumed.ok) {
+            return json(res, 400, { error: resumed.code });
+          }
+          return json(res, 200, { schedule: resumed.schedule });
+        } catch (error) {
+          return json(res, 400, { error: String(error.message ?? error) });
+        }
+      }
+
       if (method === 'GET' && path === '/internal/maintenance/owner-memory/reembed/schedules') {
         const tenantId = parsedUrl.searchParams.get('tenant_id');
         const items = await ownerMemoryMaintenanceStore.listSchedules(tenantId);
+        return json(res, 200, {
+          count: items.length,
+          items
+        });
+      }
+
+      if (method === 'GET' && path === '/internal/maintenance/owner-memory/reembed/runs') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        const limit = parseMaintenanceRunsLimit(parsedUrl.searchParams.get('limit'), 50);
+        if (parsedUrl.searchParams.get('limit') != null && limit == null) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+        const items = await ownerMemoryMaintenanceStore.listRunRecords({
+          tenant_id: tenantId,
+          limit
+        });
         return json(res, 200, {
           count: items.length,
           items
@@ -1532,6 +1658,15 @@ export function createApp(options = {}) {
 
         const dryRun = body.dry_run === true;
         const force = body.force === true;
+        const maxConcurrency = parseMaintenanceConcurrency(body.max_concurrency, 1);
+        if (body.max_concurrency != null && maxConcurrency == null) {
+          return json(res, 400, { error: 'invalid_max_concurrency' });
+        }
+        const lockTtlSeconds = parseMaintenanceLockTtlSeconds(body.lock_ttl_seconds, 120);
+        if (body.lock_ttl_seconds != null && lockTtlSeconds == null) {
+          return json(res, 400, { error: 'invalid_lock_ttl_seconds' });
+        }
+
         const schedules = await ownerMemoryMaintenanceStore.listRunnableSchedules({
           tenant_id: tenantId,
           now_iso: new Date().toISOString(),
@@ -1540,10 +1675,112 @@ export function createApp(options = {}) {
 
         let executed = 0;
         let failed = 0;
-        const runs = [];
+        let skippedLocked = 0;
+        const runs = new Array(schedules.length);
 
-        for (const schedule of schedules) {
+        const executeSchedule = async (index) => {
+          const schedule = schedules[index];
+          const runId = randomUUID();
+          const traceId = randomUUID();
+          const startedAt = new Date().toISOString();
+          const lock = await ownerMemoryMaintenanceStore.acquireRunLock(schedule.tenant_id, {
+            run_id: runId,
+            owner: 'run-due',
+            lock_ttl_seconds: lockTtlSeconds
+          });
+
+          if (!lock.ok && lock.code === 'locked') {
+            skippedLocked += 1;
+            const skippedRun = {
+              run_id: runId,
+              tenant_id: schedule.tenant_id,
+              status: 'skipped_locked',
+              reason: 'lock_active',
+              stale_recovered: lock.stale_recovered === true
+            };
+            runs[index] = skippedRun;
+            await ownerMemoryMaintenanceStore.recordRun({
+              run_id: runId,
+              tenant_id: schedule.tenant_id,
+              trigger: 'schedule-run-due',
+              status: 'skipped_locked',
+              dry_run: dryRun,
+              started_at: startedAt,
+              finished_at: new Date().toISOString(),
+              details: {
+                reason: 'lock_active',
+                lock
+              }
+            });
+            return;
+          }
+
+          if (!lock.ok) {
+            failed += 1;
+            const failedRun = {
+              run_id: runId,
+              tenant_id: schedule.tenant_id,
+              status: 'failed',
+              reason: lock.code
+            };
+            runs[index] = failedRun;
+            await ownerMemoryMaintenanceStore.recordRun({
+              run_id: runId,
+              tenant_id: schedule.tenant_id,
+              trigger: 'schedule-run-due',
+              status: 'failed',
+              dry_run: dryRun,
+              started_at: startedAt,
+              finished_at: new Date().toISOString(),
+              details: { reason: lock.code }
+            });
+            return;
+          }
+
           try {
+            const startedEvent = createOwnerMemoryReembedMaintenanceEvent(
+              'owner.memory.reembed.started',
+              schedule.tenant_id,
+              runId,
+              traceId,
+              {
+                run_id: runId,
+                trigger: 'schedule-run-due',
+                dry_run: dryRun,
+                limit: schedule.limit,
+                mode: schedule.mode ?? ownerEmbeddingProvider.mode
+              }
+            );
+            const startedEventResult = await validateAndPersistEvent(store, startedEvent);
+            if (!startedEventResult.ok) {
+              failed += 1;
+              runs[index] = {
+                run_id: runId,
+                tenant_id: schedule.tenant_id,
+                status: 'failed',
+                reason: startedEventResult.type
+              };
+              await ownerMemoryMaintenanceStore.markScheduleFailure(
+                schedule.tenant_id,
+                startedEventResult.type,
+                { details: startedEventResult.details }
+              );
+              await ownerMemoryMaintenanceStore.recordRun({
+                run_id: runId,
+                tenant_id: schedule.tenant_id,
+                trigger: 'schedule-run-due',
+                status: 'failed',
+                dry_run: dryRun,
+                started_at: startedAt,
+                finished_at: new Date().toISOString(),
+                details: {
+                  reason: startedEventResult.type,
+                  event_details: startedEventResult.details
+                }
+              });
+              return;
+            }
+
             const run = await runOwnerMemoryReembedBatch({
               tenant_id: schedule.tenant_id,
               limit: schedule.limit,
@@ -1552,43 +1789,153 @@ export function createApp(options = {}) {
             });
             if (!run.ok) {
               failed += 1;
-              runs.push({
+              runs[index] = {
+                run_id: runId,
                 tenant_id: schedule.tenant_id,
                 status: 'failed',
                 reason: run.code
+              };
+              const failedEvent = createOwnerMemoryReembedMaintenanceEvent(
+                'owner.memory.reembed.failed',
+                schedule.tenant_id,
+                runId,
+                traceId,
+                {
+                  run_id: runId,
+                  trigger: 'schedule-run-due',
+                  dry_run: dryRun,
+                  error_code: run.code,
+                  error_message: run.code
+                }
+              );
+              await validateAndPersistEvent(store, failedEvent);
+              await ownerMemoryMaintenanceStore.markScheduleFailure(
+                schedule.tenant_id,
+                run.code,
+                { reason: run.code }
+              );
+              await ownerMemoryMaintenanceStore.recordRun({
+                run_id: runId,
+                tenant_id: schedule.tenant_id,
+                trigger: 'schedule-run-due',
+                status: 'failed',
+                dry_run: dryRun,
+                started_at: startedAt,
+                finished_at: new Date().toISOString(),
+                details: { reason: run.code }
               });
-              continue;
+              return;
             }
 
             executed += 1;
-            runs.push({
+            runs[index] = {
+              run_id: runId,
               tenant_id: schedule.tenant_id,
               status: 'completed',
+              stale_recovered: lock.stale_recovered === true,
               ...run.result
-            });
+            };
+            const completedEvent = createOwnerMemoryReembedMaintenanceEvent(
+              'owner.memory.reembed.completed',
+              schedule.tenant_id,
+              runId,
+              traceId,
+              {
+                run_id: runId,
+                trigger: 'schedule-run-due',
+                dry_run: dryRun,
+                scanned_count: run.result.scanned_count,
+                updated_count: run.result.updated_count,
+                failed_count: run.result.failed_count,
+                skipped_count: run.result.skipped_count
+              }
+            );
+            await validateAndPersistEvent(store, completedEvent);
             if (!dryRun) {
               await ownerMemoryMaintenanceStore.markScheduleRun(
                 schedule.tenant_id,
                 run.result
               );
             }
+            await ownerMemoryMaintenanceStore.recordRun({
+              run_id: runId,
+              tenant_id: schedule.tenant_id,
+              trigger: 'schedule-run-due',
+              status: 'completed',
+              dry_run: dryRun,
+              started_at: startedAt,
+              finished_at: new Date().toISOString(),
+              details: run.result
+            });
           } catch (error) {
             failed += 1;
-            runs.push({
+            const reason = String(error.message ?? error);
+            runs[index] = {
+              run_id: runId,
               tenant_id: schedule.tenant_id,
               status: 'failed',
-              reason: String(error.message ?? error)
+              reason
+            };
+            const failedEvent = createOwnerMemoryReembedMaintenanceEvent(
+              'owner.memory.reembed.failed',
+              schedule.tenant_id,
+              runId,
+              traceId,
+              {
+                run_id: runId,
+                trigger: 'schedule-run-due',
+                dry_run: dryRun,
+                error_code: 'runtime_error',
+                error_message: reason
+              }
+            );
+            await validateAndPersistEvent(store, failedEvent);
+            await ownerMemoryMaintenanceStore.markScheduleFailure(
+              schedule.tenant_id,
+              'runtime_error',
+              { reason }
+            );
+            await ownerMemoryMaintenanceStore.recordRun({
+              run_id: runId,
+              tenant_id: schedule.tenant_id,
+              trigger: 'schedule-run-due',
+              status: 'failed',
+              dry_run: dryRun,
+              started_at: startedAt,
+              finished_at: new Date().toISOString(),
+              details: { reason }
             });
+          } finally {
+            await ownerMemoryMaintenanceStore.releaseRunLock(schedule.tenant_id, runId);
           }
-        }
+        };
+
+        let cursor = 0;
+        const workerCount = Math.min(maxConcurrency, Math.max(schedules.length, 1));
+        const workers = Array.from({ length: workerCount }, async () => {
+          while (true) {
+            const index = cursor;
+            cursor += 1;
+            if (index >= schedules.length) {
+              return;
+            }
+            await executeSchedule(index);
+          }
+        });
+        await Promise.all(workers);
+
+        const runItems = runs.filter(Boolean);
 
         return json(res, 200, {
           dry_run: dryRun,
           force,
+          max_concurrency: maxConcurrency,
+          lock_ttl_seconds: lockTtlSeconds,
           due_count: schedules.length,
           executed_count: executed,
           failed_count: failed,
-          runs
+          skipped_locked_count: skippedLocked,
+          runs: runItems
         });
       }
 

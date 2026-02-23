@@ -160,6 +160,49 @@ try {
     throw 'Expected at least one retrieved context item.'
   }
 
+  $schedulePayload = @{
+    tenant_id = 'tenant_automania'
+    interval_minutes = 60
+    limit = 20
+    mode = 'local'
+    enabled = $true
+    run_now = $true
+  }
+  Write-Host 'Configuring owner memory reembed schedule...'
+  $scheduleUpsert = Invoke-RestMethod -Uri "$apiBaseUrl/internal/maintenance/owner-memory/reembed/schedules" `
+    -Method Post -ContentType 'application/json' -Body ($schedulePayload | ConvertTo-Json -Depth 8)
+  if (-not $scheduleUpsert.schedule.enabled) {
+    throw 'Expected enabled owner memory reembed schedule.'
+  }
+
+  Write-Host 'Pausing owner memory reembed schedule...'
+  $schedulePause = Invoke-RestMethod -Uri "$apiBaseUrl/internal/maintenance/owner-memory/reembed/schedules/pause" `
+    -Method Post -ContentType 'application/json' -Body (@{ tenant_id = 'tenant_automania' } | ConvertTo-Json -Depth 5)
+  if ($schedulePause.schedule.enabled) {
+    throw 'Expected paused owner memory reembed schedule.'
+  }
+
+  Write-Host 'Resuming owner memory reembed schedule...'
+  $scheduleResume = Invoke-RestMethod -Uri "$apiBaseUrl/internal/maintenance/owner-memory/reembed/schedules/resume" `
+    -Method Post -ContentType 'application/json' -Body (@{ tenant_id = 'tenant_automania'; run_now = $true } | ConvertTo-Json -Depth 5)
+  if (-not $scheduleResume.schedule.enabled) {
+    throw 'Expected resumed owner memory reembed schedule.'
+  }
+
+  Write-Host 'Running owner memory due schedules...'
+  $scheduleRunDue = Invoke-RestMethod -Uri "$apiBaseUrl/internal/maintenance/owner-memory/reembed/schedules/run-due" `
+    -Method Post -ContentType 'application/json' -Body (@{ tenant_id = 'tenant_automania'; force = $true; max_concurrency = 1; lock_ttl_seconds = 120 } | ConvertTo-Json -Depth 8)
+  if ($scheduleRunDue.executed_count -lt 1) {
+    throw 'Expected owner memory schedule run-due to execute at least one schedule.'
+  }
+
+  Write-Host 'Fetching owner memory schedule run history...'
+  $scheduleRuns = Invoke-RestMethod -Uri "$apiBaseUrl/internal/maintenance/owner-memory/reembed/runs?tenant_id=tenant_automania&limit=5" `
+    -Method Get
+  if ($scheduleRuns.count -lt 1) {
+    throw 'Expected owner memory schedule run history entries.'
+  }
+
   $leadPayload = @{
     request = @{
       request_id = [guid]::NewGuid().ToString()
@@ -390,6 +433,10 @@ try {
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_memory_entries;"
   $ownerPromotionCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_context_promotions;"
+  $ownerReembedScheduleCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
+    psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_memory_reembed_schedules;"
+  $ownerReembedRunsCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
+    psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_memory_reembed_runs;"
 
   $commandCount = [int]($commandCountRaw | Select-Object -First 1).Trim()
   $eventCount = [int]($eventCountRaw | Select-Object -First 1).Trim()
@@ -401,6 +448,8 @@ try {
   $crmFollowupCount = [int]($crmFollowupCountRaw | Select-Object -First 1).Trim()
   $ownerMemoryCount = [int]($ownerMemoryCountRaw | Select-Object -First 1).Trim()
   $ownerPromotionCount = [int]($ownerPromotionCountRaw | Select-Object -First 1).Trim()
+  $ownerReembedScheduleCount = [int]($ownerReembedScheduleCountRaw | Select-Object -First 1).Trim()
+  $ownerReembedRunsCount = [int]($ownerReembedRunsCountRaw | Select-Object -First 1).Trim()
 
   if ($commandCount -lt 3) { throw "Expected >=3 commands, got $commandCount." }
   if ($eventCount -lt 6) { throw "Expected >=6 events, got $eventCount." }
@@ -412,6 +461,8 @@ try {
   if ($crmFollowupCount -lt 1) { throw "Expected >=1 crm followup row, got $crmFollowupCount." }
   if ($ownerMemoryCount -lt 1) { throw "Expected >=1 owner memory row, got $ownerMemoryCount." }
   if ($ownerPromotionCount -lt 1) { throw "Expected >=1 owner promotion row, got $ownerPromotionCount." }
+  if ($ownerReembedScheduleCount -lt 1) { throw "Expected >=1 owner memory reembed schedule row, got $ownerReembedScheduleCount." }
+  if ($ownerReembedRunsCount -lt 1) { throw "Expected >=1 owner memory reembed run row, got $ownerReembedRunsCount." }
 
   Write-Host ''
   Write-Host 'Postgres smoke passed.' -ForegroundColor Green
@@ -419,7 +470,7 @@ try {
   Write-Host "billing_correlation_id=$billingCorrelation"
   Write-Host "memory_correlation_id=$memoryCorrelation"
   Write-Host "followup_correlation_id=$followupCorrelation"
-  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount crm_campaigns=$crmCampaignCount crm_followups=$crmFollowupCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount"
+  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount crm_campaigns=$crmCampaignCount crm_followups=$crmFollowupCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount owner_reembed_schedules=$ownerReembedScheduleCount owner_reembed_runs=$ownerReembedRunsCount"
 }
 finally {
   if ($apiProcess -and -not $apiProcess.HasExited) {

@@ -8,6 +8,9 @@
       "enum": [
         "owner.command.created",
         "owner.context.promoted",
+        "owner.memory.reembed.started",
+        "owner.memory.reembed.completed",
+        "owner.memory.reembed.failed",
         "module.task.created",
         "module.task.accepted",
         "module.task.completed",
@@ -69,6 +72,82 @@
               "salience_score": { "type": "number", "minimum": 0, "maximum": 1 }
             },
             "required": ["memory_id", "session_id", "status", "salience_score"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.memory.reembed.started" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "run_id": { "type": "string", "format": "uuid" },
+              "trigger": { "type": "string", "enum": ["schedule-run-due", "manual-run-due"] },
+              "dry_run": { "type": "boolean" },
+              "limit": { "type": "integer", "minimum": 1, "maximum": 500 },
+              "mode": { "type": "string", "enum": ["auto", "openai", "local", "off"] }
+            },
+            "required": ["run_id", "trigger", "dry_run", "limit", "mode"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.memory.reembed.completed" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "completed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "run_id": { "type": "string", "format": "uuid" },
+              "trigger": { "type": "string", "enum": ["schedule-run-due", "manual-run-due"] },
+              "dry_run": { "type": "boolean" },
+              "scanned_count": { "type": "integer", "minimum": 0 },
+              "updated_count": { "type": "integer", "minimum": 0 },
+              "failed_count": { "type": "integer", "minimum": 0 },
+              "skipped_count": { "type": "integer", "minimum": 0 }
+            },
+            "required": [
+              "run_id",
+              "trigger",
+              "dry_run",
+              "scanned_count",
+              "updated_count",
+              "failed_count",
+              "skipped_count"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.memory.reembed.failed" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "failed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "run_id": { "type": "string", "format": "uuid" },
+              "trigger": { "type": "string", "enum": ["schedule-run-due", "manual-run-due"] },
+              "dry_run": { "type": "boolean" },
+              "error_code": { "type": "string", "minLength": 1 },
+              "error_message": { "type": "string", "minLength": 1 }
+            },
+            "required": ["run_id", "trigger", "dry_run", "error_code", "error_message"]
           }
         }
       }

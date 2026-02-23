@@ -72,3 +72,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01B-003 governance and validation closure for reembedding slice
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01S-001..002 owner memory reembed scheduler implementation
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01S-003 governance and validation closure for scheduler slice
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01H-001..003 owner memory reembed scheduler hardening and postgres parity
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01H-004 governance and validation closure for hardening slice

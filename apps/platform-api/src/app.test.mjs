@@ -706,6 +706,37 @@ test('owner memory reembed scheduler supports upsert, list, and run-due', async 
     const listBody = await listRes.json();
     assert.equal(listBody.count, 1);
 
+    const pauseRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules/pause`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'tenant_automania'
+        })
+      }
+    );
+    assert.equal(pauseRes.status, 200);
+    const pauseBody = await pauseRes.json();
+    assert.equal(pauseBody.schedule.enabled, false);
+    assert.equal(pauseBody.schedule.next_run_at, null);
+
+    const resumeRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules/resume`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'tenant_automania',
+          run_now: true
+        })
+      }
+    );
+    assert.equal(resumeRes.status, 200);
+    const resumeBody = await resumeRes.json();
+    assert.equal(resumeBody.schedule.enabled, true);
+    assert.ok(resumeBody.schedule.next_run_at);
+
     const dryRunRes = await fetch(
       `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules/run-due`,
       {
@@ -714,14 +745,17 @@ test('owner memory reembed scheduler supports upsert, list, and run-due', async 
         body: JSON.stringify({
           tenant_id: 'tenant_automania',
           force: true,
-          dry_run: true
+          dry_run: true,
+          max_concurrency: 1
         })
       }
     );
     assert.equal(dryRunRes.status, 200);
     const dryRunBody = await dryRunRes.json();
+    assert.equal(dryRunBody.max_concurrency, 1);
     assert.equal(dryRunBody.executed_count, 1);
     assert.equal(dryRunBody.failed_count, 0);
+    assert.equal(dryRunBody.skipped_locked_count, 0);
     assert.equal(dryRunBody.runs[0].updated_count, 0);
     assert.equal(dryRunBody.runs[0].processed[0].status, 'dry_run');
 
@@ -732,16 +766,29 @@ test('owner memory reembed scheduler supports upsert, list, and run-due', async 
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           tenant_id: 'tenant_automania',
-          force: true
+          force: true,
+          max_concurrency: 2
         })
       }
     );
     assert.equal(executeRes.status, 200);
     const executeBody = await executeRes.json();
+    assert.equal(executeBody.max_concurrency, 2);
     assert.equal(executeBody.executed_count, 1);
     assert.equal(executeBody.failed_count, 0);
+    assert.equal(executeBody.skipped_locked_count, 0);
     assert.equal(executeBody.runs[0].updated_count, 1);
     assert.ok(String(executeBody.runs[0].processed[0].embedding_ref).startsWith('local:'));
+    assert.ok(executeBody.runs[0].run_id);
+
+    const maintenanceTraceRes = await fetch(
+      `${schedulerBaseUrl}/internal/orchestration/trace?correlation_id=${executeBody.runs[0].run_id}`
+    );
+    assert.equal(maintenanceTraceRes.status, 200);
+    const maintenanceTraceBody = await maintenanceTraceRes.json();
+    const maintenanceEventNames = maintenanceTraceBody.events.map((item) => item.name);
+    assert.ok(maintenanceEventNames.includes('owner.memory.reembed.started'));
+    assert.ok(maintenanceEventNames.includes('owner.memory.reembed.completed'));
 
     const scheduleAfterRes = await fetch(
       `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules?tenant_id=tenant_automania`
@@ -751,6 +798,75 @@ test('owner memory reembed scheduler supports upsert, list, and run-due', async 
     assert.equal(scheduleAfterBody.items[0].last_result.updated_count, 1);
     assert.ok(scheduleAfterBody.items[0].last_run_at);
     assert.ok(scheduleAfterBody.items[0].next_run_at);
+    assert.equal(scheduleAfterBody.items[0].run_lock, undefined);
+
+    const runsRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/runs?tenant_id=tenant_automania&limit=5`
+    );
+    assert.equal(runsRes.status, 200);
+    const runsBody = await runsRes.json();
+    assert.ok(runsBody.count >= 2);
+    assert.equal(runsBody.items[0].tenant_id, 'tenant_automania');
+  } finally {
+    await new Promise((resolve, reject) => schedulerServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(schedulerStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('owner memory reembed scheduler skips tenant when lock is active', async () => {
+  const schedulerStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-embed-scheduler-lock-'));
+  const schedulerApp = createApp({
+    orchestrationStorageDir: schedulerStorageDir,
+    ownerMemoryStorageDir: path.join(schedulerStorageDir, 'owner-memory'),
+    ownerMemoryMaintenanceStorageDir: path.join(schedulerStorageDir, 'owner-memory-maintenance'),
+    ownerEmbeddingMode: 'off'
+  });
+  const schedulerServer = http.createServer(schedulerApp);
+  await new Promise((resolve) => schedulerServer.listen(0, '127.0.0.1', resolve));
+  const schedulerAddress = schedulerServer.address();
+  const schedulerBaseUrl = `http://127.0.0.1:${schedulerAddress.port}`;
+
+  try {
+    const upsertRes = await fetch(`${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        tenant_id: 'tenant_automania',
+        interval_minutes: 60,
+        limit: 10,
+        mode: 'local',
+        enabled: true,
+        run_now: true
+      })
+    });
+    assert.equal(upsertRes.status, 200);
+
+    const lockResult = await schedulerApp.ownerMemoryMaintenanceStore.acquireRunLock('tenant_automania', {
+      run_id: 'e9889f31-1f5f-4de2-94d8-7a89aa4b3931',
+      owner: 'test-lock',
+      lock_ttl_seconds: 180
+    });
+    assert.equal(lockResult.ok, true);
+
+    const runDueRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules/run-due`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'tenant_automania',
+          force: true,
+          dry_run: true,
+          max_concurrency: 1
+        })
+      }
+    );
+    assert.equal(runDueRes.status, 200);
+    const runDueBody = await runDueRes.json();
+    assert.equal(runDueBody.executed_count, 0);
+    assert.equal(runDueBody.failed_count, 0);
+    assert.equal(runDueBody.skipped_locked_count, 1);
+    assert.equal(runDueBody.runs[0].status, 'skipped_locked');
   } finally {
     await new Promise((resolve, reject) => schedulerServer.close((err) => (err ? reject(err) : resolve())));
     await fs.rm(schedulerStorageDir, { recursive: true, force: true });
@@ -816,6 +932,36 @@ test('owner memory reembed scheduler validates upsert payload', async () => {
     assert.equal(invalidModeRes.status, 400);
     const invalidModeBody = await invalidModeRes.json();
     assert.equal(invalidModeBody.error, 'invalid_mode');
+
+    const invalidMaxConcurrencyRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules/run-due`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          force: true,
+          max_concurrency: 0
+        })
+      }
+    );
+    assert.equal(invalidMaxConcurrencyRes.status, 400);
+    const invalidMaxConcurrencyBody = await invalidMaxConcurrencyRes.json();
+    assert.equal(invalidMaxConcurrencyBody.error, 'invalid_max_concurrency');
+
+    const invalidLockTtlRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules/run-due`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          force: true,
+          lock_ttl_seconds: 10
+        })
+      }
+    );
+    assert.equal(invalidLockTtlRes.status, 400);
+    const invalidLockTtlBody = await invalidLockTtlRes.json();
+    assert.equal(invalidLockTtlBody.error, 'invalid_lock_ttl_seconds');
   } finally {
     await new Promise((resolve, reject) => schedulerServer.close((err) => (err ? reject(err) : resolve())));
     await fs.rm(schedulerStorageDir, { recursive: true, force: true });

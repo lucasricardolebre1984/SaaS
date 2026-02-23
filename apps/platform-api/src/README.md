@@ -34,6 +34,13 @@ Runtime skeleton placeholder for API orchestration surface.
 - `GET /internal/orchestration/module-task-queue`
 - `POST /internal/worker/module-tasks/drain`
 - `POST /internal/worker/crm-collections/drain`
+- `POST /internal/maintenance/owner-memory/reembed`
+- `POST /internal/maintenance/owner-memory/reembed/schedules`
+- `POST /internal/maintenance/owner-memory/reembed/schedules/pause`
+- `POST /internal/maintenance/owner-memory/reembed/schedules/resume`
+- `GET /internal/maintenance/owner-memory/reembed/schedules?tenant_id=...`
+- `POST /internal/maintenance/owner-memory/reembed/schedules/run-due`
+- `GET /internal/maintenance/owner-memory/reembed/runs?tenant_id=...&limit=...`
 
 ## Runtime Notes
 
@@ -55,6 +62,9 @@ Runtime skeleton placeholder for API orchestration surface.
 - Owner memory store backend follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
   - `file`: `.runtime-data/owner-memory/`
   - `postgres`: `public.owner_memory_entries`, `public.owner_context_promotions`
+- Owner memory maintenance scheduler store follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
+  - `file`: `.runtime-data/owner-memory-maintenance/`
+  - `postgres`: `public.owner_memory_reembed_schedules`, `public.owner_memory_reembed_runs`
 - For `postgres` backend configure:
   - `ORCHESTRATION_STORE_BACKEND=postgres`
   - `ORCHESTRATION_PG_DSN=postgres://...`

@@ -76,3 +76,5 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-23,23:59,23:59,0.15,Implement,mod-01-owner-memory-reembedding-backfill-slice,M01B-003,pair,done,Validated runtime contract postgres smoke gates and closed governance checkpoint
 2026-02-23,23:59,23:59,0.35,Implement,mod-01-owner-memory-reembed-scheduler-slice,M01S-001..002,pair,done,Implemented owner memory maintenance scheduler store plus schedule endpoints and run-due execution path
 2026-02-23,23:59,23:59,0.15,Implement,mod-01-owner-memory-reembed-scheduler-slice,M01S-003,pair,done,Validated runtime contract postgres smoke gates and closed scheduler governance checkpoint
+2026-02-23,23:59,23:59,0.55,Implement,mod-01-owner-memory-reembed-hardening-slice,M01H-001..003,pair,done,Added pause resume endpoints concurrency controls tenant lock stale recovery postgres maintenance store parity and maintenance lifecycle events
+2026-02-23,23:59,23:59,0.20,Implement,mod-01-owner-memory-reembed-hardening-slice,M01H-004,pair,done,Validated tests contract checks postgres smoke and updated governance runbook and runtime docs

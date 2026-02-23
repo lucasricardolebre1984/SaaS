@@ -258,3 +258,36 @@ CREATE TABLE IF NOT EXISTS public.owner_context_promotions (
 
 CREATE INDEX IF NOT EXISTS owner_context_promotions_tenant_created_idx
   ON public.owner_context_promotions (tenant_id, created_at);
+
+CREATE TABLE IF NOT EXISTS public.owner_memory_reembed_schedules (
+  tenant_id TEXT PRIMARY KEY,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  interval_minutes INTEGER NOT NULL,
+  limit_items INTEGER NOT NULL,
+  mode TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  last_run_at TIMESTAMPTZ NULL,
+  next_run_at TIMESTAMPTZ NULL,
+  last_result_json JSONB NULL,
+  run_lock_json JSONB NULL
+);
+
+CREATE INDEX IF NOT EXISTS owner_memory_reembed_schedules_enabled_next_idx
+  ON public.owner_memory_reembed_schedules (enabled, next_run_at);
+
+CREATE TABLE IF NOT EXISTS public.owner_memory_reembed_runs (
+  id BIGSERIAL PRIMARY KEY,
+  run_id UUID NOT NULL,
+  tenant_id TEXT NOT NULL,
+  trigger TEXT NOT NULL,
+  status TEXT NOT NULL,
+  dry_run BOOLEAN NOT NULL DEFAULT false,
+  started_at TIMESTAMPTZ NOT NULL,
+  finished_at TIMESTAMPTZ NULL,
+  details_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS owner_memory_reembed_runs_tenant_started_idx
+  ON public.owner_memory_reembed_runs (tenant_id, started_at DESC);
