@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 01 rag provider embeddings slice)
-Active feature: mod-01-rag-provider-embeddings-slice
+Active phase: Implement (module 01 openai embedding success test slice)
+Active feature: mod-01-openai-embedding-success-test-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -181,9 +181,17 @@ Active feature: mod-01-rag-provider-embeddings-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-01-openai-embedding-success-test-slice` to validate strict OpenAI embedding success path with isolated local mock provider.
+- Runtime tests now include:
+  - strict openai mode failure without key (`embedding_error`)
+  - strict openai mode success with local mock `/embeddings` server and auth check
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 01 provider embeddings closure.
+Open next prioritized migration slice after module 01 openai success-path validation closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

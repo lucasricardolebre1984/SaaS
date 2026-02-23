@@ -485,6 +485,85 @@ test('owner memory create returns embedding_error in strict openai mode without 
   }
 });
 
+test('owner memory create succeeds in strict openai mode with local mock provider', async () => {
+  let providerCalled = false;
+  const mockProviderServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST' || req.url !== '/embeddings') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    providerCalled = true;
+    const authHeader = req.headers.authorization ?? '';
+    if (!String(authHeader).startsWith('Bearer test-key')) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
+
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    assert.equal(body.model, 'text-embedding-3-small');
+    assert.ok(typeof body.input === 'string' && body.input.length > 0);
+
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({
+      data: [{
+        embedding: [0.12, -0.23, 0.41, 0.07, -0.19, 0.31]
+      }]
+    }));
+  });
+  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = mockProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const strictStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-embed-openai-ok-'));
+  const strictOwnerMemoryStorageDir = path.join(strictStorageDir, 'owner-memory');
+  const strictServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: strictStorageDir,
+      ownerMemoryStorageDir: strictOwnerMemoryStorageDir,
+      ownerEmbeddingMode: 'openai',
+      openaiApiKey: 'test-key',
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => strictServer.listen(0, '127.0.0.1', resolve));
+  const strictAddress = strictServer.address();
+  const strictBaseUrl = `http://127.0.0.1:${strictAddress.port}`;
+
+  try {
+    const res = await fetch(`${strictBaseUrl}/v1/owner-concierge/memory/entries`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerMemoryCreateRequest({
+        request_id: '9f8e0f6a-f1ec-4690-bd8e-0253d86c1d1d',
+        memory: {
+          memory_id: 'f16e17a6-a3b2-4ac2-a98d-b994110ad2de',
+          external_key: 'strict-openai-success',
+          source: 'user_message',
+          content: 'teste openai mock sucesso',
+          tags: ['mock', 'openai'],
+          salience_score: 0.7
+        }
+      }))
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.response.status, 'created');
+    assert.ok(String(body.response.entry.embedding_ref).startsWith('openai:'));
+    assert.equal(providerCalled, true);
+  } finally {
+    await new Promise((resolve, reject) => strictServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(strictStorageDir, { recursive: true, force: true });
+  }
+});
+
 test('owner context retrieval validates malformed request', async () => {
   const res = await fetch(`${baseUrl}/v1/owner-concierge/context/retrieve`, {
     method: 'POST',

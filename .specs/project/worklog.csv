@@ -70,3 +70,5 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-23,23:59,23:59,0.30,Implement,mod-01-rag-provider-embeddings-slice,M01E-002,pair,done,Integrated embedding resolution in owner memory create flow with strict error semantics
 2026-02-23,23:59,23:59,0.30,Implement,mod-01-rag-provider-embeddings-slice,M01E-003,pair,done,Persisted internal embedding vectors in file and postgres owner memory stores
 2026-02-23,23:59,23:59,0.15,Implement,mod-01-rag-provider-embeddings-slice,M01E-004,pair,done,Validated runtime contract smoke gates and closed governance checkpoint
+2026-02-23,23:59,23:59,0.15,Implement,mod-01-openai-embedding-success-test-slice,M01T-001,pair,done,Added strict openai success integration test with local mock provider
+2026-02-23,23:59,23:59,0.10,Implement,mod-01-openai-embedding-success-test-slice,M01T-002,pair,done,Validated runtime contract smoke gates and closed governance checkpoint
