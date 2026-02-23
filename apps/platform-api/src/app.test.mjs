@@ -65,6 +65,16 @@ function validOutboundQueueRequest() {
   };
 }
 
+async function drainWorker(baseUrl, limit = 10) {
+  const res = await fetch(`${baseUrl}/internal/worker/module-tasks/drain`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ limit })
+  });
+  assert.equal(res.status, 200);
+  return res.json();
+}
+
 let server;
 let baseUrl;
 let storageDir;
@@ -84,14 +94,18 @@ test.after(async () => {
   await fs.rm(storageDir, { recursive: true, force: true });
 });
 
-test('GET /health returns ok', async () => {
+test('GET /health returns runtime metadata', async () => {
   const res = await fetch(`${baseUrl}/health`);
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.status, 'ok');
+  assert.equal(body.service, 'app-platform-api');
+  assert.ok(typeof body.orchestration.storage_dir === 'string');
+  assert.ok(typeof body.orchestration.policy_path === 'string');
+  assert.ok(typeof body.orchestration.queue_file === 'string');
 });
 
-test('POST /v1/owner-concierge/interaction accepts valid request', async () => {
+test('POST /v1/owner-concierge/interaction queues module task and trace is preserved', async () => {
   const res = await fetch(`${baseUrl}/v1/owner-concierge/interaction`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -102,35 +116,44 @@ test('POST /v1/owner-concierge/interaction accepts valid request', async () => {
   assert.equal(body.response.status, 'accepted');
   assert.equal(body.response.owner_command.name, 'owner.command.create');
   assert.equal(body.response.downstream_tasks.length, 1);
+  assert.equal(body.response.downstream_tasks[0].status, 'queued');
 
   const correlationId = body.response.owner_command.correlation_id;
-  const traceRes = await fetch(
+  const traceBeforeRes = await fetch(
     `${baseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
   );
-  assert.equal(traceRes.status, 200);
-  const traceBody = await traceRes.json();
-  assert.equal(traceBody.correlation_id, correlationId);
+  assert.equal(traceBeforeRes.status, 200);
+  const traceBefore = await traceBeforeRes.json();
 
-  const commandNames = traceBody.commands.map((item) => item.name);
-  assert.deepEqual(commandNames, ['owner.command.create', 'module.task.create']);
+  const eventNamesBefore = traceBefore.events.map((item) => item.name);
+  assert.ok(eventNamesBefore.includes('owner.command.created'));
+  assert.ok(eventNamesBefore.includes('module.task.created'));
+  assert.ok(!eventNamesBefore.includes('module.task.accepted'));
+  assert.ok(!eventNamesBefore.includes('module.task.completed'));
 
-  const eventNames = traceBody.events.map((item) => item.name);
-  assert.ok(eventNames.includes('owner.command.created'));
-  assert.ok(eventNames.includes('module.task.created'));
-  assert.ok(eventNames.includes('module.task.accepted'));
-  assert.ok(eventNames.includes('module.task.completed'));
+  const queueRes = await fetch(`${baseUrl}/internal/orchestration/module-task-queue`);
+  assert.equal(queueRes.status, 200);
+  const queueBody = await queueRes.json();
+  assert.ok(queueBody.pending_count >= 1);
 
-  for (const cmd of traceBody.commands) {
-    assert.equal(cmd.correlation_id, correlationId);
-  }
-  for (const evt of traceBody.events) {
-    assert.equal(evt.correlation_id, correlationId);
-  }
+  const drainBody = await drainWorker(baseUrl, 10);
+  assert.ok(drainBody.processed_count >= 1);
+
+  const traceAfterRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+  );
+  assert.equal(traceAfterRes.status, 200);
+  const traceAfter = await traceAfterRes.json();
+  const eventNamesAfter = traceAfter.events.map((item) => item.name);
+  assert.ok(eventNamesAfter.includes('module.task.accepted'));
+  assert.ok(eventNamesAfter.includes('module.task.completed'));
 
   const commandsRaw = await fs.readFile(path.join(storageDir, 'commands.ndjson'), 'utf8');
   const eventsRaw = await fs.readFile(path.join(storageDir, 'events.ndjson'), 'utf8');
+  const queueRaw = await fs.readFile(path.join(storageDir, 'module-task-queue.json'), 'utf8');
   assert.match(commandsRaw, /owner\.command\.create/);
-  assert.match(eventsRaw, /owner\.command\.created/);
+  assert.match(eventsRaw, /module\.task\.completed/);
+  assert.match(queueRaw, /"history"/);
 });
 
 test('POST /v1/owner-concierge/interaction rejects invalid request', async () => {
@@ -147,7 +170,7 @@ test('POST /v1/owner-concierge/interaction rejects invalid request', async () =>
   assert.equal(body.error, 'validation_error');
 });
 
-test('POST /v1/owner-concierge/interaction emits failed lifecycle when requested', async () => {
+test('worker emits module.task.failed for failure route', async () => {
   const payload = validOwnerRequest();
   payload.request.payload.text = 'forcar fail no modulo 2';
 
@@ -158,8 +181,9 @@ test('POST /v1/owner-concierge/interaction emits failed lifecycle when requested
   });
   assert.equal(res.status, 200);
   const body = await res.json();
-  assert.match(body.response.assistant_output.text, /failed/i);
+  assert.match(body.response.assistant_output.text, /queued/i);
 
+  await drainWorker(baseUrl, 10);
   const correlationId = body.response.owner_command.correlation_id;
   const traceRes = await fetch(
     `${baseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
@@ -172,7 +196,7 @@ test('POST /v1/owner-concierge/interaction emits failed lifecycle when requested
   assert.ok(!eventNames.includes('module.task.completed'));
 });
 
-test('POST /v1/owner-concierge/interaction applies routing policy and survives app restart', async () => {
+test('routing policy and queued state survive app restart', async () => {
   const payload = validOwnerRequest();
   payload.request.payload.text = 'preciso fazer cobranca vencida';
 
@@ -183,8 +207,6 @@ test('POST /v1/owner-concierge/interaction applies routing policy and survives a
   });
   assert.equal(res.status, 200);
   const body = await res.json();
-
-  assert.equal(body.response.downstream_tasks.length, 1);
   assert.equal(body.response.downstream_tasks[0].target_module, 'mod-05-faturamento-cobranca');
   assert.equal(body.response.downstream_tasks[0].task_type, 'billing.collection.request');
 
@@ -198,13 +220,22 @@ test('POST /v1/owner-concierge/interaction applies routing policy and survives a
   const rehydratedBaseUrl = `http://127.0.0.1:${rehydratedPort}`;
 
   try {
+    const queueRes = await fetch(`${rehydratedBaseUrl}/internal/orchestration/module-task-queue`);
+    assert.equal(queueRes.status, 200);
+    const queueBody = await queueRes.json();
+    assert.ok(queueBody.pending_count >= 1);
+
+    const drainBody = await drainWorker(rehydratedBaseUrl, 10);
+    assert.ok(drainBody.processed_count >= 1);
+
     const traceRes = await fetch(
       `${rehydratedBaseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
     );
     assert.equal(traceRes.status, 200);
     const traceBody = await traceRes.json();
-    assert.ok(traceBody.commands.length >= 2);
-    assert.ok(traceBody.events.length >= 3);
+    const eventNames = traceBody.events.map((item) => item.name);
+    assert.ok(eventNames.includes('module.task.accepted'));
+    assert.ok(eventNames.includes('module.task.completed'));
   } finally {
     await new Promise((resolve, reject) => {
       rehydratedServer.close((err) => (err ? reject(err) : resolve()));

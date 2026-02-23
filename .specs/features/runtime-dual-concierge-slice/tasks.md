@@ -68,3 +68,17 @@ Date: 2026-02-23
   - apps/platform-api/config/task-routing.policy.json
   - apps/platform-api/src/app.mjs
   - apps/platform-api/src/app.test.mjs
+
+## RDS-007 - Add queue/worker boundary for module task lifecycle
+- Status: done
+- Output:
+  - interaction endpoint now queues module tasks after `module.task.created`
+  - internal worker drain endpoint processes queued tasks and emits `module.task.accepted` + terminal event
+  - queue state persisted durably and rehydrated on restart
+- Verification:
+  - `nx run app-platform-api:test` passes with queue/worker lifecycle assertions
+  - `nx run contract-tests:contract-checks` remains passing
+- Evidence:
+  - apps/platform-api/src/orchestration-store.mjs
+  - apps/platform-api/src/app.mjs
+  - apps/platform-api/src/app.test.mjs

@@ -18,6 +18,8 @@ Date: 2026-02-23
 5. `GET /internal/orchestration/commands`
 6. `GET /internal/orchestration/events`
 7. `GET /internal/orchestration/trace?correlation_id={uuid}`
+8. `GET /internal/orchestration/module-task-queue`
+9. `POST /internal/worker/module-tasks/drain`
 
 ## Validation Strategy
 - Owner request validator uses `multimodal-api.schema.json` request node.
@@ -33,10 +35,13 @@ Date: 2026-02-23
   - emit event envelope `owner.command.created`
 - For `send_message` operations:
   - infer downstream task route via explicit policy rules and emit `module.task.create`
-  - simulate lifecycle events:
-    - always `module.task.created` + `module.task.accepted`
-    - terminal event `module.task.completed` or `module.task.failed` (policy route flag)
+  - emit `module.task.created`
+  - enqueue task for worker processing
+- Worker drain endpoint emits:
+  - `module.task.accepted`
+  - terminal event `module.task.completed` or `module.task.failed` (policy route flag)
 - All envelopes share the same `correlation_id` per interaction and are stored in bounded in-memory cache plus durable NDJSON files.
+- Queue state is persisted in `module-task-queue.json` with `pending` and `history`.
 
 ## Response Pattern
 - Success:
@@ -52,6 +57,7 @@ Date: 2026-02-23
   - health response
   - valid/invalid owner interaction
   - module-task orchestration trace with correlation integrity
-  - module-task failed lifecycle simulation
+  - queue + worker drain lifecycle (accepted/completed/failed)
+  - queue rehydration across app restart
   - valid/invalid webhook
   - valid/invalid outbound queue payload
