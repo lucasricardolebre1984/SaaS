@@ -16,6 +16,9 @@
         "customer.created",
         "customer.updated",
         "agenda.reminder.scheduled",
+        "agenda.reminder.sent",
+        "agenda.reminder.failed",
+        "agenda.reminder.canceled",
         "billing.charge.created",
         "billing.collection.requested",
         "billing.collection.sent",
@@ -238,15 +241,83 @@
       "then": {
         "properties": {
           "source_module": { "const": "mod-04-agenda" },
+          "target_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+          },
           "payload": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
               "reminder_id": { "type": "string", "format": "uuid" },
+              "appointment_id": { "type": "string", "format": "uuid" },
               "schedule_at": { "type": "string", "format": "date-time" },
               "target_channel": { "type": "string", "enum": ["ui-chat", "whatsapp"] }
             },
-            "required": ["reminder_id", "schedule_at", "target_channel"]
+            "required": ["reminder_id", "appointment_id", "schedule_at", "target_channel"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "agenda.reminder.sent" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-04-agenda" },
+          "target_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+          },
+          "status": { "const": "completed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "reminder_id": { "type": "string", "format": "uuid" },
+              "appointment_id": { "type": "string", "format": "uuid" },
+              "target_channel": { "type": "string", "enum": ["ui-chat", "whatsapp"] },
+              "dispatch_command_id": { "type": ["string", "null"], "format": "uuid" }
+            },
+            "required": ["reminder_id", "appointment_id", "target_channel"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "agenda.reminder.failed" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-04-agenda" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "failed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "reminder_id": { "type": "string", "format": "uuid" },
+              "appointment_id": { "type": "string", "format": "uuid" },
+              "target_channel": { "type": "string", "enum": ["ui-chat", "whatsapp"] },
+              "error_code": { "type": "string", "minLength": 1 }
+            },
+            "required": ["reminder_id", "appointment_id", "target_channel", "error_code"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "agenda.reminder.canceled" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-04-agenda" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "reminder_id": { "type": "string", "format": "uuid" },
+              "appointment_id": { "type": "string", "format": "uuid" },
+              "target_channel": { "type": "string", "enum": ["ui-chat", "whatsapp"] }
+            },
+            "required": ["reminder_id", "appointment_id", "target_channel"]
           }
         }
       }

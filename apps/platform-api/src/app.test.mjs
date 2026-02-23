@@ -83,6 +83,47 @@ function validCustomerCreateLeadRequest() {
   };
 }
 
+function validAppointmentCreateRequest() {
+  return {
+    request: {
+      request_id: '0f9c83dc-fcc8-4a3e-ab0c-79f5ec311654',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-01-owner-concierge',
+      appointment: {
+        appointment_id: 'f47d5f66-bbbf-4ad2-9189-57f7da8e7a07',
+        external_key: 'appt-001',
+        title: 'Reuniao com cliente VIP',
+        description: 'Discussao proposta comercial',
+        start_at: '2026-03-01T14:00:00.000Z',
+        end_at: '2026-03-01T15:00:00.000Z',
+        timezone: 'America/Sao_Paulo',
+        status: 'scheduled'
+      }
+    }
+  };
+}
+
+function validReminderCreateRequest() {
+  return {
+    request: {
+      request_id: 'fb8b710e-9bf0-40c0-987d-f4a2444998ec',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-01-owner-concierge',
+      reminder: {
+        reminder_id: 'ac01f70b-d860-43d3-81f1-5a65b5fb1b84',
+        appointment_id: 'f47d5f66-bbbf-4ad2-9189-57f7da8e7a07',
+        external_key: 'rem-001',
+        schedule_at: '2026-03-01T13:30:00.000Z',
+        channel: 'whatsapp',
+        message: 'Lembrete da reuniao em 30 minutos',
+        recipient: {
+          phone_e164: '+5511991234567'
+        }
+      }
+    }
+  };
+}
+
 function validOutboundQueueRequest() {
   return {
     queue_item_id: '4b95088b-0868-444f-b5f8-97dabbdad6d1',
@@ -123,14 +164,17 @@ let server;
 let baseUrl;
 let storageDir;
 let customerStorageDir;
+let agendaStorageDir;
 
 test.before(async () => {
   storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-orch-'));
   customerStorageDir = path.join(storageDir, 'customers');
+  agendaStorageDir = path.join(storageDir, 'agenda');
   server = http.createServer(
     createApp({
       orchestrationStorageDir: storageDir,
-      customerStorageDir
+      customerStorageDir,
+      agendaStorageDir
     })
   );
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -157,6 +201,100 @@ test('GET /health returns runtime metadata', async () => {
   assert.ok(typeof body.orchestration.queue_file === 'string');
   assert.equal(body.customers.backend, 'file');
   assert.ok(typeof body.customers.storage_dir === 'string');
+  assert.equal(body.agenda.backend, 'file');
+  assert.ok(typeof body.agenda.storage_dir === 'string');
+});
+
+test('POST/PATCH /v1/agenda/appointments creates and updates appointment', async () => {
+  const createRes = await fetch(`${baseUrl}/v1/agenda/appointments`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validAppointmentCreateRequest())
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+  assert.equal(createBody.response.status, 'created');
+  assert.equal(createBody.response.appointment.title, 'Reuniao com cliente VIP');
+
+  const updateRes = await fetch(
+    `${baseUrl}/v1/agenda/appointments/${createBody.response.appointment.appointment_id}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: 'de2460c2-7f5a-46dc-8964-c9451eeff2ca',
+          tenant_id: 'tenant_automania',
+          source_module: 'mod-01-owner-concierge',
+          changes: {
+            status: 'confirmed'
+          }
+        }
+      })
+    }
+  );
+  assert.equal(updateRes.status, 200);
+  const updateBody = await updateRes.json();
+  assert.equal(updateBody.response.status, 'updated');
+  assert.equal(updateBody.response.appointment.status, 'confirmed');
+});
+
+test('POST /v1/agenda/reminders emits scheduling trace and dispatch command', async () => {
+  const reminderRes = await fetch(`${baseUrl}/v1/agenda/reminders`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validReminderCreateRequest())
+  });
+  assert.equal(reminderRes.status, 200);
+  const reminderBody = await reminderRes.json();
+  assert.equal(reminderBody.response.status, 'created');
+  assert.equal(reminderBody.response.reminder.status, 'sent');
+  assert.ok(reminderBody.response.orchestration.dispatch_command_id);
+  assert.ok(reminderBody.response.orchestration.lifecycle_events.includes('agenda.reminder.scheduled'));
+  assert.ok(reminderBody.response.orchestration.lifecycle_events.includes('agenda.reminder.sent'));
+
+  const listRes = await fetch(`${baseUrl}/v1/agenda/reminders?tenant_id=tenant_automania`);
+  assert.equal(listRes.status, 200);
+  const listBody = await listRes.json();
+  assert.ok(listBody.items.some((item) => item.reminder_id === reminderBody.response.reminder.reminder_id));
+
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${reminderBody.response.orchestration.correlation_id}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+  assert.ok(traceBody.commands.some((item) => item.name === 'agenda.reminder.dispatch.request'));
+  assert.ok(traceBody.events.some((item) => item.name === 'agenda.reminder.scheduled'));
+  assert.ok(traceBody.events.some((item) => item.name === 'agenda.reminder.sent'));
+});
+
+test('POST /v1/agenda/reminders is idempotent by tenant+external_key', async () => {
+  const payload = validReminderCreateRequest();
+  payload.request.request_id = 'd0f8a790-64dd-4a34-a894-5ba933cc101c';
+
+  const first = await fetch(`${baseUrl}/v1/agenda/reminders`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(first.status, 200);
+  const firstBody = await first.json();
+  assert.equal(firstBody.response.status, 'idempotent');
+});
+
+test('POST /v1/agenda/reminders rejects whatsapp reminder without e164 recipient', async () => {
+  const payload = validReminderCreateRequest();
+  payload.request.request_id = 'f895f3e2-f2a2-4da5-a627-f53636fae3f4';
+  delete payload.request.reminder.recipient.phone_e164;
+
+  const res = await fetch(`${baseUrl}/v1/agenda/reminders`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.error, 'validation_error');
 });
 
 test('POST /v1/customers creates customer and emits lifecycle event', async () => {
@@ -362,7 +500,8 @@ test('routing policy and queued state survive app restart', async () => {
   const rehydratedServer = http.createServer(
     createApp({
       orchestrationStorageDir: storageDir,
-      customerStorageDir
+      customerStorageDir,
+      agendaStorageDir
     })
   );
   await new Promise((resolve) => rehydratedServer.listen(0, '127.0.0.1', resolve));

@@ -10,6 +10,7 @@
         "module.task.create",
         "crm.whatsapp.send",
         "agenda.reminder.schedule",
+        "agenda.reminder.dispatch.request",
         "billing.collection.request",
         "customer.record.upsert"
       ]
@@ -124,6 +125,27 @@
               "delivery_channel": { "type": "string", "enum": ["ui-chat", "whatsapp"] }
             },
             "required": ["reminder_id", "title", "schedule_at", "timezone", "delivery_channel"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "agenda.reminder.dispatch.request" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-04-agenda" },
+          "target_module": { "const": "mod-02-whatsapp-crm" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "reminder_id": { "type": "string", "format": "uuid" },
+              "appointment_id": { "type": "string", "format": "uuid" },
+              "schedule_at": { "type": "string", "format": "date-time" },
+              "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+              "message": { "type": "string", "minLength": 1 }
+            },
+            "required": ["reminder_id", "appointment_id", "schedule_at", "phone_e164", "message"]
           }
         }
       }

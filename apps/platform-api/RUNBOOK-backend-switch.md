@@ -72,3 +72,7 @@ Reference schema: `apps/platform-api/sql/orchestration-postgres.sql`
 
 Also includes Module 03 baseline table:
 - `public.customers`
+
+Also includes Module 04 baseline tables:
+- `public.agenda_appointments`
+- `public.agenda_reminders`

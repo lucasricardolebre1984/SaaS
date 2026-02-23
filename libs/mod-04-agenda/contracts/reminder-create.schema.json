@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-04/reminder-create.schema.json",
+  "title": "Module 04 Reminder Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-04-agenda"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "reminder": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reminder_id": { "type": "string", "format": "uuid" },
+            "appointment_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "schedule_at": { "type": "string", "format": "date-time" },
+            "channel": { "type": "string", "enum": ["whatsapp", "ui-chat"] },
+            "message": { "type": "string", "minLength": 1 },
+            "recipient": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "phone_e164": {
+                  "type": "string",
+                  "pattern": "^\\+[1-9][0-9]{7,14}$"
+                },
+                "contact_id": { "type": "string", "minLength": 1 }
+              }
+            },
+            "metadata": { "type": "object" }
+          },
+          "required": ["appointment_id", "schedule_at", "channel", "message"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "reminder"]
+    }
+  },
+  "required": ["request"]
+}

@@ -1,10 +1,10 @@
 # Tasks - mod-04-agenda-slice
 
-Status: Draft
+Status: Done
 Date: 2026-02-23
 
 ## M04-001 - Publish module 04 agenda contracts
-- Status: pending
+- Status: done
 - Output:
   - appointment create/update schemas
   - reminder create/list schemas
@@ -12,10 +12,14 @@ Date: 2026-02-23
 - Verification:
   - contracts parse and are included in contract checks
 - Evidence:
-  - libs/mod-04-agenda/contracts/*
+  - libs/mod-04-agenda/contracts/appointment-create.schema.json
+  - libs/mod-04-agenda/contracts/appointment-update.schema.json
+  - libs/mod-04-agenda/contracts/reminder-create.schema.json
+  - libs/mod-04-agenda/contracts/reminder-list.schema.json
+  - libs/mod-04-agenda/contracts/reminder-events.schema.json
 
 ## M04-002 - Implement agenda store abstraction
-- Status: pending
+- Status: done
 - Output:
   - agenda store interface
   - file adapter for appointments/reminders
@@ -23,11 +27,13 @@ Date: 2026-02-23
 - Verification:
   - runtime tests pass for file backend and preserve compatibility for postgres smoke
 - Evidence:
-  - apps/platform-api/src/agenda-store*.mjs
+  - apps/platform-api/src/agenda-store.mjs
+  - apps/platform-api/src/agenda-store-file.mjs
+  - apps/platform-api/src/agenda-store-postgres.mjs
   - apps/platform-api/sql/orchestration-postgres.sql
 
 ## M04-003 - Implement agenda runtime endpoints
-- Status: pending
+- Status: done
 - Output:
   - `POST /v1/agenda/appointments`
   - `PATCH /v1/agenda/appointments/:id`
@@ -40,7 +46,7 @@ Date: 2026-02-23
   - apps/platform-api/src/app.test.mjs
 
 ## M04-004 - Emit reminder lifecycle orchestration signals
-- Status: pending
+- Status: done
 - Output:
   - `agenda.reminder.scheduled` event emission
   - dispatch request orchestration command to module 02
@@ -51,9 +57,10 @@ Date: 2026-02-23
   - libs/core/orchestration-contracts/schemas/commands.schema.json
   - libs/core/orchestration-contracts/schemas/events.schema.json
   - apps/platform-api/src/app.mjs
+  - apps/platform-api/src/app.test.mjs
 
 ## M04-005 - Governance and metrics checkpoint
-- Status: pending
+- Status: done
 - Output:
   - STATE/worklog/costlog updated
 - Verification:

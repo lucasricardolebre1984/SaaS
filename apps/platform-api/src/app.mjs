@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
+  appointmentCreateValid,
+  appointmentUpdateValid,
   customerCreateValid,
   customerLifecycleEventPayloadValid,
   customerListValid,
@@ -7,11 +9,15 @@ import {
   outboundQueueValid,
   orchestrationCommandValid,
   orchestrationEventValid,
-  ownerInteractionValid
+  ownerInteractionValid,
+  reminderCreateValid,
+  reminderLifecycleEventPayloadValid,
+  reminderListValid
 } from './schemas.mjs';
 import { createOrchestrationStore } from './orchestration-store.mjs';
 import { createTaskPlanner } from './task-planner.mjs';
 import { createCustomerStore } from './customer-store.mjs';
+import { createAgendaStore } from './agenda-store.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
   mapCustomerCreateRequestToStoreRecord
@@ -332,6 +338,67 @@ function createCustomerLifecycleEvent(command, customer, action) {
   };
 }
 
+function createAgendaReminderDispatchCommand(reminder, correlationId, traceId) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'command',
+    command_id: randomUUID(),
+    name: 'agenda.reminder.dispatch.request',
+    tenant_id: reminder.tenant_id,
+    source_module: 'mod-04-agenda',
+    target_module: 'mod-02-whatsapp-crm',
+    created_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    trace_id: traceId,
+    actor: {
+      actor_id: reminder.reminder_id,
+      actor_type: 'system',
+      channel: 'scheduler'
+    },
+    payload: {
+      reminder_id: reminder.reminder_id,
+      appointment_id: reminder.appointment_id,
+      schedule_at: reminder.schedule_at,
+      phone_e164: reminder.recipient?.phone_e164,
+      message: reminder.message
+    }
+  };
+}
+
+function createAgendaReminderEvent(eventName, reminder, correlationId, traceId, causationId, extras = {}) {
+  const statusMap = {
+    'agenda.reminder.scheduled': 'info',
+    'agenda.reminder.sent': 'completed',
+    'agenda.reminder.failed': 'failed',
+    'agenda.reminder.canceled': 'info'
+  };
+
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: eventName,
+    tenant_id: reminder.tenant_id,
+    source_module: 'mod-04-agenda',
+    target_module: reminder.channel === 'whatsapp' ? 'mod-02-whatsapp-crm' : 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    ...(causationId ? { causation_id: causationId } : {}),
+    trace_id: traceId,
+    status: statusMap[eventName],
+    payload: {
+      reminder_id: reminder.reminder_id,
+      appointment_id: reminder.appointment_id,
+      target_channel: reminder.channel,
+      ...(eventName === 'agenda.reminder.scheduled' ? { schedule_at: reminder.schedule_at } : {}),
+      ...(extras.dispatch_command_id !== undefined
+        ? { dispatch_command_id: extras.dispatch_command_id }
+        : {}),
+      ...(extras.error_code ? { error_code: extras.error_code } : {})
+    }
+  };
+}
+
 async function persistCommandSafely(store, command) {
   try {
     await store.appendCommand(command);
@@ -400,6 +467,20 @@ function customerInfo(store) {
   };
 }
 
+function agendaInfo(store) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir
+  };
+}
+
 export function createApp(options = {}) {
   const backend = options.orchestrationBackend;
   const pgConnectionString = options.orchestrationPgDsn;
@@ -421,6 +502,13 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const agendaStore = createAgendaStore({
+    backend,
+    storageDir: options.agendaStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
+  });
   const taskPlanner = createTaskPlanner({
     policyPath: options.taskRoutingPolicyPath
   });
@@ -436,7 +524,8 @@ export function createApp(options = {}) {
           status: 'ok',
           service: 'app-platform-api',
           orchestration: orchestrationInfo(store, taskPlanner.policyPath),
-          customers: customerInfo(customerStore)
+          customers: customerInfo(customerStore),
+          agenda: agendaInfo(agendaStore)
         });
       }
 
@@ -550,6 +639,299 @@ export function createApp(options = {}) {
           failed_count: failed,
           processed
         });
+      }
+
+      if (method === 'POST' && path === '/v1/agenda/appointments') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = appointmentCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const startAt = new Date(request.appointment.start_at).getTime();
+        const endAt = request.appointment.end_at
+          ? new Date(request.appointment.end_at).getTime()
+          : null;
+        if (endAt !== null && Number.isFinite(startAt) && Number.isFinite(endAt) && endAt < startAt) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: [{
+              instancePath: '/request/appointment/end_at',
+              message: 'must be greater than or equal to start_at'
+            }]
+          });
+        }
+
+        let createResult;
+        try {
+          createResult = await agendaStore.createAppointment({
+            appointment_id: request.appointment.appointment_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            external_key: request.appointment.external_key ?? null,
+            title: request.appointment.title,
+            description: request.appointment.description ?? '',
+            start_at: request.appointment.start_at,
+            end_at: request.appointment.end_at ?? null,
+            timezone: request.appointment.timezone,
+            status: request.appointment.status ?? 'scheduled',
+            metadata: request.appointment.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            appointment: createResult.appointment
+          }
+        });
+      }
+
+      if (method === 'PATCH' && path.startsWith('/v1/agenda/appointments/')) {
+        const appointmentId = path.slice('/v1/agenda/appointments/'.length);
+        if (!appointmentId) {
+          return json(res, 400, { error: 'missing_appointment_id' });
+        }
+
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = appointmentUpdateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        let updated;
+        try {
+          updated = await agendaStore.updateAppointment(
+            request.tenant_id,
+            appointmentId,
+            request.changes
+          );
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        if (!updated) {
+          return json(res, 404, { error: 'not_found' });
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'updated',
+            appointment: updated
+          }
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/agenda/reminders') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = reminderCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const appointment = await agendaStore.getAppointmentById(
+          request.tenant_id,
+          request.reminder.appointment_id
+        );
+        if (!appointment) {
+          return json(res, 404, {
+            error: 'appointment_not_found',
+            details: request.reminder.appointment_id
+          });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let reminderResult;
+        try {
+          reminderResult = await agendaStore.createReminder({
+            reminder_id: request.reminder.reminder_id ?? randomUUID(),
+            appointment_id: request.reminder.appointment_id,
+            tenant_id: request.tenant_id,
+            external_key: request.reminder.external_key ?? null,
+            schedule_at: request.reminder.schedule_at,
+            channel: request.reminder.channel,
+            message: request.reminder.message,
+            recipient: request.reminder.recipient ?? {},
+            status: 'scheduled',
+            metadata: request.reminder.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const lifecycleEvents = [];
+        let dispatchCommandId = null;
+        const reminder = reminderResult.reminder;
+
+        if (reminderResult.action !== 'idempotent') {
+          const scheduledEvent = createAgendaReminderEvent(
+            'agenda.reminder.scheduled',
+            reminder,
+            correlationId,
+            traceId
+          );
+          const scheduledPayloadValidation = reminderLifecycleEventPayloadValid({
+            name: scheduledEvent.name,
+            payload: {
+              ...scheduledEvent.payload,
+              status: 'scheduled'
+            }
+          });
+          if (!scheduledPayloadValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: scheduledPayloadValidation.errors
+            });
+          }
+
+          const scheduledEventResult = await validateAndPersistEvent(store, scheduledEvent);
+          if (!scheduledEventResult.ok) {
+            return json(res, 500, {
+              error: scheduledEventResult.type,
+              details: scheduledEventResult.details
+            });
+          }
+          lifecycleEvents.push(scheduledEvent.name);
+
+          if (reminder.channel === 'whatsapp') {
+            const dispatchCommand = createAgendaReminderDispatchCommand(reminder, correlationId, traceId);
+            const dispatchValidation = orchestrationCommandValid(dispatchCommand);
+            if (!dispatchValidation.ok) {
+              return json(res, 500, {
+                error: 'contract_generation_error',
+                details: dispatchValidation.errors
+              });
+            }
+
+            const dispatchPersistError = await persistCommandSafely(store, dispatchCommand);
+            if (dispatchPersistError) {
+              return json(res, 500, {
+                error: 'storage_error',
+                details: String(dispatchPersistError.message ?? dispatchPersistError)
+              });
+            }
+            dispatchCommandId = dispatchCommand.command_id;
+
+            await agendaStore.updateReminder(reminder.tenant_id, reminder.reminder_id, {
+              status: 'dispatch_requested',
+              dispatch_command_id: dispatchCommandId
+            });
+          }
+
+          const sentEvent = createAgendaReminderEvent(
+            'agenda.reminder.sent',
+            reminder,
+            correlationId,
+            traceId,
+            dispatchCommandId,
+            { dispatch_command_id: dispatchCommandId }
+          );
+          const sentPayloadValidation = reminderLifecycleEventPayloadValid({
+            name: sentEvent.name,
+            payload: {
+              ...sentEvent.payload,
+              status: 'sent'
+            }
+          });
+          if (!sentPayloadValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: sentPayloadValidation.errors
+            });
+          }
+
+          const sentEventResult = await validateAndPersistEvent(store, sentEvent);
+          if (!sentEventResult.ok) {
+            return json(res, 500, {
+              error: sentEventResult.type,
+              details: sentEventResult.details
+            });
+          }
+          lifecycleEvents.push(sentEvent.name);
+
+          await agendaStore.updateReminder(reminder.tenant_id, reminder.reminder_id, {
+            status: 'sent',
+            dispatch_command_id: dispatchCommandId
+          });
+        }
+
+        const finalReminder = await agendaStore.listReminders(request.tenant_id)
+          .then((items) => items.find((item) => item.reminder_id === reminder.reminder_id) ?? reminder);
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: reminderResult.action,
+            reminder: finalReminder,
+            orchestration: {
+              correlation_id: correlationId,
+              dispatch_command_id: dispatchCommandId,
+              lifecycle_events: lifecycleEvents
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/agenda/reminders') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const items = await agendaStore.listReminders(tenantId);
+        const response = {
+          tenant_id: tenantId,
+          count: items.length,
+          items
+        };
+
+        const validation = reminderListValid(response);
+        if (!validation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: validation.errors
+          });
+        }
+
+        return json(res, 200, response);
       }
 
       if (method === 'POST' && path === '/v1/customers') {
@@ -868,5 +1250,6 @@ export function createApp(options = {}) {
 
   handler.store = store;
   handler.customerStore = customerStore;
+  handler.agendaStore = agendaStore;
   return handler;
 }

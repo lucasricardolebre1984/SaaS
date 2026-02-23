@@ -1,7 +1,7 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Specify (module 04 agenda slice)
+Active phase: Implement + Validate (module 04 agenda slice)
 Active feature: mod-04-agenda-slice
 
 ## Current Decisions
@@ -63,9 +63,23 @@ Active feature: mod-04-agenda-slice
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
 - Opened `mod-04-agenda-slice` with draft `spec/design/tasks` for contract-first agenda migration.
+- Module 04 contracts published (`appointment`, `reminder`, `reminder-events`) and integrated into contract checks.
+- Module 04 runtime implemented with pluggable agenda store (`file` + `postgres`) and endpoints:
+  - `POST /v1/agenda/appointments`
+  - `PATCH /v1/agenda/appointments/:id`
+  - `POST /v1/agenda/reminders`
+  - `GET /v1/agenda/reminders`
+- Reminder orchestration flow now emits:
+  - `agenda.reminder.scheduled`
+  - `agenda.reminder.sent`
+  - command `agenda.reminder.dispatch.request` for whatsapp dispatch intent.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Approve `mod-04-agenda-slice` artifacts and start `M04-001`.
+Open module 05 (faturamento/cobranca) migration slice specs and repeat contract-first execution.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

@@ -54,7 +54,11 @@ test('orchestration events include mandatory core events', () => {
     'customer.updated',
     'billing.collection.requested',
     'billing.collection.sent',
-    'billing.collection.failed'
+    'billing.collection.failed',
+    'agenda.reminder.scheduled',
+    'agenda.reminder.sent',
+    'agenda.reminder.failed',
+    'agenda.reminder.canceled'
   ];
 
   for (const item of mandatory) {
@@ -71,6 +75,7 @@ test('orchestration commands include mandatory owner and module commands', () =>
     'module.task.create',
     'crm.whatsapp.send',
     'agenda.reminder.schedule',
+    'agenda.reminder.dispatch.request',
     'billing.collection.request',
     'customer.record.upsert'
   ];

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-04/reminder-list.schema.json",
+  "title": "Module 04 Reminder List Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reminder_id": { "type": "string", "format": "uuid" },
+          "appointment_id": { "type": "string", "format": "uuid" },
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "external_key": { "type": ["string", "null"] },
+          "schedule_at": { "type": "string", "format": "date-time" },
+          "channel": { "type": "string", "enum": ["whatsapp", "ui-chat"] },
+          "message": { "type": "string", "minLength": 1 },
+          "recipient": { "type": "object" },
+          "status": {
+            "type": "string",
+            "enum": ["scheduled", "dispatch_requested", "sent", "failed", "canceled"]
+          },
+          "dispatch_command_id": { "type": ["string", "null"], "format": "uuid" },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "reminder_id",
+          "appointment_id",
+          "tenant_id",
+          "schedule_at",
+          "channel",
+          "message",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    }
+  },
+  "required": ["tenant_id", "count", "items"]
+}

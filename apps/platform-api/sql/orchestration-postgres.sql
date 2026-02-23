@@ -67,3 +67,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS customers_tenant_external_key_ux
 
 CREATE INDEX IF NOT EXISTS customers_tenant_created_idx
   ON public.customers (tenant_id, created_at);
+
+CREATE TABLE IF NOT EXISTS public.agenda_appointments (
+  appointment_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  external_key TEXT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ NULL,
+  timezone TEXT NOT NULL,
+  status TEXT NOT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS agenda_appointments_tenant_external_key_ux
+  ON public.agenda_appointments (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS public.agenda_reminders (
+  reminder_id UUID PRIMARY KEY,
+  appointment_id UUID NOT NULL,
+  tenant_id TEXT NOT NULL,
+  external_key TEXT NULL,
+  schedule_at TIMESTAMPTZ NOT NULL,
+  channel TEXT NOT NULL,
+  message TEXT NOT NULL,
+  recipient_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  status TEXT NOT NULL,
+  dispatch_command_id UUID NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS agenda_reminders_tenant_external_key_ux
+  ON public.agenda_reminders (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS agenda_reminders_tenant_schedule_idx
+  ON public.agenda_reminders (tenant_id, schedule_at);

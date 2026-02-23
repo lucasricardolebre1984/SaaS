@@ -20,6 +20,9 @@ async function gracefulShutdown(signal) {
       if (typeof app.customerStore?.close === 'function') {
         await app.customerStore.close();
       }
+      if (typeof app.agendaStore?.close === 'function') {
+        await app.agendaStore.close();
+      }
     } finally {
       console.log(`app-platform-api stopped (${signal})`);
       process.exit(0);

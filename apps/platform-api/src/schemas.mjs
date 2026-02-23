@@ -26,6 +26,11 @@ const outboundQueueSchema = readJson('libs/mod-02-whatsapp-crm/integration/outbo
 const customerCreateSchema = readJson('libs/mod-03-clientes/contracts/customer-create.schema.json');
 const customerListSchema = readJson('libs/mod-03-clientes/contracts/customer-list.schema.json');
 const customerEventsSchema = readJson('libs/mod-03-clientes/contracts/customer-events.schema.json');
+const appointmentCreateSchema = readJson('libs/mod-04-agenda/contracts/appointment-create.schema.json');
+const appointmentUpdateSchema = readJson('libs/mod-04-agenda/contracts/appointment-update.schema.json');
+const reminderCreateSchema = readJson('libs/mod-04-agenda/contracts/reminder-create.schema.json');
+const reminderListSchema = readJson('libs/mod-04-agenda/contracts/reminder-list.schema.json');
+const reminderEventsSchema = readJson('libs/mod-04-agenda/contracts/reminder-events.schema.json');
 
 ajv.addSchema(orchestrationBaseSchema, orchestrationBaseSchema.$id);
 
@@ -37,6 +42,11 @@ const validateOutboundQueue = ajv.compile(outboundQueueSchema);
 const validateCustomerCreateRequest = ajv.compile(customerCreateSchema.properties.request);
 const validateCustomerListResponse = ajv.compile(customerListSchema);
 const validateCustomerLifecycleEventPayload = ajv.compile(customerEventsSchema);
+const validateAppointmentCreateRequest = ajv.compile(appointmentCreateSchema.properties.request);
+const validateAppointmentUpdateRequest = ajv.compile(appointmentUpdateSchema.properties.request);
+const validateReminderCreateRequest = ajv.compile(reminderCreateSchema.properties.request);
+const validateReminderListResponse = ajv.compile(reminderListSchema);
+const validateReminderLifecycleEventPayload = ajv.compile(reminderEventsSchema);
 
 function operationSpecificOwnerErrors(request) {
   const errors = [];
@@ -157,4 +167,44 @@ export function customerListValid(body) {
 export function customerLifecycleEventPayloadValid(body) {
   const ok = validateCustomerLifecycleEventPayload(body);
   return { ok: Boolean(ok), errors: validateCustomerLifecycleEventPayload.errors ?? [] };
+}
+
+export function appointmentCreateValid(body) {
+  const ok = validateAppointmentCreateRequest(body?.request);
+  const errors = [...(validateAppointmentCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function appointmentUpdateValid(body) {
+  const ok = validateAppointmentUpdateRequest(body?.request);
+  const errors = [...(validateAppointmentUpdateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function reminderCreateValid(body) {
+  const ok = validateReminderCreateRequest(body?.request);
+  const errors = [...(validateReminderCreateRequest.errors ?? [])];
+  const request = body?.request;
+
+  if (request?.reminder?.channel === 'whatsapp') {
+    const phone = request?.reminder?.recipient?.phone_e164;
+    if (typeof phone !== 'string' || !/^\+[1-9][0-9]{7,14}$/.test(phone)) {
+      errors.push({
+        instancePath: '/request/reminder/recipient/phone_e164',
+        message: 'must be valid e164 when channel=whatsapp'
+      });
+    }
+  }
+
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function reminderListValid(body) {
+  const ok = validateReminderListResponse(body);
+  return { ok: Boolean(ok), errors: validateReminderListResponse.errors ?? [] };
+}
+
+export function reminderLifecycleEventPayloadValid(body) {
+  const ok = validateReminderLifecycleEventPayload(body);
+  return { ok: Boolean(ok), errors: validateReminderLifecycleEventPayload.errors ?? [] };
 }

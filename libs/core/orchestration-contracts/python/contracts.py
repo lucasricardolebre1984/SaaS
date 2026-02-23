@@ -16,6 +16,7 @@ CommandName = Literal[
     "module.task.create",
     "crm.whatsapp.send",
     "agenda.reminder.schedule",
+    "agenda.reminder.dispatch.request",
     "billing.collection.request",
     "customer.record.upsert",
 ]
@@ -31,6 +32,9 @@ EventName = Literal[
     "customer.created",
     "customer.updated",
     "agenda.reminder.scheduled",
+    "agenda.reminder.sent",
+    "agenda.reminder.failed",
+    "agenda.reminder.canceled",
     "billing.charge.created",
     "billing.collection.requested",
     "billing.collection.sent",
