@@ -68,3 +68,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01E-004 governance and validation closure for provider embeddings slice
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01T-001 strict openai embedding success test with local provider mock
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01T-002 governance closure for openai success test slice
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01B-001..002 owner memory reembedding maintenance implementation
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01B-003 governance and validation closure for reembedding slice

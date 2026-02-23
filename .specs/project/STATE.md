@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 01 openai embedding success test slice)
-Active feature: mod-01-openai-embedding-success-test-slice
+Active phase: Implement (module 01 owner memory reembedding backfill slice)
+Active feature: mod-01-owner-memory-reembedding-backfill-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -189,9 +189,21 @@ Active feature: mod-01-openai-embedding-success-test-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-01-owner-memory-reembedding-backfill-slice` for tenant-scoped internal embedding backfill maintenance.
+- Owner memory stores now support controlled scan/update for entries missing vectors:
+  - `listEntriesMissingEmbedding(tenantId, limit)`
+  - `updateEntryEmbedding(tenantId, memoryId, payload)`
+- Internal maintenance endpoint implemented:
+  - `POST /internal/maintenance/owner-memory/reembed`
+  - supports `tenant_id`, `limit`, `dry_run`, and provider `mode` override
+- Runtime tests now validate dry-run and execute paths for re-embedding by tenant.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 01 openai success-path validation closure.
+Open next prioritized migration slice after module 01 re-embedding backfill closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

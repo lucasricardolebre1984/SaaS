@@ -207,6 +207,37 @@ export function createFileOwnerMemoryStore(options = {}) {
       const entries = entriesState.items.filter((item) => item.tenant_id === tenantId);
       return retrieveContextByScoring(entries, query);
     },
+    async listEntriesMissingEmbedding(tenantId, limit = 50) {
+      const maxItems = Number.isFinite(limit) && limit > 0 ? Math.min(Math.floor(limit), 500) : 50;
+      return entriesState.items
+        .filter((item) => item.tenant_id === tenantId)
+        .filter((item) => !Array.isArray(item.embedding_vector) || item.embedding_vector.length === 0)
+        .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+        .slice(0, maxItems)
+        .map((item) => clone(asPublicEntry(item)));
+    },
+    async updateEntryEmbedding(tenantId, memoryId, payload = {}) {
+      const entry = entriesState.items.find(
+        (item) => item.tenant_id === tenantId && item.memory_id === memoryId
+      );
+      if (!entry) {
+        return { ok: false, code: 'not_found' };
+      }
+
+      entry.embedding_ref = payload.embedding_ref ?? entry.embedding_ref ?? null;
+      if (Array.isArray(payload.embedding_vector) && payload.embedding_vector.length > 0) {
+        entry.embedding_vector = payload.embedding_vector;
+      }
+      if (payload.metadata_patch && typeof payload.metadata_patch === 'object') {
+        entry.metadata = {
+          ...(entry.metadata ?? {}),
+          ...payload.metadata_patch
+        };
+      }
+      entry.updated_at = new Date().toISOString();
+      persistEntries();
+      return { ok: true, entry: clone(asPublicEntry(entry)) };
+    },
     async close() {}
   };
 }

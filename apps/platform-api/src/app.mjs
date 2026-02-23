@@ -814,6 +814,15 @@ function ownerMemoryInfo(store, embeddingProvider) {
   };
 }
 
+function parseMaintenanceEmbeddingMode(value) {
+  if (value == null) return null;
+  const mode = String(value).toLowerCase();
+  if (mode === 'auto' || mode === 'openai' || mode === 'local' || mode === 'off') {
+    return mode;
+  }
+  return null;
+}
+
 export function createApp(options = {}) {
   const backend = options.orchestrationBackend;
   const pgConnectionString = options.orchestrationPgDsn;
@@ -870,12 +879,22 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
-  const ownerEmbeddingProvider = createEmbeddingProvider({
+  const ownerEmbeddingProviderConfig = {
     mode: options.ownerEmbeddingMode,
     openaiApiKey: options.openaiApiKey,
     openaiModel: options.ownerEmbeddingModel,
     openaiBaseUrl: options.openaiBaseUrl
-  });
+  };
+  const ownerEmbeddingProvider = createEmbeddingProvider(ownerEmbeddingProviderConfig);
+  function getOwnerEmbeddingProvider(modeOverride = null) {
+    if (!modeOverride) {
+      return ownerEmbeddingProvider;
+    }
+    return createEmbeddingProvider({
+      ...ownerEmbeddingProviderConfig,
+      mode: modeOverride
+    });
+  }
   const taskPlanner = createTaskPlanner({
     policyPath: options.taskRoutingPolicyPath
   });
@@ -1309,6 +1328,120 @@ export function createApp(options = {}) {
         return json(res, 200, {
           processed_count: processed.length,
           succeeded_count: succeeded,
+          failed_count: failed,
+          skipped_count: skipped,
+          processed
+        });
+      }
+
+      if (method === 'POST' && path === '/internal/maintenance/owner-memory/reembed') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const tenantId = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : '';
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const requestedLimit = Number(body.limit ?? 50);
+        const maxItems = Number.isFinite(requestedLimit) && requestedLimit > 0
+          ? Math.min(Math.floor(requestedLimit), 500)
+          : 50;
+        const dryRun = body.dry_run === true;
+        const mode = parseMaintenanceEmbeddingMode(body.mode);
+        if (body.mode != null && !mode) {
+          return json(res, 400, { error: 'invalid_mode' });
+        }
+
+        const candidates = await ownerMemoryStore.listEntriesMissingEmbedding(tenantId, maxItems);
+        const provider = getOwnerEmbeddingProvider(mode);
+
+        const processed = [];
+        let updated = 0;
+        let failed = 0;
+        let skipped = 0;
+
+        for (const entry of candidates) {
+          if (dryRun) {
+            processed.push({
+              memory_id: entry.memory_id,
+              status: 'dry_run'
+            });
+            continue;
+          }
+
+          let embedding;
+          try {
+            embedding = await provider.resolveMemoryEmbedding({
+              tenant_id: entry.tenant_id,
+              session_id: entry.session_id,
+              memory_id: entry.memory_id,
+              content: entry.content,
+              tags: entry.tags ?? [],
+              embedding_ref: entry.embedding_ref ?? null
+            });
+          } catch (error) {
+            failed += 1;
+            processed.push({
+              memory_id: entry.memory_id,
+              status: 'failed',
+              reason: String(error.message ?? error)
+            });
+            continue;
+          }
+
+          if (!Array.isArray(embedding.embedding_vector) || embedding.embedding_vector.length === 0) {
+            skipped += 1;
+            processed.push({
+              memory_id: entry.memory_id,
+              status: 'skipped',
+              reason: 'embedding_vector_missing'
+            });
+            continue;
+          }
+
+          const updateResult = await ownerMemoryStore.updateEntryEmbedding(
+            entry.tenant_id,
+            entry.memory_id,
+            {
+              embedding_ref: embedding.embedding_ref,
+              embedding_vector: embedding.embedding_vector,
+              metadata_patch: {
+                embedding_backfill: {
+                  provider: embedding.provider,
+                  model: embedding.model,
+                  strategy: embedding.strategy,
+                  updated_at: new Date().toISOString()
+                }
+              }
+            }
+          );
+          if (!updateResult.ok) {
+            failed += 1;
+            processed.push({
+              memory_id: entry.memory_id,
+              status: 'failed',
+              reason: updateResult.code
+            });
+            continue;
+          }
+
+          updated += 1;
+          processed.push({
+            memory_id: entry.memory_id,
+            status: 'updated',
+            embedding_ref: updateResult.entry.embedding_ref ?? null
+          });
+        }
+
+        return json(res, 200, {
+          tenant_id: tenantId,
+          mode: mode ?? ownerEmbeddingProvider.mode,
+          dry_run: dryRun,
+          scanned_count: candidates.length,
+          updated_count: updated,
           failed_count: failed,
           skipped_count: skipped,
           processed

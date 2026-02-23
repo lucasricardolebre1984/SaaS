@@ -325,6 +325,63 @@ export function createPostgresOwnerMemoryStore(options = {}) {
       const entries = result.rows.map(asEntryForRetrieval);
       return retrieveContextByScoring(entries, queryOptions);
     },
+    async listEntriesMissingEmbedding(tenantId, limit = 50) {
+      const maxItems = Number.isFinite(limit) && limit > 0 ? Math.min(Math.floor(limit), 500) : 50;
+      const result = await query(
+        `SELECT *
+         FROM ${entriesTable}
+         WHERE tenant_id = $1
+           AND (
+             embedding_vector_json IS NULL
+             OR jsonb_typeof(embedding_vector_json) <> 'array'
+             OR jsonb_array_length(embedding_vector_json) = 0
+           )
+         ORDER BY created_at ASC
+         LIMIT $2`,
+        [tenantId, maxItems]
+      );
+      return result.rows.map(asEntryPublic);
+    },
+    async updateEntryEmbedding(tenantId, memoryId, payload = {}) {
+      const current = await query(
+        `SELECT *
+         FROM ${entriesTable}
+         WHERE tenant_id = $1 AND memory_id = $2
+         LIMIT 1`,
+        [tenantId, memoryId]
+      );
+      if (current.rowCount === 0) {
+        return { ok: false, code: 'not_found' };
+      }
+
+      const row = current.rows[0];
+      const mergedMetadata = payload.metadata_patch && typeof payload.metadata_patch === 'object'
+        ? { ...(row.metadata_json ?? {}), ...payload.metadata_patch }
+        : (row.metadata_json ?? {});
+      const embeddingRef = payload.embedding_ref ?? row.embedding_ref ?? null;
+      const embeddingVector = Array.isArray(payload.embedding_vector) && payload.embedding_vector.length > 0
+        ? payload.embedding_vector
+        : (row.embedding_vector_json ?? null);
+
+      const updated = await query(
+        `UPDATE ${entriesTable}
+         SET embedding_ref = $3,
+             embedding_vector_json = $4::jsonb,
+             metadata_json = $5::jsonb,
+             updated_at = $6
+         WHERE tenant_id = $1 AND memory_id = $2
+         RETURNING *`,
+        [
+          tenantId,
+          memoryId,
+          embeddingRef,
+          embeddingVector ? JSON.stringify(embeddingVector) : null,
+          JSON.stringify(mergedMetadata),
+          new Date().toISOString()
+        ]
+      );
+      return { ok: true, entry: asEntryPublic(updated.rows[0]) };
+    },
     async close() {
       await ready;
       await client.end();

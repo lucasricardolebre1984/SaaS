@@ -564,6 +564,87 @@ test('owner memory create succeeds in strict openai mode with local mock provide
   }
 });
 
+test('owner memory maintenance reembed supports dry-run and execute by tenant', async () => {
+  const maintenanceStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-embed-backfill-'));
+  const maintenanceOwnerMemoryStorageDir = path.join(maintenanceStorageDir, 'owner-memory');
+  const maintenanceServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: maintenanceStorageDir,
+      ownerMemoryStorageDir: maintenanceOwnerMemoryStorageDir,
+      ownerEmbeddingMode: 'off'
+    })
+  );
+  await new Promise((resolve) => maintenanceServer.listen(0, '127.0.0.1', resolve));
+  const maintenanceAddress = maintenanceServer.address();
+  const maintenanceBaseUrl = `http://127.0.0.1:${maintenanceAddress.port}`;
+
+  try {
+    const createRes = await fetch(`${maintenanceBaseUrl}/v1/owner-concierge/memory/entries`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerMemoryCreateRequest({
+        request_id: '4e8d26e6-703f-4659-8319-6692757ca646',
+        memory: {
+          memory_id: '3512fcb4-5659-4545-a86a-94e3927d3f03',
+          external_key: 'backfill-target-001',
+          source: 'user_message',
+          content: 'entrada antiga sem embedding para backfill',
+          tags: ['legacy'],
+          salience_score: 0.6
+        }
+      }))
+    });
+    assert.equal(createRes.status, 200);
+    const createBody = await createRes.json();
+    assert.equal(createBody.response.entry.embedding_ref, null);
+
+    const dryRunRes = await fetch(`${maintenanceBaseUrl}/internal/maintenance/owner-memory/reembed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        tenant_id: 'tenant_automania',
+        limit: 20,
+        dry_run: true,
+        mode: 'local'
+      })
+    });
+    assert.equal(dryRunRes.status, 200);
+    const dryRunBody = await dryRunRes.json();
+    assert.equal(dryRunBody.scanned_count, 1);
+    assert.equal(dryRunBody.updated_count, 0);
+    assert.equal(dryRunBody.processed[0].status, 'dry_run');
+
+    const executeRes = await fetch(`${maintenanceBaseUrl}/internal/maintenance/owner-memory/reembed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        tenant_id: 'tenant_automania',
+        limit: 20,
+        dry_run: false,
+        mode: 'local'
+      })
+    });
+    assert.equal(executeRes.status, 200);
+    const executeBody = await executeRes.json();
+    assert.equal(executeBody.scanned_count, 1);
+    assert.equal(executeBody.updated_count, 1);
+    assert.equal(executeBody.processed[0].status, 'updated');
+    assert.ok(String(executeBody.processed[0].embedding_ref).startsWith('local:'));
+
+    const listRes = await fetch(
+      `${maintenanceBaseUrl}/v1/owner-concierge/memory/entries?tenant_id=tenant_automania&session_id=67c28929-5ff7-48ef-bdcc-6f7f4dc6580b`
+    );
+    assert.equal(listRes.status, 200);
+    const listBody = await listRes.json();
+    const targetEntry = listBody.items.find((item) => item.memory_id === createBody.response.entry.memory_id);
+    assert.ok(targetEntry);
+    assert.ok(String(targetEntry.embedding_ref).startsWith('local:'));
+  } finally {
+    await new Promise((resolve, reject) => maintenanceServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(maintenanceStorageDir, { recursive: true, force: true });
+  }
+});
+
 test('owner context retrieval validates malformed request', async () => {
   const res = await fetch(`${baseUrl}/v1/owner-concierge/context/retrieve`, {
     method: 'POST',
