@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-01/memory-entry-list.schema.json",
+  "title": "Module 01 Memory Entry List Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "session_id": { "type": "string", "format": "uuid" },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "memory_id": { "type": "string", "format": "uuid" },
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "session_id": { "type": "string", "format": "uuid" },
+          "external_key": { "type": ["string", "null"] },
+          "source": { "type": "string", "enum": ["user_message", "assistant_message", "system_note"] },
+          "content": { "type": "string", "minLength": 1 },
+          "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "salience_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "embedding_ref": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["candidate", "promoted", "archived"] },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "memory_id",
+          "tenant_id",
+          "session_id",
+          "source",
+          "content",
+          "salience_score",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    }
+  },
+  "required": ["tenant_id", "session_id", "count", "items"]
+}

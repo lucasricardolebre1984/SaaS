@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-01/context-summary.schema.json",
+  "title": "Module 01 Context Summary Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "entries_total": { "type": "integer", "minimum": 0 },
+    "candidate_count": { "type": "integer", "minimum": 0 },
+    "promoted_count": { "type": "integer", "minimum": 0 },
+    "archived_count": { "type": "integer", "minimum": 0 },
+    "sessions_count": { "type": "integer", "minimum": 0 },
+    "last_promoted_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "required": [
+    "tenant_id",
+    "entries_total",
+    "candidate_count",
+    "promoted_count",
+    "archived_count",
+    "sessions_count",
+    "last_promoted_at"
+  ]
+}

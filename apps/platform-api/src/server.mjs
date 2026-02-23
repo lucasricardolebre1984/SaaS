@@ -29,6 +29,9 @@ async function gracefulShutdown(signal) {
       if (typeof app.leadStore?.close === 'function') {
         await app.leadStore.close();
       }
+      if (typeof app.ownerMemoryStore?.close === 'function') {
+        await app.ownerMemoryStore.close();
+      }
     } finally {
       console.log(`app-platform-api stopped (${signal})`);
       process.exit(0);

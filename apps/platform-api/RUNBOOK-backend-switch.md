@@ -5,7 +5,7 @@ Scope: `app-platform-api` orchestration persistence
 
 ## Goal
 
-Switch runtime persistence (`orchestration` + `customers` + `agenda` + `billing` + `crm leads`) from `file` backend to `postgres` backend with validated smoke flow.
+Switch runtime persistence (`orchestration` + `customers` + `agenda` + `billing` + `crm leads` + `owner memory`) from `file` backend to `postgres` backend with validated smoke flow.
 
 ## Preconditions
 
@@ -27,6 +27,8 @@ What this does:
    - `ORCHESTRATION_PG_DSN=postgres://fabio:fabio@127.0.0.1:55432/fabio_dev`
 3. Executes end-to-end flow:
    - `POST /v1/owner-concierge/interaction`
+   - `POST /v1/owner-concierge/memory/entries`
+   - `POST /v1/owner-concierge/context/promotions`
    - `POST /v1/billing/charges`
    - `POST /v1/billing/charges/:id/collection-request`
    - `POST /v1/billing/payments`
@@ -88,3 +90,7 @@ Also includes Module 05 baseline tables:
 
 Also includes Module 02 lead baseline table:
 - `public.crm_leads`
+
+Also includes Module 01 owner memory baseline tables:
+- `public.owner_memory_entries`
+- `public.owner_context_promotions`

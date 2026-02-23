@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-01/memory-entry-create.schema.json",
+  "title": "Module 01 Memory Entry Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "session_id": { "type": "string", "format": "uuid" },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "memory": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "memory_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "source": { "type": "string", "enum": ["user_message", "assistant_message", "system_note"] },
+            "content": { "type": "string", "minLength": 1 },
+            "tags": { "type": "array", "items": { "type": "string", "minLength": 1 }, "maxItems": 20 },
+            "salience_score": { "type": "number", "minimum": 0, "maximum": 1 },
+            "embedding_ref": { "type": "string", "minLength": 1 },
+            "metadata": { "type": "object" }
+          },
+          "required": ["source", "content"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "session_id", "memory"]
+    }
+  },
+  "required": ["request"]
+}

@@ -17,6 +17,7 @@ export type CommandName =
 
 export type EventName =
   | "owner.command.created"
+  | "owner.context.promoted"
   | "module.task.created"
   | "module.task.accepted"
   | "module.task.completed"

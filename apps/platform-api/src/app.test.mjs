@@ -188,6 +188,26 @@ function validLeadCreateRequest(overrides = {}) {
   };
 }
 
+function validOwnerMemoryCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: 'd54f038f-e91b-48da-a8eb-fcd417e3e4fa',
+      tenant_id: 'tenant_automania',
+      session_id: '67c28929-5ff7-48ef-bdcc-6f7f4dc6580b',
+      correlation_id: 'ec87c6d5-5cc7-4ba8-9c79-95acba46bc30',
+      memory: {
+        memory_id: '79d2a77f-dd0f-4f5e-a09f-51eeccef4de6',
+        external_key: 'memory-ext-001',
+        source: 'user_message',
+        content: 'Lembrar de ligar para cliente premium',
+        tags: ['followup', 'premium'],
+        salience_score: 0.82
+      },
+      ...overrides
+    }
+  };
+}
+
 function validOutboundQueueRequest() {
   return {
     queue_item_id: '4b95088b-0868-444f-b5f8-97dabbdad6d1',
@@ -241,6 +261,7 @@ let customerStorageDir;
 let agendaStorageDir;
 let billingStorageDir;
 let leadStorageDir;
+let ownerMemoryStorageDir;
 
 test.before(async () => {
   storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-orch-'));
@@ -248,13 +269,15 @@ test.before(async () => {
   agendaStorageDir = path.join(storageDir, 'agenda');
   billingStorageDir = path.join(storageDir, 'billing');
   leadStorageDir = path.join(storageDir, 'crm');
+  ownerMemoryStorageDir = path.join(storageDir, 'owner-memory');
   server = http.createServer(
     createApp({
       orchestrationStorageDir: storageDir,
       customerStorageDir,
       agendaStorageDir,
       billingStorageDir,
-      leadStorageDir
+      leadStorageDir,
+      ownerMemoryStorageDir
     })
   );
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -287,6 +310,107 @@ test('GET /health returns runtime metadata', async () => {
   assert.ok(typeof body.billing.storage_dir === 'string');
   assert.equal(body.crm_leads.backend, 'file');
   assert.ok(typeof body.crm_leads.storage_dir === 'string');
+  assert.equal(body.owner_memory.backend, 'file');
+  assert.ok(typeof body.owner_memory.storage_dir === 'string');
+});
+
+test('owner memory endpoints create/list/promote and emit promotion trace event', async () => {
+  const createRes = await fetch(`${baseUrl}/v1/owner-concierge/memory/entries`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validOwnerMemoryCreateRequest())
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+  assert.equal(createBody.response.status, 'created');
+  assert.equal(createBody.response.entry.status, 'candidate');
+
+  const sessionId = createBody.response.entry.session_id;
+  const listRes = await fetch(
+    `${baseUrl}/v1/owner-concierge/memory/entries?tenant_id=tenant_automania&session_id=${sessionId}`
+  );
+  assert.equal(listRes.status, 200);
+  const listBody = await listRes.json();
+  assert.ok(listBody.items.some((item) => item.memory_id === createBody.response.entry.memory_id));
+
+  const promoteRes = await fetch(`${baseUrl}/v1/owner-concierge/context/promotions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: '0624ef21-2f4c-46fb-b42f-7b47783afe1c',
+        tenant_id: 'tenant_automania',
+        memory_id: createBody.response.entry.memory_id,
+        correlation_id: 'ec87c6d5-5cc7-4ba8-9c79-95acba46bc30',
+        action: 'promote',
+        reason_code: 'HIGH_PRIORITY'
+      }
+    })
+  });
+  assert.equal(promoteRes.status, 200);
+  const promoteBody = await promoteRes.json();
+  assert.equal(promoteBody.response.entry.status, 'promoted');
+  assert.equal(promoteBody.response.orchestration.lifecycle_event_name, 'owner.context.promoted');
+
+  const summaryRes = await fetch(`${baseUrl}/v1/owner-concierge/context/summary?tenant_id=tenant_automania`);
+  assert.equal(summaryRes.status, 200);
+  const summaryBody = await summaryRes.json();
+  assert.ok(summaryBody.promoted_count >= 1);
+
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${promoteBody.response.orchestration.correlation_id}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+  assert.ok(traceBody.events.some((item) => item.name === 'owner.context.promoted'));
+});
+
+test('owner memory promotion rejects invalid transition', async () => {
+  const createRes = await fetch(`${baseUrl}/v1/owner-concierge/memory/entries`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validOwnerMemoryCreateRequest({
+      request_id: '1e72af75-bca2-4d22-af8a-211f95ddaf4b',
+      memory: {
+        memory_id: '8d7a59c6-1d5f-484e-a0bf-71a39cc4f8cd',
+        external_key: 'memory-ext-002',
+        source: 'system_note',
+        content: 'Memoria para teste de transicao',
+        salience_score: 0.4
+      }
+    }))
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+
+  const promotePayload = {
+    request: {
+      request_id: 'fcd8f947-33af-4f11-b42a-264268f6838d',
+      tenant_id: 'tenant_automania',
+      memory_id: createBody.response.entry.memory_id,
+      action: 'promote'
+    }
+  };
+  const first = await fetch(`${baseUrl}/v1/owner-concierge/context/promotions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(promotePayload)
+  });
+  assert.equal(first.status, 200);
+
+  const second = await fetch(`${baseUrl}/v1/owner-concierge/context/promotions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        ...promotePayload.request,
+        request_id: '9a8fe00d-a876-429f-ab6e-611297fcf8ca'
+      }
+    })
+  });
+  assert.equal(second.status, 400);
+  const secondBody = await second.json();
+  assert.equal(secondBody.error, 'transition_error');
 });
 
 test('POST/PATCH/GET /v1/crm/leads creates, transitions, and lists leads', async () => {
@@ -824,7 +948,8 @@ test('routing policy and queued state survive app restart', async () => {
       customerStorageDir,
       agendaStorageDir,
       billingStorageDir,
-      leadStorageDir
+      leadStorageDir,
+      ownerMemoryStorageDir
     })
   );
   await new Promise((resolve) => rehydratedServer.listen(0, '127.0.0.1', resolve));

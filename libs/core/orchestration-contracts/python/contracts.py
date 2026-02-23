@@ -24,6 +24,7 @@ CommandName = Literal[
 
 EventName = Literal[
     "owner.command.created",
+    "owner.context.promoted",
     "module.task.created",
     "module.task.accepted",
     "module.task.completed",

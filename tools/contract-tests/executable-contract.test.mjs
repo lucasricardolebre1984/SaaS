@@ -44,6 +44,7 @@ test('orchestration events include mandatory core events', () => {
 
   const mandatory = [
     'owner.command.created',
+    'owner.context.promoted',
     'module.task.created',
     'module.task.accepted',
     'module.task.completed',

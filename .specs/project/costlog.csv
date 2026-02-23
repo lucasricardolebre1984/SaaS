@@ -43,3 +43,8 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02-003 crm lead runtime endpoints
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02-004 crm collection dispatch worker and billing events
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02-005 governance and checkpoint closure for module 02 slice
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01-001 module 01 memory contracts publication
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01-002 owner memory store abstraction file+postgres and SQL tables
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01-003 owner memory runtime endpoints
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01-004 owner context promoted orchestration signal
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01-005 governance and checkpoint closure for module 01 memory slice

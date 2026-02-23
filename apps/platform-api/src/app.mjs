@@ -6,6 +6,8 @@ import {
   chargeCreateValid,
   chargeListValid,
   chargeUpdateValid,
+  contextPromotionValid,
+  contextSummaryValid,
   customerCreateValid,
   customerLifecycleEventPayloadValid,
   customerListValid,
@@ -13,6 +15,8 @@ import {
   leadCreateValid,
   leadListValid,
   leadStageUpdateValid,
+  memoryEntryCreateValid,
+  memoryEntryListValid,
   outboundQueueValid,
   orchestrationCommandValid,
   orchestrationEventValid,
@@ -29,6 +33,7 @@ import { createCustomerStore } from './customer-store.mjs';
 import { createAgendaStore } from './agenda-store.mjs';
 import { createBillingStore } from './billing-store.mjs';
 import { createLeadStore } from './lead-store.mjs';
+import { createOwnerMemoryStore } from './owner-memory-store.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
   mapCustomerCreateRequestToStoreRecord
@@ -159,6 +164,29 @@ function createOwnerCommandCreatedEvent(ownerCommand) {
     payload: {
       owner_command_id: ownerCommand.payload.owner_command_id,
       mode: ownerCommand.payload.mode
+    }
+  };
+}
+
+function createOwnerContextPromotedEvent(entry, correlationId, traceId, causationId) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'owner.context.promoted',
+    tenant_id: entry.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    ...(causationId ? { causation_id: causationId } : {}),
+    trace_id: traceId,
+    status: 'info',
+    payload: {
+      memory_id: entry.memory_id,
+      session_id: entry.session_id,
+      status: 'promoted',
+      salience_score: entry.salience_score
     }
   };
 }
@@ -659,6 +687,20 @@ function leadInfo(store) {
   };
 }
 
+function ownerMemoryInfo(store) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir
+  };
+}
+
 export function createApp(options = {}) {
   const backend = options.orchestrationBackend;
   const pgConnectionString = options.orchestrationPgDsn;
@@ -701,6 +743,13 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const ownerMemoryStore = createOwnerMemoryStore({
+    backend,
+    storageDir: options.ownerMemoryStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
+  });
   const taskPlanner = createTaskPlanner({
     policyPath: options.taskRoutingPolicyPath
   });
@@ -719,7 +768,8 @@ export function createApp(options = {}) {
           customers: customerInfo(customerStore),
           agenda: agendaInfo(agendaStore),
           billing: billingInfo(billingStore),
-          crm_leads: leadInfo(leadStore)
+          crm_leads: leadInfo(leadStore),
+          owner_memory: ownerMemoryInfo(ownerMemoryStore)
         });
       }
 
@@ -1925,6 +1975,176 @@ export function createApp(options = {}) {
         return json(res, 200, { customer });
       }
 
+      if (method === 'POST' && path === '/v1/owner-concierge/memory/entries') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = memoryEntryCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        let createResult;
+        try {
+          createResult = await ownerMemoryStore.createEntry({
+            memory_id: request.memory.memory_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            session_id: request.session_id,
+            external_key: request.memory.external_key ?? null,
+            source: request.memory.source,
+            content: request.memory.content,
+            tags: request.memory.tags ?? [],
+            salience_score: request.memory.salience_score ?? 0.5,
+            embedding_ref: request.memory.embedding_ref ?? null,
+            metadata: request.memory.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            entry: createResult.entry
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/owner-concierge/memory/entries') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        const sessionId = parsedUrl.searchParams.get('session_id');
+        const status = parsedUrl.searchParams.get('status');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+        if (!sessionId) {
+          return json(res, 400, { error: 'missing_session_id' });
+        }
+
+        const items = await ownerMemoryStore.listEntries(tenantId, {
+          sessionId,
+          status: status ?? undefined
+        });
+        const response = {
+          tenant_id: tenantId,
+          session_id: sessionId,
+          count: items.length,
+          items
+        };
+        const listValidation = memoryEntryListValid(response);
+        if (!listValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: listValidation.errors
+          });
+        }
+
+        return json(res, 200, response);
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/context/promotions') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = contextPromotionValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let promotionResult;
+        try {
+          promotionResult = await ownerMemoryStore.applyPromotion(
+            request.tenant_id,
+            request.memory_id,
+            request.action,
+            request.reason_code,
+            request.metadata ?? {}
+          );
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        if (!promotionResult.ok && promotionResult.code === 'not_found') {
+          return json(res, 404, { error: 'not_found' });
+        }
+        if (!promotionResult.ok) {
+          return json(res, 400, {
+            error: 'transition_error',
+            details: promotionResult
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (request.action === 'promote') {
+          const promotedEvent = createOwnerContextPromotedEvent(
+            promotionResult.entry,
+            correlationId,
+            traceId
+          );
+          const eventResult = await validateAndPersistEvent(store, promotedEvent);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = promotedEvent.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'updated',
+            action: request.action,
+            entry: promotionResult.entry,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/owner-concierge/context/summary') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const summary = await ownerMemoryStore.getSummary(tenantId);
+        const summaryValidation = contextSummaryValid(summary);
+        if (!summaryValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: summaryValidation.errors
+          });
+        }
+
+        return json(res, 200, summary);
+      }
+
       if (method === 'POST' && path === '/v1/owner-concierge/interaction') {
         const body = await readJsonBody(req);
         if (body === null) {
@@ -2100,5 +2320,6 @@ export function createApp(options = {}) {
   handler.agendaStore = agendaStore;
   handler.billingStore = billingStore;
   handler.leadStore = leadStore;
+  handler.ownerMemoryStore = ownerMemoryStore;
   return handler;
 }

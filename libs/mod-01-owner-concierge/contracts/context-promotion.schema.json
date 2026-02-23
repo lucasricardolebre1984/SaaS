@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-01/context-promotion.schema.json",
+  "title": "Module 01 Context Promotion Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "memory_id": { "type": "string", "format": "uuid" },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "action": { "type": "string", "enum": ["promote", "archive"] },
+        "reason_code": { "type": "string", "minLength": 3 },
+        "metadata": { "type": "object" }
+      },
+      "required": ["request_id", "tenant_id", "memory_id", "action"]
+    }
+  },
+  "required": ["request"]
+}

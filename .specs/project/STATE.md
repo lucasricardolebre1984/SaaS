@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 02 whatsapp crm slice)
-Active feature: mod-02-whatsapp-crm-slice
+Active phase: Implement (module 01 owner memory slice)
+Active feature: mod-01-owner-memory-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -62,6 +62,19 @@ Active feature: mod-02-whatsapp-crm-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-01-owner-memory-slice` with contract-first owner memory/context runtime.
+- Module 01 memory contracts published (`memory-entry-create`, `memory-entry-list`, `context-promotion`, `context-summary`) and integrated into contract checks.
+- Module 01 runtime implemented with pluggable owner memory store (`file` + `postgres`) and endpoints:
+  - `POST /v1/owner-concierge/memory/entries`
+  - `GET /v1/owner-concierge/memory/entries`
+  - `POST /v1/owner-concierge/context/promotions`
+  - `GET /v1/owner-concierge/context/summary`
+- Orchestration events expanded with `owner.context.promoted` for auditable context-learning flow.
+- Postgres smoke flow expanded to cover owner memory create/promote and persisted row assertions in `owner_memory_entries` and `owner_context_promotions`.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 - Opened and implemented `mod-02-whatsapp-crm-slice` with contract-first lead runtime and collection worker dispatch.
 - Module 02 lead contracts published (`lead-create`, `lead-stage-update`, `lead-list`) and integrated into contract checks.
 - Module 02 runtime implemented with pluggable lead store (`file` + `postgres`) and endpoints:
@@ -110,7 +123,7 @@ Active feature: mod-02-whatsapp-crm-slice
   - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 02 closure.
+Open next prioritized migration slice after module 01 memory closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

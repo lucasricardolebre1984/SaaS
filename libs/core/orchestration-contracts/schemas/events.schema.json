@@ -7,6 +7,7 @@
     "name": {
       "enum": [
         "owner.command.created",
+        "owner.context.promoted",
         "module.task.created",
         "module.task.accepted",
         "module.task.completed",
@@ -42,6 +43,27 @@
               "mode": { "type": "string", "enum": ["one-shot", "continuous"] }
             },
             "required": ["owner_command_id", "mode"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.context.promoted" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "memory_id": { "type": "string", "format": "uuid" },
+              "session_id": { "type": "string", "format": "uuid" },
+              "status": { "type": "string", "enum": ["promoted"] },
+              "salience_score": { "type": "number", "minimum": 0, "maximum": 1 }
+            },
+            "required": ["memory_id", "session_id", "status", "salience_score"]
           }
         }
       }

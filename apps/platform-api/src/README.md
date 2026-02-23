@@ -8,6 +8,10 @@ Runtime skeleton placeholder for API orchestration surface.
 - `POST /v1/crm/leads`
 - `PATCH /v1/crm/leads/:id/stage`
 - `GET /v1/crm/leads?tenant_id=...`
+- `POST /v1/owner-concierge/memory/entries`
+- `GET /v1/owner-concierge/memory/entries?tenant_id=...&session_id=...`
+- `POST /v1/owner-concierge/context/promotions`
+- `GET /v1/owner-concierge/context/summary?tenant_id=...`
 - `POST /v1/billing/charges`
 - `PATCH /v1/billing/charges/:id`
 - `POST /v1/billing/charges/:id/collection-request`
@@ -47,6 +51,9 @@ Runtime skeleton placeholder for API orchestration surface.
 - CRM lead store backend follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
   - `file`: `.runtime-data/crm/`
   - `postgres`: `public.crm_leads`
+- Owner memory store backend follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
+  - `file`: `.runtime-data/owner-memory/`
+  - `postgres`: `public.owner_memory_entries`, `public.owner_context_promotions`
 - For `postgres` backend configure:
   - `ORCHESTRATION_STORE_BACKEND=postgres`
   - `ORCHESTRATION_PG_DSN=postgres://...`

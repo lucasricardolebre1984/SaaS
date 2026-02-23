@@ -21,6 +21,10 @@ const orchestrationBaseSchema = readJson('libs/core/orchestration-contracts/sche
 const orchestrationCommandsSchema = readJson('libs/core/orchestration-contracts/schemas/commands.schema.json');
 const orchestrationEventsSchema = readJson('libs/core/orchestration-contracts/schemas/events.schema.json');
 const multimodalApiSchema = readJson('libs/mod-01-owner-concierge/contracts/multimodal-api.schema.json');
+const memoryEntryCreateSchema = readJson('libs/mod-01-owner-concierge/contracts/memory-entry-create.schema.json');
+const memoryEntryListSchema = readJson('libs/mod-01-owner-concierge/contracts/memory-entry-list.schema.json');
+const contextPromotionSchema = readJson('libs/mod-01-owner-concierge/contracts/context-promotion.schema.json');
+const contextSummarySchema = readJson('libs/mod-01-owner-concierge/contracts/context-summary.schema.json');
 const evolutionWebhookSchema = readJson('libs/mod-02-whatsapp-crm/integration/evolution-webhook.schema.json');
 const outboundQueueSchema = readJson('libs/mod-02-whatsapp-crm/integration/outbound-queue.schema.json');
 const leadCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-create.schema.json');
@@ -45,6 +49,10 @@ ajv.addSchema(orchestrationBaseSchema, orchestrationBaseSchema.$id);
 const validateOrchestrationCommand = ajv.compile(orchestrationCommandsSchema);
 const validateOrchestrationEvent = ajv.compile(orchestrationEventsSchema);
 const validateOwnerRequest = ajv.compile(multimodalApiSchema.properties.request);
+const validateMemoryEntryCreateRequest = ajv.compile(memoryEntryCreateSchema.properties.request);
+const validateMemoryEntryListResponse = ajv.compile(memoryEntryListSchema);
+const validateContextPromotionRequest = ajv.compile(contextPromotionSchema.properties.request);
+const validateContextSummaryResponse = ajv.compile(contextSummarySchema);
 const validateEvolutionWebhook = ajv.compile(evolutionWebhookSchema);
 const validateOutboundQueue = ajv.compile(outboundQueueSchema);
 const validateLeadCreateRequest = ajv.compile(leadCreateSchema.properties.request);
@@ -118,6 +126,28 @@ export function ownerInteractionValid(body) {
   const errors = [...(validateOwnerRequest.errors ?? [])];
   errors.push(...operationSpecificOwnerErrors(body?.request));
   return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function memoryEntryCreateValid(body) {
+  const ok = validateMemoryEntryCreateRequest(body?.request);
+  const errors = [...(validateMemoryEntryCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function memoryEntryListValid(body) {
+  const ok = validateMemoryEntryListResponse(body);
+  return { ok: Boolean(ok), errors: validateMemoryEntryListResponse.errors ?? [] };
+}
+
+export function contextPromotionValid(body) {
+  const ok = validateContextPromotionRequest(body?.request);
+  const errors = [...(validateContextPromotionRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function contextSummaryValid(body) {
+  const ok = validateContextSummaryResponse(body);
+  return { ok: Boolean(ok), errors: validateContextSummaryResponse.errors ?? [] };
 }
 
 export function evolutionWebhookValid(body) {

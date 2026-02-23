@@ -94,6 +94,51 @@ try {
   }
   $correlationId = $interaction.response.owner_command.correlation_id
 
+  $memoryCorrelation = [guid]::NewGuid().ToString()
+  $memoryPayload = @{
+    request = @{
+      request_id = [guid]::NewGuid().ToString()
+      tenant_id = 'tenant_automania'
+      session_id = $sessionId
+      correlation_id = $memoryCorrelation
+      memory = @{
+        memory_id = [guid]::NewGuid().ToString()
+        external_key = "smoke-memory-$([guid]::NewGuid().ToString())"
+        source = 'user_message'
+        content = 'Memoria de teste para promocao de contexto'
+        tags = @('smoke', 'owner')
+        salience_score = 0.85
+      }
+    }
+  }
+  Write-Host 'Creating owner memory entry...'
+  $memoryCreate = Invoke-RestMethod -Uri "$apiBaseUrl/v1/owner-concierge/memory/entries" `
+    -Method Post -ContentType 'application/json' -Body ($memoryPayload | ConvertTo-Json -Depth 8)
+  if ($memoryCreate.response.status -notin @('created', 'idempotent')) {
+    throw 'Owner memory create did not return created/idempotent.'
+  }
+  $memoryId = $memoryCreate.response.entry.memory_id
+
+  $promotionPayload = @{
+    request = @{
+      request_id = [guid]::NewGuid().ToString()
+      tenant_id = 'tenant_automania'
+      memory_id = $memoryId
+      correlation_id = $memoryCorrelation
+      action = 'promote'
+      reason_code = 'SMOKE_PRIORITY'
+    }
+  }
+  Write-Host 'Promoting owner memory entry...'
+  $memoryPromote = Invoke-RestMethod -Uri "$apiBaseUrl/v1/owner-concierge/context/promotions" `
+    -Method Post -ContentType 'application/json' -Body ($promotionPayload | ConvertTo-Json -Depth 8)
+  if ($memoryPromote.response.status -ne 'updated') {
+    throw 'Owner memory promotion was not accepted.'
+  }
+  if ($memoryPromote.response.entry.status -ne 'promoted') {
+    throw 'Expected promoted status after context promotion.'
+  }
+
   $leadPayload = @{
     request = @{
       request_id = [guid]::NewGuid().ToString()
@@ -229,6 +274,14 @@ try {
     throw 'Expected billing.payment.confirmed event not found.'
   }
 
+  Write-Host 'Fetching owner memory promotion trace...'
+  $memoryTrace = Invoke-RestMethod -Uri "$apiBaseUrl/internal/orchestration/trace?correlation_id=$memoryCorrelation" `
+    -Method Get
+  $memoryEventNames = @($memoryTrace.events | ForEach-Object { $_.name })
+  if (-not ($memoryEventNames -contains 'owner.context.promoted')) {
+    throw 'Expected owner.context.promoted event not found.'
+  }
+
   Write-Host 'Validating persisted rows in Postgres...'
   $commandCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.orchestration_commands;"
@@ -242,6 +295,10 @@ try {
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.billing_payments;"
   $crmLeadCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.crm_leads;"
+  $ownerMemoryCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
+    psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_memory_entries;"
+  $ownerPromotionCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
+    psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_context_promotions;"
 
   $commandCount = [int]($commandCountRaw | Select-Object -First 1).Trim()
   $eventCount = [int]($eventCountRaw | Select-Object -First 1).Trim()
@@ -249,6 +306,8 @@ try {
   $billingChargeCount = [int]($billingChargeCountRaw | Select-Object -First 1).Trim()
   $billingPaymentCount = [int]($billingPaymentCountRaw | Select-Object -First 1).Trim()
   $crmLeadCount = [int]($crmLeadCountRaw | Select-Object -First 1).Trim()
+  $ownerMemoryCount = [int]($ownerMemoryCountRaw | Select-Object -First 1).Trim()
+  $ownerPromotionCount = [int]($ownerPromotionCountRaw | Select-Object -First 1).Trim()
 
   if ($commandCount -lt 3) { throw "Expected >=3 commands, got $commandCount." }
   if ($eventCount -lt 6) { throw "Expected >=6 events, got $eventCount." }
@@ -256,12 +315,15 @@ try {
   if ($billingChargeCount -lt 1) { throw "Expected >=1 billing charge row, got $billingChargeCount." }
   if ($billingPaymentCount -lt 1) { throw "Expected >=1 billing payment row, got $billingPaymentCount." }
   if ($crmLeadCount -lt 1) { throw "Expected >=1 crm lead row, got $crmLeadCount." }
+  if ($ownerMemoryCount -lt 1) { throw "Expected >=1 owner memory row, got $ownerMemoryCount." }
+  if ($ownerPromotionCount -lt 1) { throw "Expected >=1 owner promotion row, got $ownerPromotionCount." }
 
   Write-Host ''
   Write-Host 'Postgres smoke passed.' -ForegroundColor Green
   Write-Host "correlation_id=$correlationId"
   Write-Host "billing_correlation_id=$billingCorrelation"
-  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount"
+  Write-Host "memory_correlation_id=$memoryCorrelation"
+  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount"
 }
 finally {
   if ($apiProcess -and -not $apiProcess.HasExited) {
