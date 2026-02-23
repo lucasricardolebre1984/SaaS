@@ -16,6 +16,13 @@ Reusable React component for Module 01 continuous voice chat.
 - format: `.mp4` + optional `.webm`
 - target for webapp: 1280x720, under 3MB
 
+## Default Generated Set (local)
+
+- `assets/brain-idle.mp4`
+- `assets/brain-speaking.mp4`
+- `assets/brain-idle.webm`
+- `assets/brain-speaking.webm`
+
 ## Usage
 
 ```jsx
