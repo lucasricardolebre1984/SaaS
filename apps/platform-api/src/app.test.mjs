@@ -169,6 +169,25 @@ function validPaymentCreateRequest(chargeId, overrides = {}) {
   };
 }
 
+function validLeadCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '4f65d057-b5e8-4f65-8ccf-42a9b44e0f92',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      lead: {
+        lead_id: '96de31ad-4604-4bb4-b1f1-7a91058f7670',
+        external_key: 'lead-ext-001',
+        display_name: 'Lead Principal',
+        phone_e164: '+5511988877665',
+        source_channel: 'whatsapp',
+        stage: 'new'
+      },
+      ...overrides
+    }
+  };
+}
+
 function validOutboundQueueRequest() {
   return {
     queue_item_id: '4b95088b-0868-444f-b5f8-97dabbdad6d1',
@@ -205,21 +224,37 @@ async function drainWorker(baseUrl, limit = 10) {
   return res.json();
 }
 
+async function drainCrmCollections(baseUrl, limit = 10) {
+  const res = await fetch(`${baseUrl}/internal/worker/crm-collections/drain`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ limit })
+  });
+  assert.equal(res.status, 200);
+  return res.json();
+}
+
 let server;
 let baseUrl;
 let storageDir;
 let customerStorageDir;
 let agendaStorageDir;
+let billingStorageDir;
+let leadStorageDir;
 
 test.before(async () => {
   storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-orch-'));
   customerStorageDir = path.join(storageDir, 'customers');
   agendaStorageDir = path.join(storageDir, 'agenda');
+  billingStorageDir = path.join(storageDir, 'billing');
+  leadStorageDir = path.join(storageDir, 'crm');
   server = http.createServer(
     createApp({
       orchestrationStorageDir: storageDir,
       customerStorageDir,
-      agendaStorageDir
+      agendaStorageDir,
+      billingStorageDir,
+      leadStorageDir
     })
   );
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -250,6 +285,66 @@ test('GET /health returns runtime metadata', async () => {
   assert.ok(typeof body.agenda.storage_dir === 'string');
   assert.equal(body.billing.backend, 'file');
   assert.ok(typeof body.billing.storage_dir === 'string');
+  assert.equal(body.crm_leads.backend, 'file');
+  assert.ok(typeof body.crm_leads.storage_dir === 'string');
+});
+
+test('POST/PATCH/GET /v1/crm/leads creates, transitions, and lists leads', async () => {
+  const createRes = await fetch(`${baseUrl}/v1/crm/leads`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validLeadCreateRequest())
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+  assert.equal(createBody.response.status, 'created');
+  assert.equal(createBody.response.lead.stage, 'new');
+  assert.equal(createBody.response.orchestration.lifecycle_event_name, 'crm.lead.created');
+
+  const leadId = createBody.response.lead.lead_id;
+  const patchRes = await fetch(`${baseUrl}/v1/crm/leads/${leadId}/stage`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: 'a4118875-c275-46d8-af7a-5dca2b5d5b1d',
+        tenant_id: 'tenant_automania',
+        source_module: 'mod-02-whatsapp-crm',
+        changes: {
+          to_stage: 'contacted',
+          trigger: 'first_contact_attempt'
+        }
+      }
+    })
+  });
+  assert.equal(patchRes.status, 200);
+  const patchBody = await patchRes.json();
+  assert.equal(patchBody.response.status, 'updated');
+  assert.equal(patchBody.response.lead.stage, 'contacted');
+
+  const invalidPatch = await fetch(`${baseUrl}/v1/crm/leads/${leadId}/stage`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: 'b6d2fc7d-a31d-47f0-96d5-94f9ef7ca3c1',
+        tenant_id: 'tenant_automania',
+        source_module: 'mod-02-whatsapp-crm',
+        changes: {
+          to_stage: 'won',
+          trigger: 'invalid_skip'
+        }
+      }
+    })
+  });
+  assert.equal(invalidPatch.status, 400);
+  const invalidBody = await invalidPatch.json();
+  assert.equal(invalidBody.error, 'transition_error');
+
+  const listRes = await fetch(`${baseUrl}/v1/crm/leads?tenant_id=tenant_automania`);
+  assert.equal(listRes.status, 200);
+  const listBody = await listRes.json();
+  assert.ok(listBody.items.some((item) => item.lead_id === leadId));
 });
 
 test('POST/GET /v1/billing/charges creates and lists charges', async () => {
@@ -334,6 +429,9 @@ test('collection-request + payment confirmation emit billing trace and update st
   assert.equal(collectionBody.response.orchestration.lifecycle_event_name, 'billing.collection.requested');
   assert.ok(collectionBody.response.orchestration.command_id);
 
+  const crmDrain = await drainCrmCollections(baseUrl, 10);
+  assert.ok(crmDrain.processed_count >= 1);
+
   const paymentRes = await fetch(`${baseUrl}/v1/billing/payments`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -364,6 +462,11 @@ test('collection-request + payment confirmation emit billing trace and update st
   const traceBody = await traceRes.json();
   assert.ok(traceBody.commands.some((item) => item.name === 'billing.collection.dispatch.request'));
   assert.ok(traceBody.events.some((item) => item.name === 'billing.collection.requested'));
+  assert.ok(
+    traceBody.events.some(
+      (item) => item.name === 'billing.collection.sent' || item.name === 'billing.collection.failed'
+    )
+  );
   assert.ok(traceBody.events.some((item) => item.name === 'billing.payment.confirmed'));
 });
 
@@ -719,7 +822,9 @@ test('routing policy and queued state survive app restart', async () => {
     createApp({
       orchestrationStorageDir: storageDir,
       customerStorageDir,
-      agendaStorageDir
+      agendaStorageDir,
+      billingStorageDir,
+      leadStorageDir
     })
   );
   await new Promise((resolve) => rehydratedServer.listen(0, '127.0.0.1', resolve));

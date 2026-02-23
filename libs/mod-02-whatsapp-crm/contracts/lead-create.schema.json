@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/lead-create.schema.json",
+  "title": "Module 02 Lead Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "lead": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lead_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "display_name": { "type": "string", "minLength": 2 },
+            "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+            "source_channel": { "type": "string", "enum": ["whatsapp", "web", "manual"] },
+            "stage": {
+              "type": "string",
+              "enum": [
+                "new",
+                "contacted",
+                "qualified",
+                "proposal",
+                "negotiation",
+                "won",
+                "lost",
+                "nurturing",
+                "disqualified"
+              ]
+            },
+            "metadata": { "type": "object" }
+          },
+          "required": ["display_name", "phone_e164", "source_channel"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "lead"]
+    }
+  },
+  "required": ["request"]
+}

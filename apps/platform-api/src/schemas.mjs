@@ -23,6 +23,9 @@ const orchestrationEventsSchema = readJson('libs/core/orchestration-contracts/sc
 const multimodalApiSchema = readJson('libs/mod-01-owner-concierge/contracts/multimodal-api.schema.json');
 const evolutionWebhookSchema = readJson('libs/mod-02-whatsapp-crm/integration/evolution-webhook.schema.json');
 const outboundQueueSchema = readJson('libs/mod-02-whatsapp-crm/integration/outbound-queue.schema.json');
+const leadCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-create.schema.json');
+const leadStageUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-stage-update.schema.json');
+const leadListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-list.schema.json');
 const customerCreateSchema = readJson('libs/mod-03-clientes/contracts/customer-create.schema.json');
 const customerListSchema = readJson('libs/mod-03-clientes/contracts/customer-list.schema.json');
 const customerEventsSchema = readJson('libs/mod-03-clientes/contracts/customer-events.schema.json');
@@ -44,6 +47,9 @@ const validateOrchestrationEvent = ajv.compile(orchestrationEventsSchema);
 const validateOwnerRequest = ajv.compile(multimodalApiSchema.properties.request);
 const validateEvolutionWebhook = ajv.compile(evolutionWebhookSchema);
 const validateOutboundQueue = ajv.compile(outboundQueueSchema);
+const validateLeadCreateRequest = ajv.compile(leadCreateSchema.properties.request);
+const validateLeadStageUpdateRequest = ajv.compile(leadStageUpdateSchema.properties.request);
+const validateLeadListResponse = ajv.compile(leadListSchema);
 const validateCustomerCreateRequest = ajv.compile(customerCreateSchema.properties.request);
 const validateCustomerListResponse = ajv.compile(customerListSchema);
 const validateCustomerLifecycleEventPayload = ajv.compile(customerEventsSchema);
@@ -122,6 +128,23 @@ export function evolutionWebhookValid(body) {
 export function outboundQueueValid(body) {
   const ok = validateOutboundQueue(body);
   return { ok: Boolean(ok), errors: validateOutboundQueue.errors ?? [] };
+}
+
+export function leadCreateValid(body) {
+  const ok = validateLeadCreateRequest(body?.request);
+  const errors = [...(validateLeadCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function leadStageUpdateValid(body) {
+  const ok = validateLeadStageUpdateRequest(body?.request);
+  const errors = [...(validateLeadStageUpdateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function leadListValid(body) {
+  const ok = validateLeadListResponse(body);
+  return { ok: Boolean(ok), errors: validateLeadListResponse.errors ?? [] };
 }
 
 export function orchestrationCommandValid(body) {

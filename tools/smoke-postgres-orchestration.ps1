@@ -94,6 +94,28 @@ try {
   }
   $correlationId = $interaction.response.owner_command.correlation_id
 
+  $leadPayload = @{
+    request = @{
+      request_id = [guid]::NewGuid().ToString()
+      tenant_id = 'tenant_automania'
+      source_module = 'mod-02-whatsapp-crm'
+      lead = @{
+        lead_id = [guid]::NewGuid().ToString()
+        external_key = "smoke-lead-$([guid]::NewGuid().ToString())"
+        display_name = 'Lead Smoke'
+        phone_e164 = '+5511993332211'
+        source_channel = 'whatsapp'
+        stage = 'new'
+      }
+    }
+  }
+  Write-Host 'Creating CRM lead...'
+  $leadCreate = Invoke-RestMethod -Uri "$apiBaseUrl/v1/crm/leads" `
+    -Method Post -ContentType 'application/json' -Body ($leadPayload | ConvertTo-Json -Depth 8)
+  if ($leadCreate.response.status -notin @('created', 'idempotent')) {
+    throw 'Lead create did not return created/idempotent.'
+  }
+
   $chargePayload = @{
     request = @{
       request_id = [guid]::NewGuid().ToString()
@@ -138,6 +160,13 @@ try {
     -Method Post -ContentType 'application/json' -Body ($collectionPayload | ConvertTo-Json -Depth 8)
   if ($collectionRequest.response.status -ne 'collection_requested') {
     throw 'Collection request was not accepted.'
+  }
+
+  Write-Host 'Draining CRM collections worker...'
+  $crmDrain = Invoke-RestMethod -Uri "$apiBaseUrl/internal/worker/crm-collections/drain" `
+    -Method Post -ContentType 'application/json' -Body (@{ limit = 10 } | ConvertTo-Json)
+  if ($crmDrain.processed_count -lt 1) {
+    throw 'CRM collections worker did not process dispatch commands.'
   }
 
   $paymentPayload = @{
@@ -193,6 +222,9 @@ try {
   if (-not ($billingEventNames -contains 'billing.collection.requested')) {
     throw 'Expected billing.collection.requested event not found.'
   }
+  if (-not (($billingEventNames -contains 'billing.collection.sent') -or ($billingEventNames -contains 'billing.collection.failed'))) {
+    throw 'Expected billing collection dispatch terminal event not found.'
+  }
   if (-not ($billingEventNames -contains 'billing.payment.confirmed')) {
     throw 'Expected billing.payment.confirmed event not found.'
   }
@@ -208,24 +240,28 @@ try {
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.billing_charges;"
   $billingPaymentCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.billing_payments;"
+  $crmLeadCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
+    psql -U fabio -d fabio_dev -tAc "select count(*) from public.crm_leads;"
 
   $commandCount = [int]($commandCountRaw | Select-Object -First 1).Trim()
   $eventCount = [int]($eventCountRaw | Select-Object -First 1).Trim()
   $queueCount = [int]($queueCountRaw | Select-Object -First 1).Trim()
   $billingChargeCount = [int]($billingChargeCountRaw | Select-Object -First 1).Trim()
   $billingPaymentCount = [int]($billingPaymentCountRaw | Select-Object -First 1).Trim()
+  $crmLeadCount = [int]($crmLeadCountRaw | Select-Object -First 1).Trim()
 
   if ($commandCount -lt 3) { throw "Expected >=3 commands, got $commandCount." }
   if ($eventCount -lt 6) { throw "Expected >=6 events, got $eventCount." }
   if ($queueCount -lt 1) { throw "Expected >=1 queue row, got $queueCount." }
   if ($billingChargeCount -lt 1) { throw "Expected >=1 billing charge row, got $billingChargeCount." }
   if ($billingPaymentCount -lt 1) { throw "Expected >=1 billing payment row, got $billingPaymentCount." }
+  if ($crmLeadCount -lt 1) { throw "Expected >=1 crm lead row, got $crmLeadCount." }
 
   Write-Host ''
   Write-Host 'Postgres smoke passed.' -ForegroundColor Green
   Write-Host "correlation_id=$correlationId"
   Write-Host "billing_correlation_id=$billingCorrelation"
-  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount"
+  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount"
 }
 finally {
   if ($apiProcess -and -not $apiProcess.HasExited) {

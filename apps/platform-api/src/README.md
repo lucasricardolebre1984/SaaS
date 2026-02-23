@@ -5,6 +5,9 @@ Runtime skeleton placeholder for API orchestration surface.
 ## Endpoints
 
 - `GET /health`
+- `POST /v1/crm/leads`
+- `PATCH /v1/crm/leads/:id/stage`
+- `GET /v1/crm/leads?tenant_id=...`
 - `POST /v1/billing/charges`
 - `PATCH /v1/billing/charges/:id`
 - `POST /v1/billing/charges/:id/collection-request`
@@ -25,6 +28,7 @@ Runtime skeleton placeholder for API orchestration surface.
 - `GET /internal/orchestration/trace?correlation_id={uuid}`
 - `GET /internal/orchestration/module-task-queue`
 - `POST /internal/worker/module-tasks/drain`
+- `POST /internal/worker/crm-collections/drain`
 
 ## Runtime Notes
 
@@ -40,6 +44,9 @@ Runtime skeleton placeholder for API orchestration surface.
 - Billing store backend follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
   - `file`: `.runtime-data/billing/`
   - `postgres`: `public.billing_charges`, `public.billing_payments`
+- CRM lead store backend follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
+  - `file`: `.runtime-data/crm/`
+  - `postgres`: `public.crm_leads`
 - For `postgres` backend configure:
   - `ORCHESTRATION_STORE_BACKEND=postgres`
   - `ORCHESTRATION_PG_DSN=postgres://...`

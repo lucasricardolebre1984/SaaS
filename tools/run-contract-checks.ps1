@@ -23,6 +23,7 @@ function Get-FilesByScope {
     }
     'mod02' {
       return @(
+        'libs/mod-02-whatsapp-crm/contracts/*.json',
         'libs/mod-02-whatsapp-crm/domain/*.json',
         'libs/mod-02-whatsapp-crm/integration/*.json',
         'libs/mod-02-whatsapp-crm/tests/*.json'
@@ -64,6 +65,7 @@ function Get-FilesByScope {
       return @(
         'libs/core/orchestration-contracts/schemas/*.json',
         'libs/mod-01-owner-concierge/contracts/*.json',
+        'libs/mod-02-whatsapp-crm/contracts/*.json',
         'libs/mod-02-whatsapp-crm/domain/*.json',
         'libs/mod-02-whatsapp-crm/integration/*.json',
         'libs/mod-02-whatsapp-crm/tests/*.json',

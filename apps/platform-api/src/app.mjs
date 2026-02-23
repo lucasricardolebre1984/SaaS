@@ -10,6 +10,9 @@ import {
   customerLifecycleEventPayloadValid,
   customerListValid,
   evolutionWebhookValid,
+  leadCreateValid,
+  leadListValid,
+  leadStageUpdateValid,
   outboundQueueValid,
   orchestrationCommandValid,
   orchestrationEventValid,
@@ -21,9 +24,11 @@ import {
 } from './schemas.mjs';
 import { createOrchestrationStore } from './orchestration-store.mjs';
 import { createTaskPlanner } from './task-planner.mjs';
+import { normalizeLeadStageForPublicEvent } from './lead-funnel.mjs';
 import { createCustomerStore } from './customer-store.mjs';
 import { createAgendaStore } from './agenda-store.mjs';
 import { createBillingStore } from './billing-store.mjs';
+import { createLeadStore } from './lead-store.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
   mapCustomerCreateRequestToStoreRecord
@@ -479,6 +484,71 @@ function createBillingEvent(eventName, charge, correlationId, traceId, causation
   };
 }
 
+function createCrmLeadCreatedEvent(lead, correlationId, traceId) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'crm.lead.created',
+    tenant_id: lead.tenant_id,
+    source_module: 'mod-02-whatsapp-crm',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    trace_id: traceId,
+    status: 'info',
+    payload: {
+      lead_id: lead.lead_id,
+      source_channel: lead.source_channel,
+      phone_e164: lead.phone_e164,
+      stage: normalizeLeadStageForPublicEvent(lead.stage)
+    }
+  };
+}
+
+function createBillingCollectionSentEvent(command) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'billing.collection.sent',
+    tenant_id: command.tenant_id,
+    source_module: 'mod-02-whatsapp-crm',
+    target_module: 'mod-05-faturamento-cobranca',
+    emitted_at: new Date().toISOString(),
+    correlation_id: command.correlation_id,
+    causation_id: command.command_id,
+    trace_id: command.trace_id,
+    payload: {
+      charge_id: command.payload.charge_id,
+      message_id: `msg-${randomUUID()}`,
+      sent_at: new Date().toISOString()
+    }
+  };
+}
+
+function createBillingCollectionFailedEvent(command, errorCode = 'DISPATCH_FAILED', retryable = true) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'billing.collection.failed',
+    tenant_id: command.tenant_id,
+    source_module: 'mod-02-whatsapp-crm',
+    target_module: 'mod-05-faturamento-cobranca',
+    emitted_at: new Date().toISOString(),
+    correlation_id: command.correlation_id,
+    causation_id: command.command_id,
+    trace_id: command.trace_id,
+    status: 'failed',
+    payload: {
+      charge_id: command.payload.charge_id,
+      error_code: errorCode,
+      retryable
+    }
+  };
+}
+
 async function persistCommandSafely(store, command) {
   try {
     await store.appendCommand(command);
@@ -575,6 +645,20 @@ function billingInfo(store) {
   };
 }
 
+function leadInfo(store) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir
+  };
+}
+
 export function createApp(options = {}) {
   const backend = options.orchestrationBackend;
   const pgConnectionString = options.orchestrationPgDsn;
@@ -610,6 +694,13 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const leadStore = createLeadStore({
+    backend,
+    storageDir: options.leadStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
+  });
   const taskPlanner = createTaskPlanner({
     policyPath: options.taskRoutingPolicyPath
   });
@@ -627,7 +718,8 @@ export function createApp(options = {}) {
           orchestration: orchestrationInfo(store, taskPlanner.policyPath),
           customers: customerInfo(customerStore),
           agenda: agendaInfo(agendaStore),
-          billing: billingInfo(billingStore)
+          billing: billingInfo(billingStore),
+          crm_leads: leadInfo(leadStore)
         });
       }
 
@@ -741,6 +833,263 @@ export function createApp(options = {}) {
           failed_count: failed,
           processed
         });
+      }
+
+      if (method === 'POST' && path === '/internal/worker/crm-collections/drain') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const requestedLimit = Number(body.limit ?? 10);
+        const maxItems = Number.isFinite(requestedLimit) && requestedLimit > 0
+          ? Math.min(Math.floor(requestedLimit), 100)
+          : 10;
+        const forceFailure = body.force_failure === true;
+
+        const commands = await store.getCommands();
+        const events = await store.getEvents();
+        const processedSet = new Set(
+          events
+            .filter((item) => (
+              (item.name === 'billing.collection.sent' || item.name === 'billing.collection.failed') &&
+              typeof item.causation_id === 'string'
+            ))
+            .map((item) => item.causation_id)
+        );
+
+        const candidates = commands.filter((item) => (
+          item.name === 'billing.collection.dispatch.request' &&
+          !processedSet.has(item.command_id)
+        ));
+
+        const processed = [];
+        let succeeded = 0;
+        let failed = 0;
+        for (const command of candidates.slice(0, maxItems)) {
+          const outbound = {
+            queue_item_id: randomUUID(),
+            tenant_id: command.tenant_id,
+            trace_id: command.trace_id,
+            correlation_id: command.correlation_id,
+            idempotency_key: `collection:${command.command_id}`,
+            context: {
+              type: 'collection',
+              context_id: command.payload.charge_id,
+              task_id: command.payload.charge_id,
+              module_source: 'mod-05-faturamento-cobranca'
+            },
+            recipient: {
+              customer_id: command.payload.customer_id,
+              phone_e164: command.payload.phone_e164
+            },
+            message: {
+              type: 'text',
+              text: command.payload.message
+            },
+            retry_policy: {
+              max_attempts: 3,
+              backoff_ms: 500
+            },
+            created_at: new Date().toISOString()
+          };
+          const outboundValidation = outboundQueueValid(outbound);
+          if (!outboundValidation.ok) {
+            const failedEvent = createBillingCollectionFailedEvent(
+              command,
+              'OUTBOUND_CONTRACT_INVALID',
+              false
+            );
+            const failedResult = await validateAndPersistEvent(store, failedEvent);
+            if (!failedResult.ok) {
+              return json(res, 500, {
+                error: failedResult.type,
+                details: failedResult.details
+              });
+            }
+
+            processed.push({
+              command_id: command.command_id,
+              charge_id: command.payload.charge_id,
+              status: 'failed',
+              reason: 'outbound_contract_invalid'
+            });
+            failed += 1;
+            continue;
+          }
+
+          const shouldFail = forceFailure || /fail/i.test(String(command.payload.message ?? ''));
+          const event = shouldFail
+            ? createBillingCollectionFailedEvent(command, 'PROVIDER_SEND_ERROR', true)
+            : createBillingCollectionSentEvent(command);
+          const eventResult = await validateAndPersistEvent(store, event);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+
+          processed.push({
+            command_id: command.command_id,
+            charge_id: command.payload.charge_id,
+            status: shouldFail ? 'failed' : 'sent'
+          });
+          if (shouldFail) {
+            failed += 1;
+          } else {
+            succeeded += 1;
+          }
+        }
+
+        return json(res, 200, {
+          processed_count: processed.length,
+          succeeded_count: succeeded,
+          failed_count: failed,
+          processed
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/crm/leads') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = leadCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        let createResult;
+        try {
+          createResult = await leadStore.createLead({
+            lead_id: request.lead.lead_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            external_key: request.lead.external_key ?? null,
+            display_name: request.lead.display_name,
+            phone_e164: request.lead.phone_e164,
+            source_channel: request.lead.source_channel,
+            stage: request.lead.stage ?? 'new',
+            metadata: request.lead.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const leadCreatedEvent = createCrmLeadCreatedEvent(
+            createResult.lead,
+            correlationId,
+            traceId
+          );
+          const eventResult = await validateAndPersistEvent(store, leadCreatedEvent);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = leadCreatedEvent.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            lead: createResult.lead,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'PATCH' && path.startsWith('/v1/crm/leads/') && path.endsWith('/stage')) {
+        const leadId = path.slice('/v1/crm/leads/'.length).replace('/stage', '');
+        if (!leadId) {
+          return json(res, 400, { error: 'missing_lead_id' });
+        }
+
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = leadStageUpdateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        let updateResult;
+        try {
+          updateResult = await leadStore.updateLeadStage(
+            request.tenant_id,
+            leadId,
+            request.changes
+          );
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        if (!updateResult.ok && updateResult.code === 'not_found') {
+          return json(res, 404, { error: 'not_found' });
+        }
+        if (!updateResult.ok) {
+          return json(res, 400, {
+            error: 'transition_error',
+            details: updateResult
+          });
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'updated',
+            lead: updateResult.lead
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/leads') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const items = await leadStore.listLeads(tenantId);
+        const response = {
+          tenant_id: tenantId,
+          count: items.length,
+          items
+        };
+        const validation = leadListValid(response);
+        if (!validation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: validation.errors
+          });
+        }
+
+        return json(res, 200, response);
       }
 
       if (method === 'POST' && path === '/v1/billing/charges') {
@@ -1750,5 +2099,6 @@ export function createApp(options = {}) {
   handler.customerStore = customerStore;
   handler.agendaStore = agendaStore;
   handler.billingStore = billingStore;
+  handler.leadStore = leadStore;
   return handler;
 }

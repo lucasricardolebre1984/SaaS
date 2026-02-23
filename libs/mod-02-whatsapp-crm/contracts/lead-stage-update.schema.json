@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/lead-stage-update.schema.json",
+  "title": "Module 02 Lead Stage Update Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "changes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "to_stage": {
+              "type": "string",
+              "enum": [
+                "new",
+                "contacted",
+                "qualified",
+                "proposal",
+                "negotiation",
+                "won",
+                "lost",
+                "nurturing",
+                "disqualified"
+              ]
+            },
+            "trigger": { "type": "string", "minLength": 3 },
+            "reason_code": { "type": "string", "minLength": 3 },
+            "metadata": { "type": "object" }
+          },
+          "required": ["to_stage", "trigger"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "changes"]
+    }
+  },
+  "required": ["request"]
+}

@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 05 faturamento/cobranca slice)
-Active feature: mod-05-faturamento-cobranca-slice
+Active phase: Implement (module 02 whatsapp crm slice)
+Active feature: mod-02-whatsapp-crm-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -62,6 +62,21 @@ Active feature: mod-05-faturamento-cobranca-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-02-whatsapp-crm-slice` with contract-first lead runtime and collection worker dispatch.
+- Module 02 lead contracts published (`lead-create`, `lead-stage-update`, `lead-list`) and integrated into contract checks.
+- Module 02 runtime implemented with pluggable lead store (`file` + `postgres`) and endpoints:
+  - `POST /v1/crm/leads`
+  - `PATCH /v1/crm/leads/:id/stage`
+  - `GET /v1/crm/leads`
+  - `POST /internal/worker/crm-collections/drain`
+- CRM collection worker now consumes `billing.collection.dispatch.request` commands and emits:
+  - `billing.collection.sent`
+  - `billing.collection.failed`
+- Postgres smoke flow expanded to cover crm lead creation and crm collection worker dispatch.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 - Opened `mod-04-agenda-slice` with draft `spec/design/tasks` for contract-first agenda migration.
 - Module 04 contracts published (`appointment`, `reminder`, `reminder-events`) and integrated into contract checks.
 - Module 04 runtime implemented with pluggable agenda store (`file` + `postgres`) and endpoints:
@@ -95,7 +110,7 @@ Active feature: mod-05-faturamento-cobranca-slice
   - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 05 closure.
+Open next prioritized migration slice after module 02 closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

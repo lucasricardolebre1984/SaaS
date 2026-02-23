@@ -26,6 +26,9 @@ async function gracefulShutdown(signal) {
       if (typeof app.billingStore?.close === 'function') {
         await app.billingStore.close();
       }
+      if (typeof app.leadStore?.close === 'function') {
+        await app.leadStore.close();
+      }
     } finally {
       console.log(`app-platform-api stopped (${signal})`);
       process.exit(0);

@@ -151,3 +151,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS billing_payments_tenant_external_key_ux
 
 CREATE INDEX IF NOT EXISTS billing_payments_tenant_paid_at_idx
   ON public.billing_payments (tenant_id, paid_at);
+
+CREATE TABLE IF NOT EXISTS public.crm_leads (
+  lead_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  external_key TEXT NULL,
+  display_name TEXT NOT NULL,
+  phone_e164 TEXT NOT NULL,
+  source_channel TEXT NOT NULL,
+  stage TEXT NOT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS crm_leads_tenant_external_key_ux
+  ON public.crm_leads (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS crm_leads_tenant_stage_idx
+  ON public.crm_leads (tenant_id, stage);

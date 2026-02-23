@@ -5,7 +5,7 @@ Scope: `app-platform-api` orchestration persistence
 
 ## Goal
 
-Switch runtime persistence (`orchestration` + `customers` + `agenda` + `billing`) from `file` backend to `postgres` backend with validated smoke flow.
+Switch runtime persistence (`orchestration` + `customers` + `agenda` + `billing` + `crm leads`) from `file` backend to `postgres` backend with validated smoke flow.
 
 ## Preconditions
 
@@ -85,3 +85,6 @@ Also includes Module 04 baseline tables:
 Also includes Module 05 baseline tables:
 - `public.billing_charges`
 - `public.billing_payments`
+
+Also includes Module 02 lead baseline table:
+- `public.crm_leads`

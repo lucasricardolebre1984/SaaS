@@ -38,3 +38,8 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-003 billing runtime endpoints
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-004 billing orchestration signals and trace validation
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-005 governance and checkpoint closure for module 05 slice
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02-001 module 02 lead contracts publication
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02-002 lead store abstraction file+postgres and SQL table
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02-003 crm lead runtime endpoints
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02-004 crm collection dispatch worker and billing events
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02-005 governance and checkpoint closure for module 02 slice

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/lead-list.schema.json",
+  "title": "Module 02 Lead List Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "lead_id": { "type": "string", "format": "uuid" },
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "external_key": { "type": ["string", "null"] },
+          "display_name": { "type": "string", "minLength": 2 },
+          "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+          "source_channel": { "type": "string", "enum": ["whatsapp", "web", "manual"] },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "new",
+              "contacted",
+              "qualified",
+              "proposal",
+              "negotiation",
+              "won",
+              "lost",
+              "nurturing",
+              "disqualified"
+            ]
+          },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "lead_id",
+          "tenant_id",
+          "display_name",
+          "phone_e164",
+          "source_channel",
+          "stage",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    }
+  },
+  "required": ["tenant_id", "count", "items"]
+}
