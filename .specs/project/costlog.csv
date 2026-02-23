@@ -11,3 +11,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,FND-002..004 nx runtime skeleton and contract gates
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,FND-005..006 migration rollback and quarantine policy closure
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,FND-004 executable contract test target
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-001..003 runtime dual concierge endpoints and tests
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-004 runtime slice governance closure

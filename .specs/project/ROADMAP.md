@@ -12,6 +12,7 @@ Features:
 - dual-concierge-core-standard
 - engineering-metrics-platform
 - module-decomposition-plan
+- runtime-dual-concierge-slice
 
 Exit criteria:
 - Foundation specs approved

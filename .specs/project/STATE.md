@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement + Validate (runtime skeleton + contract gates)
-Active feature: foundation-monorepo-bootstrap
+Active phase: Implement + Validate (runtime dual concierge slice)
+Active feature: runtime-dual-concierge-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -43,9 +43,11 @@ Active feature: foundation-monorepo-bootstrap
 - Contract checks automated via Nx target `contract-tests:contract-checks`.
 - Executable contract tests available via Nx target `contract-tests:test`.
 - Foundation tasks FND-002..FND-006 finalized with explicit evidence.
+- Runtime dual concierge slice implemented in app-platform-api with contract-validated endpoints.
+- Runtime tests added and passing via `nx run app-platform-api:test`.
 
 ## Next Checkpoint
-Start runtime module implementation slice (mod-01 + mod-02) with executable contract tests beyond JSON/schema checks.
+Extend runtime slice with module-task dispatch stubs and event emission simulation for mod-01 -> mod-02 orchestration.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

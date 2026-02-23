@@ -27,6 +27,12 @@ npm install
 .\nx run contract-tests:contract-checks
 ```
 
+## Runtime dual concierge slice
+```powershell
+.\nx run app-platform-api:test
+.\nx run app-platform-api:serve
+```
+
 ## Encerramento diário
 ```powershell
 .\tools\end-day.ps1 -ShowPending

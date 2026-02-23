@@ -52,7 +52,7 @@ Always update:
 See formulas and targets in .specs/project/METRICS.md.
 
 ## Current Priority
-Execute feature: foundation-monorepo-bootstrap (runtime skeleton + contract gates).
-Secondary implementation stream: saas-standard-v1 runtime module slices.
-No deployment actions until runtime skeleton and contract-test coverage are stable.
+Execute feature: runtime-dual-concierge-slice.
+Secondary stream: deepen app-platform-api orchestration flow (task dispatch/event simulation).
+No deployment actions until runtime slice tests and contract gates remain stable.
 

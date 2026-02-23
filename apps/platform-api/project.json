@@ -8,13 +8,19 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "echo platform-api build skeleton"
+        "command": "echo platform-api build placeholder (runtime script-based)"
       }
     },
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "echo platform-api serve skeleton"
+        "command": "node apps/platform-api/src/server.mjs"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --test apps/platform-api/src/*.test.mjs"
       }
     }
   }
