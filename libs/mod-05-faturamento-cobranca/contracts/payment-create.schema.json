@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-05/payment-create.schema.json",
+  "title": "Module 05 Payment Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": { "type": "string", "enum": ["mod-05-faturamento-cobranca"] },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "payment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "payment_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "charge_id": { "type": "string", "format": "uuid" },
+            "amount": { "type": "number", "exclusiveMinimum": 0 },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "paid_at": { "type": "string", "format": "date-time" },
+            "status": { "type": "string", "enum": ["confirmed", "failed"] },
+            "metadata": { "type": "object" }
+          },
+          "required": ["charge_id", "amount", "currency", "status"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "payment"]
+    }
+  },
+  "required": ["request"]
+}

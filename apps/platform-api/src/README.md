@@ -5,6 +5,11 @@ Runtime skeleton placeholder for API orchestration surface.
 ## Endpoints
 
 - `GET /health`
+- `POST /v1/billing/charges`
+- `PATCH /v1/billing/charges/:id`
+- `POST /v1/billing/charges/:id/collection-request`
+- `POST /v1/billing/payments`
+- `GET /v1/billing/charges?tenant_id=...`
 - `POST /v1/agenda/appointments`
 - `PATCH /v1/agenda/appointments/:id`
 - `POST /v1/agenda/reminders`
@@ -32,6 +37,9 @@ Runtime skeleton placeholder for API orchestration surface.
 - Agenda store backend follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
   - `file`: `.runtime-data/agenda/`
   - `postgres`: `public.agenda_appointments`, `public.agenda_reminders`
+- Billing store backend follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
+  - `file`: `.runtime-data/billing/`
+  - `postgres`: `public.billing_charges`, `public.billing_payments`
 - For `postgres` backend configure:
   - `ORCHESTRATION_STORE_BACKEND=postgres`
   - `ORCHESTRATION_PG_DSN=postgres://...`

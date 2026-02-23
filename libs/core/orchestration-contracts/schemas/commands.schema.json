@@ -12,6 +12,7 @@
         "agenda.reminder.schedule",
         "agenda.reminder.dispatch.request",
         "billing.collection.request",
+        "billing.collection.dispatch.request",
         "customer.record.upsert"
       ]
     }
@@ -168,6 +169,37 @@
               "channel": { "type": "string", "enum": ["whatsapp"] }
             },
             "required": ["charge_id", "customer_id", "amount", "currency", "channel"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "billing.collection.dispatch.request" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-05-faturamento-cobranca" },
+          "target_module": { "const": "mod-02-whatsapp-crm" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "charge_id": { "type": "string", "format": "uuid" },
+              "customer_id": { "type": "string", "format": "uuid" },
+              "amount": { "type": "number", "minimum": 0 },
+              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+              "channel": { "type": "string", "enum": ["whatsapp"] },
+              "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+              "message": { "type": "string", "minLength": 1 }
+            },
+            "required": [
+              "charge_id",
+              "customer_id",
+              "amount",
+              "currency",
+              "channel",
+              "phone_e164",
+              "message"
+            ]
           }
         }
       }

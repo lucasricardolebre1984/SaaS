@@ -21,6 +21,7 @@
         "agenda.reminder.canceled",
         "billing.charge.created",
         "billing.collection.requested",
+        "billing.payment.confirmed",
         "billing.collection.sent",
         "billing.collection.failed"
       ]
@@ -355,6 +356,28 @@
               "channel": { "type": "string", "enum": ["whatsapp"] }
             },
             "required": ["charge_id", "channel"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "billing.payment.confirmed" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-05-faturamento-cobranca" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "completed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "payment_id": { "type": "string", "format": "uuid" },
+              "charge_id": { "type": "string", "format": "uuid" },
+              "amount": { "type": "number", "minimum": 0 },
+              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+              "paid_at": { "type": "string", "format": "date-time" }
+            },
+            "required": ["payment_id", "charge_id", "amount", "currency", "paid_at"]
           }
         }
       }

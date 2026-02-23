@@ -18,6 +18,7 @@ CommandName = Literal[
     "agenda.reminder.schedule",
     "agenda.reminder.dispatch.request",
     "billing.collection.request",
+    "billing.collection.dispatch.request",
     "customer.record.upsert",
 ]
 
@@ -37,6 +38,7 @@ EventName = Literal[
     "agenda.reminder.canceled",
     "billing.charge.created",
     "billing.collection.requested",
+    "billing.payment.confirmed",
     "billing.collection.sent",
     "billing.collection.failed",
 ]

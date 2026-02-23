@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-05/billing-events.schema.json",
+  "title": "Module 05 Billing Lifecycle Events",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "enum": [
+        "billing.charge.created",
+        "billing.collection.requested",
+        "billing.payment.confirmed"
+      ]
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "charge_id": { "type": "string", "format": "uuid" },
+        "customer_id": { "type": "string", "format": "uuid" },
+        "amount": { "type": "number", "exclusiveMinimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "channel": { "type": "string", "enum": ["whatsapp"] },
+        "payment_id": { "type": "string", "format": "uuid" },
+        "paid_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["charge_id"]
+    }
+  },
+  "required": ["name", "payload"]
+}

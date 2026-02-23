@@ -1,7 +1,7 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Specify (module 05 faturamento/cobranca slice)
+Active phase: Implement (module 05 faturamento/cobranca slice)
 Active feature: mod-05-faturamento-cobranca-slice
 
 ## Current Decisions
@@ -78,9 +78,24 @@ Active feature: mod-05-faturamento-cobranca-slice
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
 - Opened `mod-05-faturamento-cobranca-slice` with draft `spec/design/tasks` for contract-first billing migration.
+- Module 05 contracts published (`charge-create`, `charge-update`, `charge-list`, `payment-create`, `billing-events`) and integrated into contract checks.
+- Module 05 runtime implemented with pluggable billing store (`file` + `postgres`) and endpoints:
+  - `POST /v1/billing/charges`
+  - `PATCH /v1/billing/charges/:id`
+  - `POST /v1/billing/charges/:id/collection-request`
+  - `POST /v1/billing/payments`
+  - `GET /v1/billing/charges`
+- Billing orchestration flow now emits:
+  - command `billing.collection.dispatch.request`
+  - events `billing.charge.created`, `billing.collection.requested`, `billing.payment.confirmed`
+- Postgres smoke flow expanded to cover billing create/collection/payment with persisted row assertions in `billing_charges` and `billing_payments`.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Approve `mod-05-faturamento-cobranca-slice` artifacts and start `M05-001`.
+Open next prioritized migration slice after module 05 closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

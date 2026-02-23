@@ -1,6 +1,6 @@
 # Design - mod-05-faturamento-cobranca-slice
 
-Status: Draft
+Status: Implemented
 Date: 2026-02-23
 
 ## Runtime Surface

@@ -53,6 +53,7 @@ test('orchestration events include mandatory core events', () => {
     'customer.created',
     'customer.updated',
     'billing.collection.requested',
+    'billing.payment.confirmed',
     'billing.collection.sent',
     'billing.collection.failed',
     'agenda.reminder.scheduled',
@@ -77,6 +78,7 @@ test('orchestration commands include mandatory owner and module commands', () =>
     'agenda.reminder.schedule',
     'agenda.reminder.dispatch.request',
     'billing.collection.request',
+    'billing.collection.dispatch.request',
     'customer.record.upsert'
   ];
 

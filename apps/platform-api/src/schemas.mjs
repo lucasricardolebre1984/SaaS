@@ -31,6 +31,11 @@ const appointmentUpdateSchema = readJson('libs/mod-04-agenda/contracts/appointme
 const reminderCreateSchema = readJson('libs/mod-04-agenda/contracts/reminder-create.schema.json');
 const reminderListSchema = readJson('libs/mod-04-agenda/contracts/reminder-list.schema.json');
 const reminderEventsSchema = readJson('libs/mod-04-agenda/contracts/reminder-events.schema.json');
+const chargeCreateSchema = readJson('libs/mod-05-faturamento-cobranca/contracts/charge-create.schema.json');
+const chargeUpdateSchema = readJson('libs/mod-05-faturamento-cobranca/contracts/charge-update.schema.json');
+const paymentCreateSchema = readJson('libs/mod-05-faturamento-cobranca/contracts/payment-create.schema.json');
+const chargeListSchema = readJson('libs/mod-05-faturamento-cobranca/contracts/charge-list.schema.json');
+const billingEventsSchema = readJson('libs/mod-05-faturamento-cobranca/contracts/billing-events.schema.json');
 
 ajv.addSchema(orchestrationBaseSchema, orchestrationBaseSchema.$id);
 
@@ -47,6 +52,11 @@ const validateAppointmentUpdateRequest = ajv.compile(appointmentUpdateSchema.pro
 const validateReminderCreateRequest = ajv.compile(reminderCreateSchema.properties.request);
 const validateReminderListResponse = ajv.compile(reminderListSchema);
 const validateReminderLifecycleEventPayload = ajv.compile(reminderEventsSchema);
+const validateChargeCreateRequest = ajv.compile(chargeCreateSchema.properties.request);
+const validateChargeUpdateRequest = ajv.compile(chargeUpdateSchema.properties.request);
+const validatePaymentCreateRequest = ajv.compile(paymentCreateSchema.properties.request);
+const validateChargeListResponse = ajv.compile(chargeListSchema);
+const validateBillingLifecycleEventPayload = ajv.compile(billingEventsSchema);
 
 function operationSpecificOwnerErrors(request) {
   const errors = [];
@@ -207,4 +217,32 @@ export function reminderListValid(body) {
 export function reminderLifecycleEventPayloadValid(body) {
   const ok = validateReminderLifecycleEventPayload(body);
   return { ok: Boolean(ok), errors: validateReminderLifecycleEventPayload.errors ?? [] };
+}
+
+export function chargeCreateValid(body) {
+  const ok = validateChargeCreateRequest(body?.request);
+  const errors = [...(validateChargeCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function chargeUpdateValid(body) {
+  const ok = validateChargeUpdateRequest(body?.request);
+  const errors = [...(validateChargeUpdateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function paymentCreateValid(body) {
+  const ok = validatePaymentCreateRequest(body?.request);
+  const errors = [...(validatePaymentCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function chargeListValid(body) {
+  const ok = validateChargeListResponse(body);
+  return { ok: Boolean(ok), errors: validateChargeListResponse.errors ?? [] };
+}
+
+export function billingLifecycleEventPayloadValid(body) {
+  const ok = validateBillingLifecycleEventPayload(body);
+  return { ok: Boolean(ok), errors: validateBillingLifecycleEventPayload.errors ?? [] };
 }

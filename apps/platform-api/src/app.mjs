@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import {
   appointmentCreateValid,
   appointmentUpdateValid,
+  billingLifecycleEventPayloadValid,
+  chargeCreateValid,
+  chargeListValid,
+  chargeUpdateValid,
   customerCreateValid,
   customerLifecycleEventPayloadValid,
   customerListValid,
@@ -10,6 +14,7 @@ import {
   orchestrationCommandValid,
   orchestrationEventValid,
   ownerInteractionValid,
+  paymentCreateValid,
   reminderCreateValid,
   reminderLifecycleEventPayloadValid,
   reminderListValid
@@ -18,6 +23,7 @@ import { createOrchestrationStore } from './orchestration-store.mjs';
 import { createTaskPlanner } from './task-planner.mjs';
 import { createCustomerStore } from './customer-store.mjs';
 import { createAgendaStore } from './agenda-store.mjs';
+import { createBillingStore } from './billing-store.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
   mapCustomerCreateRequestToStoreRecord
@@ -399,6 +405,80 @@ function createAgendaReminderEvent(eventName, reminder, correlationId, traceId, 
   };
 }
 
+function createBillingCollectionDispatchCommand(charge, collection, correlationId, traceId) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'command',
+    command_id: randomUUID(),
+    name: 'billing.collection.dispatch.request',
+    tenant_id: charge.tenant_id,
+    source_module: 'mod-05-faturamento-cobranca',
+    target_module: 'mod-02-whatsapp-crm',
+    created_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    trace_id: traceId,
+    actor: {
+      actor_id: charge.charge_id,
+      actor_type: 'system',
+      channel: 'billing'
+    },
+    payload: {
+      charge_id: charge.charge_id,
+      customer_id: charge.customer_id,
+      amount: charge.amount,
+      currency: charge.currency,
+      channel: 'whatsapp',
+      phone_e164: collection.recipient.phone_e164,
+      message: collection.message
+    }
+  };
+}
+
+function createBillingEvent(eventName, charge, correlationId, traceId, causationId, extraPayload = {}) {
+  const basePayload = {
+    charge_id: charge.charge_id
+  };
+  if (eventName === 'billing.charge.created') {
+    basePayload.customer_id = charge.customer_id;
+    basePayload.amount = charge.amount;
+    basePayload.currency = charge.currency;
+  }
+  if (eventName === 'billing.collection.requested') {
+    basePayload.channel = 'whatsapp';
+  }
+
+  const statusMap = {
+    'billing.charge.created': 'info',
+    'billing.collection.requested': 'info',
+    'billing.payment.confirmed': 'completed'
+  };
+
+  const targetModuleMap = {
+    'billing.charge.created': 'mod-01-owner-concierge',
+    'billing.collection.requested': 'mod-02-whatsapp-crm',
+    'billing.payment.confirmed': 'mod-01-owner-concierge'
+  };
+
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: eventName,
+    tenant_id: charge.tenant_id,
+    source_module: 'mod-05-faturamento-cobranca',
+    target_module: targetModuleMap[eventName],
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    ...(causationId ? { causation_id: causationId } : {}),
+    trace_id: traceId,
+    status: statusMap[eventName],
+    payload: {
+      ...basePayload,
+      ...extraPayload
+    }
+  };
+}
+
 async function persistCommandSafely(store, command) {
   try {
     await store.appendCommand(command);
@@ -481,6 +561,20 @@ function agendaInfo(store) {
   };
 }
 
+function billingInfo(store) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir
+  };
+}
+
 export function createApp(options = {}) {
   const backend = options.orchestrationBackend;
   const pgConnectionString = options.orchestrationPgDsn;
@@ -509,6 +603,13 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const billingStore = createBillingStore({
+    backend,
+    storageDir: options.billingStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
+  });
   const taskPlanner = createTaskPlanner({
     policyPath: options.taskRoutingPolicyPath
   });
@@ -525,7 +626,8 @@ export function createApp(options = {}) {
           service: 'app-platform-api',
           orchestration: orchestrationInfo(store, taskPlanner.policyPath),
           customers: customerInfo(customerStore),
-          agenda: agendaInfo(agendaStore)
+          agenda: agendaInfo(agendaStore),
+          billing: billingInfo(billingStore)
         });
       }
 
@@ -639,6 +741,402 @@ export function createApp(options = {}) {
           failed_count: failed,
           processed
         });
+      }
+
+      if (method === 'POST' && path === '/v1/billing/charges') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = chargeCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        let upsertResult;
+        try {
+          upsertResult = await billingStore.createCharge({
+            charge_id: request.charge.charge_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            customer_id: request.charge.customer_id,
+            external_key: request.charge.external_key ?? null,
+            amount: request.charge.amount,
+            currency: request.charge.currency,
+            due_date: request.charge.due_date ?? null,
+            status: request.charge.status ?? 'open',
+            metadata: request.charge.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (upsertResult.action !== 'idempotent') {
+          const chargeCreatedEvent = createBillingEvent(
+            'billing.charge.created',
+            upsertResult.charge,
+            correlationId,
+            traceId
+          );
+          const payloadValidation = billingLifecycleEventPayloadValid({
+            name: chargeCreatedEvent.name,
+            payload: chargeCreatedEvent.payload
+          });
+          if (!payloadValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: payloadValidation.errors
+            });
+          }
+          const eventResult = await validateAndPersistEvent(store, chargeCreatedEvent);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = chargeCreatedEvent.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: upsertResult.action,
+            charge: upsertResult.charge,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'PATCH' && path.startsWith('/v1/billing/charges/')) {
+        const chargeId = path.slice('/v1/billing/charges/'.length);
+        if (!chargeId) {
+          return json(res, 400, { error: 'missing_charge_id' });
+        }
+
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = chargeUpdateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        let updated;
+        try {
+          updated = await billingStore.updateCharge(
+            request.tenant_id,
+            chargeId,
+            request.changes
+          );
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        if (!updated) {
+          return json(res, 404, { error: 'not_found' });
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'updated',
+            charge: updated
+          }
+        });
+      }
+
+      if (method === 'POST' && path.startsWith('/v1/billing/charges/') && path.endsWith('/collection-request')) {
+        const chargeId = path
+          .slice('/v1/billing/charges/'.length)
+          .replace('/collection-request', '');
+        if (!chargeId) {
+          return json(res, 400, { error: 'missing_charge_id' });
+        }
+
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const request = body?.request;
+        if (!request || typeof request !== 'object') {
+          return json(res, 400, { error: 'validation_error', details: [{ message: 'missing request object' }] });
+        }
+        if (typeof request.request_id !== 'string' || request.request_id.length === 0) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: [{ instancePath: '/request/request_id', message: 'must be non-empty string' }]
+          });
+        }
+        if (typeof request.tenant_id !== 'string' || request.tenant_id.length === 0) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: [{ instancePath: '/request/tenant_id', message: 'must be non-empty string' }]
+          });
+        }
+
+        const phone = request?.collection?.recipient?.phone_e164;
+        if (typeof phone !== 'string' || !/^\+[1-9][0-9]{7,14}$/.test(phone)) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: [{
+              instancePath: '/request/collection/recipient/phone_e164',
+              message: 'must be valid e164'
+            }]
+          });
+        }
+
+        const charge = await billingStore.getChargeById(request.tenant_id, chargeId);
+        if (!charge) {
+          return json(res, 404, { error: 'charge_not_found' });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        const message = String(
+          request?.collection?.message ??
+          `Cobranca pendente no valor de ${charge.currency} ${Number(charge.amount).toFixed(2)}.`
+        ).trim();
+        if (message.length === 0) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: [{ instancePath: '/request/collection/message', message: 'must be non-empty string' }]
+          });
+        }
+
+        let updatedCharge;
+        try {
+          updatedCharge = await billingStore.updateCharge(request.tenant_id, charge.charge_id, {
+            status: 'collection_requested'
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const dispatchCommand = createBillingCollectionDispatchCommand(
+          updatedCharge ?? charge,
+          {
+            recipient: { phone_e164: phone },
+            message
+          },
+          correlationId,
+          traceId
+        );
+        const commandValidation = orchestrationCommandValid(dispatchCommand);
+        if (!commandValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: commandValidation.errors
+          });
+        }
+
+        const commandPersistError = await persistCommandSafely(store, dispatchCommand);
+        if (commandPersistError) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(commandPersistError.message ?? commandPersistError)
+          });
+        }
+
+        const collectionRequestedEvent = createBillingEvent(
+          'billing.collection.requested',
+          updatedCharge ?? charge,
+          correlationId,
+          traceId,
+          dispatchCommand.command_id
+        );
+        const payloadValidation = billingLifecycleEventPayloadValid({
+          name: collectionRequestedEvent.name,
+          payload: collectionRequestedEvent.payload
+        });
+        if (!payloadValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: payloadValidation.errors
+          });
+        }
+
+        const eventResult = await validateAndPersistEvent(store, collectionRequestedEvent);
+        if (!eventResult.ok) {
+          return json(res, 500, {
+            error: eventResult.type,
+            details: eventResult.details
+          });
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'collection_requested',
+            charge: updatedCharge ?? charge,
+            orchestration: {
+              command_id: dispatchCommand.command_id,
+              correlation_id: correlationId,
+              lifecycle_event_name: collectionRequestedEvent.name
+            }
+          }
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/billing/payments') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = paymentCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const charge = await billingStore.getChargeById(
+          request.tenant_id,
+          request.payment.charge_id
+        );
+        if (!charge) {
+          return json(res, 404, { error: 'charge_not_found' });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let paymentResult;
+        try {
+          paymentResult = await billingStore.createPayment({
+            payment_id: request.payment.payment_id ?? randomUUID(),
+            charge_id: request.payment.charge_id,
+            tenant_id: request.tenant_id,
+            external_key: request.payment.external_key ?? null,
+            amount: request.payment.amount,
+            currency: request.payment.currency,
+            paid_at: request.payment.paid_at ?? new Date().toISOString(),
+            status: request.payment.status,
+            metadata: request.payment.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let chargeAfterPayment = charge;
+        let lifecycleEventName = null;
+        if (paymentResult.action !== 'idempotent') {
+          const nextChargeStatus = paymentResult.payment.status === 'confirmed' ? 'paid' : 'failed';
+          try {
+            chargeAfterPayment = await billingStore.updateCharge(
+              request.tenant_id,
+              request.payment.charge_id,
+              { status: nextChargeStatus }
+            ) ?? charge;
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+
+          if (paymentResult.payment.status === 'confirmed') {
+            const paymentConfirmedEvent = createBillingEvent(
+              'billing.payment.confirmed',
+              chargeAfterPayment,
+              correlationId,
+              traceId,
+              undefined,
+              {
+                payment_id: paymentResult.payment.payment_id,
+                amount: paymentResult.payment.amount,
+                currency: paymentResult.payment.currency,
+                paid_at: paymentResult.payment.paid_at
+              }
+            );
+            const payloadValidation = billingLifecycleEventPayloadValid({
+              name: paymentConfirmedEvent.name,
+              payload: paymentConfirmedEvent.payload
+            });
+            if (!payloadValidation.ok) {
+              return json(res, 500, {
+                error: 'contract_generation_error',
+                details: payloadValidation.errors
+              });
+            }
+            const eventResult = await validateAndPersistEvent(store, paymentConfirmedEvent);
+            if (!eventResult.ok) {
+              return json(res, 500, {
+                error: eventResult.type,
+                details: eventResult.details
+              });
+            }
+            lifecycleEventName = paymentConfirmedEvent.name;
+          }
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: paymentResult.action,
+            payment: paymentResult.payment,
+            charge: chargeAfterPayment,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/billing/charges') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const items = await billingStore.listCharges(tenantId);
+        const response = {
+          tenant_id: tenantId,
+          count: items.length,
+          items
+        };
+        const validation = chargeListValid(response);
+        if (!validation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: validation.errors
+          });
+        }
+
+        return json(res, 200, response);
       }
 
       if (method === 'POST' && path === '/v1/agenda/appointments') {
@@ -1251,5 +1749,6 @@ export function createApp(options = {}) {
   handler.store = store;
   handler.customerStore = customerStore;
   handler.agendaStore = agendaStore;
+  handler.billingStore = billingStore;
   return handler;
 }

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-05/charge-create.schema.json",
+  "title": "Module 05 Charge Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-05-faturamento-cobranca"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "charge": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "charge_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "customer_id": { "type": "string", "format": "uuid" },
+            "amount": { "type": "number", "exclusiveMinimum": 0 },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "due_date": { "type": "string", "format": "date" },
+            "status": {
+              "type": "string",
+              "enum": ["draft", "open", "collection_requested", "paid", "canceled", "failed"]
+            },
+            "metadata": { "type": "object" }
+          },
+          "required": ["customer_id", "amount", "currency"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "charge"]
+    }
+  },
+  "required": ["request"]
+}

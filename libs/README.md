@@ -6,4 +6,5 @@ Reusable modules and shared cores.
 - mod-02-whatsapp-crm
 - mod-03-clientes
 - mod-04-agenda
+- mod-05-faturamento-cobranca
 - core/*

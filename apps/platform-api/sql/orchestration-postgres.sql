@@ -109,3 +109,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS agenda_reminders_tenant_external_key_ux
 
 CREATE INDEX IF NOT EXISTS agenda_reminders_tenant_schedule_idx
   ON public.agenda_reminders (tenant_id, schedule_at);
+
+CREATE TABLE IF NOT EXISTS public.billing_charges (
+  charge_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  customer_id UUID NOT NULL,
+  external_key TEXT NULL,
+  amount NUMERIC(14, 2) NOT NULL,
+  currency CHAR(3) NOT NULL,
+  due_date DATE NULL,
+  status TEXT NOT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS billing_charges_tenant_external_key_ux
+  ON public.billing_charges (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS billing_charges_tenant_due_date_idx
+  ON public.billing_charges (tenant_id, due_date);
+
+CREATE TABLE IF NOT EXISTS public.billing_payments (
+  payment_id UUID PRIMARY KEY,
+  charge_id UUID NOT NULL REFERENCES public.billing_charges(charge_id),
+  tenant_id TEXT NOT NULL,
+  external_key TEXT NULL,
+  amount NUMERIC(14, 2) NOT NULL,
+  currency CHAR(3) NOT NULL,
+  paid_at TIMESTAMPTZ NOT NULL,
+  status TEXT NOT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS billing_payments_tenant_external_key_ux
+  ON public.billing_payments (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS billing_payments_tenant_paid_at_idx
+  ON public.billing_payments (tenant_id, paid_at);

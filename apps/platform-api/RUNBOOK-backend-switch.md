@@ -5,7 +5,7 @@ Scope: `app-platform-api` orchestration persistence
 
 ## Goal
 
-Switch orchestration persistence from `file` backend to `postgres` backend with validated smoke flow.
+Switch runtime persistence (`orchestration` + `customers` + `agenda` + `billing`) from `file` backend to `postgres` backend with validated smoke flow.
 
 ## Preconditions
 
@@ -27,12 +27,17 @@ What this does:
    - `ORCHESTRATION_PG_DSN=postgres://fabio:fabio@127.0.0.1:55432/fabio_dev`
 3. Executes end-to-end flow:
    - `POST /v1/owner-concierge/interaction`
+   - `POST /v1/billing/charges`
+   - `POST /v1/billing/charges/:id/collection-request`
+   - `POST /v1/billing/payments`
    - `POST /internal/worker/module-tasks/drain`
    - `GET /internal/orchestration/trace`
 4. Verifies persisted rows in:
    - `public.orchestration_commands`
    - `public.orchestration_events`
    - `public.orchestration_module_task_queue`
+   - `public.billing_charges`
+   - `public.billing_payments`
 5. Stops containers and removes volumes (default behavior)
 
 Isolation note:
@@ -76,3 +81,7 @@ Also includes Module 03 baseline table:
 Also includes Module 04 baseline tables:
 - `public.agenda_appointments`
 - `public.agenda_reminders`
+
+Also includes Module 05 baseline tables:
+- `public.billing_charges`
+- `public.billing_payments`

@@ -1,10 +1,10 @@
 # Tasks - mod-05-faturamento-cobranca-slice
 
-Status: Draft
+Status: Completed
 Date: 2026-02-23
 
 ## M05-001 - Publish module 05 billing contracts
-- Status: pending
+- Status: completed
 - Output:
   - charge create/update/list schemas
   - payment create schema
@@ -15,7 +15,7 @@ Date: 2026-02-23
   - libs/mod-05-faturamento-cobranca/contracts/*
 
 ## M05-002 - Implement billing store abstraction
-- Status: pending
+- Status: completed
 - Output:
   - billing store interface
   - file adapter (charges/payments)
@@ -27,7 +27,7 @@ Date: 2026-02-23
   - apps/platform-api/sql/orchestration-postgres.sql
 
 ## M05-003 - Implement billing runtime endpoints
-- Status: pending
+- Status: completed
 - Output:
   - `POST /v1/billing/charges`
   - `PATCH /v1/billing/charges/:id`
@@ -41,7 +41,7 @@ Date: 2026-02-23
   - apps/platform-api/src/app.test.mjs
 
 ## M05-004 - Emit billing orchestration signals
-- Status: pending
+- Status: completed
 - Output:
   - command/event flow for collection request to module 02
   - payment confirmation event flow
@@ -53,7 +53,7 @@ Date: 2026-02-23
   - apps/platform-api/src/app.mjs
 
 ## M05-005 - Governance and metrics checkpoint
-- Status: pending
+- Status: completed
 - Output:
   - STATE/worklog/costlog updated
 - Verification:

@@ -33,3 +33,8 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M04-004 reminder lifecycle orchestration signals and dispatch command flow
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M04-005 governance and checkpoint closure for module 04 slice
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-000 module 05 faturamento cobranca slice specs kickoff
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-001 module 05 billing contracts publication
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-002 billing store abstraction file+postgres and SQL tables
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-003 billing runtime endpoints
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-004 billing orchestration signals and trace validation
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M05-005 governance and checkpoint closure for module 05 slice

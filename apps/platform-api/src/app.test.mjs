@@ -124,6 +124,51 @@ function validReminderCreateRequest() {
   };
 }
 
+function validChargeCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: 'a9f3e0e2-f341-471e-9f7d-2f6bc53a73d2',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-01-owner-concierge',
+      correlation_id: 'd7c30858-896f-426a-8dbf-77ca208164af',
+      charge: {
+        charge_id: 'd6b12368-4fba-42e2-8d49-6f18b057f799',
+        customer_id: '6a317f2d-9334-4f2f-9246-b71f264f4a83',
+        external_key: 'charge-ext-001',
+        amount: 129.9,
+        currency: 'BRL',
+        due_date: '2026-03-10',
+        status: 'open',
+        metadata: {
+          source: 'tests'
+        }
+      },
+      ...overrides
+    }
+  };
+}
+
+function validPaymentCreateRequest(chargeId, overrides = {}) {
+  return {
+    request: {
+      request_id: '48fbd5db-5790-4c15-94dd-f2f8f1b146f0',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-05-faturamento-cobranca',
+      correlation_id: 'f50291a7-ff47-4aba-aa7a-56a9b9a39d87',
+      payment: {
+        payment_id: '12f44352-ec96-4f73-a7a4-82ea4497f762',
+        charge_id: chargeId,
+        external_key: 'payment-ext-001',
+        amount: 129.9,
+        currency: 'BRL',
+        paid_at: '2026-03-10T13:00:00.000Z',
+        status: 'confirmed'
+      },
+      ...overrides
+    }
+  };
+}
+
 function validOutboundQueueRequest() {
   return {
     queue_item_id: '4b95088b-0868-444f-b5f8-97dabbdad6d1',
@@ -203,6 +248,179 @@ test('GET /health returns runtime metadata', async () => {
   assert.ok(typeof body.customers.storage_dir === 'string');
   assert.equal(body.agenda.backend, 'file');
   assert.ok(typeof body.agenda.storage_dir === 'string');
+  assert.equal(body.billing.backend, 'file');
+  assert.ok(typeof body.billing.storage_dir === 'string');
+});
+
+test('POST/GET /v1/billing/charges creates and lists charges', async () => {
+  const createPayload = validChargeCreateRequest({
+    request_id: 'a0b39a4d-c0e7-4923-a7bb-f5c6398a1a9a',
+    charge: {
+      charge_id: 'db62cb67-4d48-4b03-b14e-549857256eb9',
+      customer_id: '35c84f2c-b6be-4aa0-9342-1e77e0de02da',
+      external_key: 'charge-ext-101',
+      amount: 249.5,
+      currency: 'BRL',
+      due_date: '2026-03-20',
+      status: 'open'
+    }
+  });
+
+  const createRes = await fetch(`${baseUrl}/v1/billing/charges`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(createPayload)
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+  assert.equal(createBody.response.status, 'created');
+  assert.equal(createBody.response.charge.external_key, 'charge-ext-101');
+  assert.equal(createBody.response.orchestration.lifecycle_event_name, 'billing.charge.created');
+
+  const listRes = await fetch(`${baseUrl}/v1/billing/charges?tenant_id=tenant_automania`);
+  assert.equal(listRes.status, 200);
+  const listBody = await listRes.json();
+  assert.ok(listBody.items.some((item) => item.charge_id === createBody.response.charge.charge_id));
+});
+
+test('collection-request + payment confirmation emit billing trace and update status', async () => {
+  const chargePayload = validChargeCreateRequest({
+    request_id: '79e381f5-c48d-4258-b3b9-156eb0c2e713',
+    charge: {
+      charge_id: 'f47c19d0-cb67-4669-89b0-f4812dcf4ee8',
+      customer_id: '6a317f2d-9334-4f2f-9246-b71f264f4a83',
+      external_key: 'charge-ext-202',
+      amount: 399.9,
+      currency: 'BRL',
+      due_date: '2026-03-25',
+      status: 'open'
+    }
+  });
+
+  const chargeRes = await fetch(`${baseUrl}/v1/billing/charges`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(chargePayload)
+  });
+  assert.equal(chargeRes.status, 200);
+  const chargeBody = await chargeRes.json();
+  const chargeId = chargeBody.response.charge.charge_id;
+
+  const collectionRes = await fetch(
+    `${baseUrl}/v1/billing/charges/${chargeId}/collection-request`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: '252819ce-d5f0-4f48-84d7-b7b95dd5e6b6',
+          tenant_id: 'tenant_automania',
+          source_module: 'mod-01-owner-concierge',
+          correlation_id: '36ba0f41-dfbb-44ec-94fc-c20576e2206d',
+          collection: {
+            recipient: {
+              phone_e164: '+5511991112233'
+            },
+            message: 'Cobranca amigavel: favor confirmar pagamento.'
+          }
+        }
+      })
+    }
+  );
+  assert.equal(collectionRes.status, 200);
+  const collectionBody = await collectionRes.json();
+  assert.equal(collectionBody.response.status, 'collection_requested');
+  assert.equal(collectionBody.response.charge.status, 'collection_requested');
+  assert.equal(collectionBody.response.orchestration.lifecycle_event_name, 'billing.collection.requested');
+  assert.ok(collectionBody.response.orchestration.command_id);
+
+  const paymentRes = await fetch(`${baseUrl}/v1/billing/payments`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validPaymentCreateRequest(chargeId, {
+      request_id: 'b5c788a7-1000-4210-b8c6-73f8f5de7380',
+      correlation_id: collectionBody.response.orchestration.correlation_id,
+      payment: {
+        payment_id: 'ac260c62-6a4b-4f5b-a9e1-05c4d99f9fd0',
+        charge_id: chargeId,
+        external_key: 'payment-ext-202',
+        amount: 399.9,
+        currency: 'BRL',
+        paid_at: '2026-03-25T15:30:00.000Z',
+        status: 'confirmed'
+      }
+    }))
+  });
+  assert.equal(paymentRes.status, 200);
+  const paymentBody = await paymentRes.json();
+  assert.equal(paymentBody.response.status, 'created');
+  assert.equal(paymentBody.response.charge.status, 'paid');
+  assert.equal(paymentBody.response.orchestration.lifecycle_event_name, 'billing.payment.confirmed');
+
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${collectionBody.response.orchestration.correlation_id}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+  assert.ok(traceBody.commands.some((item) => item.name === 'billing.collection.dispatch.request'));
+  assert.ok(traceBody.events.some((item) => item.name === 'billing.collection.requested'));
+  assert.ok(traceBody.events.some((item) => item.name === 'billing.payment.confirmed'));
+});
+
+test('billing endpoints validate malformed payloads', async () => {
+  const invalidCharge = validChargeCreateRequest({
+    request_id: 'ec97f09b-dab2-48bd-ab15-62c4ecf505df',
+    charge: {
+      charge_id: '3a71cf0d-18d3-4a05-8df4-67aeab8c4cd7',
+      customer_id: '35c84f2c-b6be-4aa0-9342-1e77e0de02da',
+      external_key: 'charge-ext-invalid',
+      amount: 0,
+      currency: 'BRL'
+    }
+  });
+
+  const invalidChargeRes = await fetch(`${baseUrl}/v1/billing/charges`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(invalidCharge)
+  });
+  assert.equal(invalidChargeRes.status, 400);
+
+  const validChargeRes = await fetch(`${baseUrl}/v1/billing/charges`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validChargeCreateRequest({
+      request_id: 'f53b8dcb-7c88-46f4-918a-f6ead0f6dba4',
+      charge: {
+        charge_id: '9483b112-2cea-4d38-b730-1ae4140a22a8',
+        customer_id: '35c84f2c-b6be-4aa0-9342-1e77e0de02da',
+        external_key: 'charge-ext-303',
+        amount: 199.9,
+        currency: 'BRL',
+        status: 'open'
+      }
+    }))
+  });
+  assert.equal(validChargeRes.status, 200);
+  const validChargeBody = await validChargeRes.json();
+
+  const invalidCollectionRes = await fetch(
+    `${baseUrl}/v1/billing/charges/${validChargeBody.response.charge.charge_id}/collection-request`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: '0704ab9d-c3f7-4017-abcf-f41995ff5227',
+          tenant_id: 'tenant_automania',
+          collection: {
+            recipient: {}
+          }
+        }
+      })
+    }
+  );
+  assert.equal(invalidCollectionRes.status, 400);
 });
 
 test('POST/PATCH /v1/agenda/appointments creates and updates appointment', async () => {
