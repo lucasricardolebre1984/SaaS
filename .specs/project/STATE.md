@@ -49,9 +49,12 @@ Active feature: runtime-dual-concierge-slice
 - Runtime now persists orchestration envelopes in durable NDJSON storage and applies policy-driven downstream task routing.
 - Runtime now has queue/worker boundary for module-task lifecycle with durable queue rehydration.
 - Runtime store now supports pluggable backend (`file` default, `postgres` adapter) with SQL baseline for relational persistence.
+- Runtime Postgres checkpoint validated with real local DB via `npm run smoke:postgres` and persisted row assertions.
+- Postgres smoke stack is explicitly isolated in Docker project `fabio-postgres-smoke` (no shared container/volume with `fabio2`).
+- Backend switch operational runbook finalized with explicit rollback path (`file` backend toggle).
 
 ## Next Checkpoint
-Run integration checkpoint with real Postgres instance (migrations + smoke flow) and close operational runbook for backend switch.
+Promote Postgres smoke to CI-ready gate and start first domain migration slice on top of stable dual-concierge runtime.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

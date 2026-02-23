@@ -1,6 +1,6 @@
 # Tasks - runtime-dual-concierge-slice
 
-Status: In Progress
+Status: Done
 Date: 2026-02-23
 
 ## RDS-001 - Implement API runtime skeleton
@@ -92,10 +92,26 @@ Date: 2026-02-23
 - Verification:
   - `nx run app-platform-api:test` passes on `file` backend after store abstraction
   - `nx run contract-tests:contract-checks` remains passing
-  - Postgres live integration test pending (no local DB provisioned in this checkpoint)
+  - `npm run smoke:postgres` passes against real local Postgres backend
 - Evidence:
   - apps/platform-api/src/orchestration-store.mjs
   - apps/platform-api/src/orchestration-store-file.mjs
   - apps/platform-api/src/orchestration-store-postgres.mjs
   - apps/platform-api/sql/orchestration-postgres.sql
   - apps/platform-api/src/app.mjs
+
+## RDS-009 - Close backend-switch runbook and Postgres smoke automation
+- Status: done
+- Output:
+  - smoke script created and wired to `npm run smoke:postgres`
+  - local compose stack uses isolated project name (`fabio-postgres-smoke`) to avoid collision with `fabio2`
+  - operational runbook published for backend switch and rollback
+- Verification:
+  - `npm run smoke:postgres` passes with expected persisted counts
+  - `nx run app-platform-api:test` remains passing
+  - `nx run contract-tests:contract-checks` remains passing
+- Evidence:
+  - tools/smoke-postgres-orchestration.ps1
+  - tools/postgres-smoke/docker-compose.yml
+  - package.json
+  - apps/platform-api/RUNBOOK-backend-switch.md

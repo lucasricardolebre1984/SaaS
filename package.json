@@ -7,6 +7,7 @@
     "nx": "nx",
     "contracts:check": "powershell -ExecutionPolicy Bypass -File ./tools/run-contract-checks.ps1",
     "tenant:validate": "powershell -ExecutionPolicy Bypass -File ./tools/validate-sample-tenant-pack.ps1",
+    "smoke:postgres": "powershell -ExecutionPolicy Bypass -File ./tools/smoke-postgres-orchestration.ps1",
     "start:day": "powershell -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -SkipInstall",
     "end:day": "powershell -ExecutionPolicy Bypass -File ./tools/end-day.ps1 -ShowPending"
   },

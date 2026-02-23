@@ -17,3 +17,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-006 durable orchestration store and policy-driven routing
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-007 queue worker boundary for module task lifecycle
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-008 pluggable store factory and Postgres persistence adapter baseline
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-009 isolated Postgres smoke checkpoint and backend switch runbook closure

@@ -1,0 +1,22 @@
+name: fabio-postgres-smoke
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fabio
+      POSTGRES_PASSWORD: fabio
+      POSTGRES_DB: fabio_dev
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fabio -d fabio_dev"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata_fabio_smoke:/var/lib/postgresql/data
+
+volumes:
+  pgdata_fabio_smoke:

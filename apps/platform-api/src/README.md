@@ -25,3 +25,6 @@ Runtime skeleton placeholder for API orchestration surface.
   - optional `ORCHESTRATION_PG_SCHEMA=public`
 - Task planning uses policy file: `apps/platform-api/config/task-routing.policy.json`.
 - SQL baseline: `apps/platform-api/sql/orchestration-postgres.sql`.
+- Operational runbook: `apps/platform-api/RUNBOOK-backend-switch.md`.
+- Local smoke command: `npm run smoke:postgres`.
+- Smoke Docker project is isolated as `fabio-postgres-smoke` (no shared infra with `fabio2`).
