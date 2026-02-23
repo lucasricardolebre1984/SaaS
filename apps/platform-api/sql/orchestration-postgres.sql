@@ -172,6 +172,56 @@ CREATE UNIQUE INDEX IF NOT EXISTS crm_leads_tenant_external_key_ux
 CREATE INDEX IF NOT EXISTS crm_leads_tenant_stage_idx
   ON public.crm_leads (tenant_id, stage);
 
+CREATE TABLE IF NOT EXISTS public.crm_campaigns (
+  campaign_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  external_key TEXT NULL,
+  name TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  audience_segment TEXT NULL,
+  state TEXT NOT NULL,
+  scheduled_at TIMESTAMPTZ NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS crm_campaigns_tenant_external_key_ux
+  ON public.crm_campaigns (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS crm_campaigns_tenant_state_idx
+  ON public.crm_campaigns (tenant_id, state);
+
+CREATE TABLE IF NOT EXISTS public.crm_followups (
+  followup_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  campaign_id UUID NULL,
+  external_key TEXT NULL,
+  lead_id UUID NULL,
+  customer_id UUID NULL,
+  phone_e164 TEXT NOT NULL,
+  message TEXT NOT NULL,
+  schedule_at TIMESTAMPTZ NOT NULL,
+  channel TEXT NOT NULL,
+  status TEXT NOT NULL,
+  provider_message_id TEXT NULL,
+  last_error_code TEXT NULL,
+  last_error_message TEXT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  correlation_id UUID NULL,
+  trace_id TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS crm_followups_tenant_external_key_ux
+  ON public.crm_followups (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS crm_followups_tenant_schedule_idx
+  ON public.crm_followups (tenant_id, status, schedule_at);
+
 CREATE TABLE IF NOT EXISTS public.owner_memory_entries (
   memory_id UUID PRIMARY KEY,
   tenant_id TEXT NOT NULL,

@@ -32,6 +32,11 @@ const outboundQueueSchema = readJson('libs/mod-02-whatsapp-crm/integration/outbo
 const leadCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-create.schema.json');
 const leadStageUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-stage-update.schema.json');
 const leadListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-list.schema.json');
+const campaignCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/campaign-create.schema.json');
+const campaignStateUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/campaign-state-update.schema.json');
+const campaignListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/campaign-list.schema.json');
+const followupCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/followup-create.schema.json');
+const followupListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/followup-list.schema.json');
 const customerCreateSchema = readJson('libs/mod-03-clientes/contracts/customer-create.schema.json');
 const customerListSchema = readJson('libs/mod-03-clientes/contracts/customer-list.schema.json');
 const customerEventsSchema = readJson('libs/mod-03-clientes/contracts/customer-events.schema.json');
@@ -62,6 +67,11 @@ const validateOutboundQueue = ajv.compile(outboundQueueSchema);
 const validateLeadCreateRequest = ajv.compile(leadCreateSchema.properties.request);
 const validateLeadStageUpdateRequest = ajv.compile(leadStageUpdateSchema.properties.request);
 const validateLeadListResponse = ajv.compile(leadListSchema);
+const validateCampaignCreateRequest = ajv.compile(campaignCreateSchema.properties.request);
+const validateCampaignStateUpdateRequest = ajv.compile(campaignStateUpdateSchema.properties.request);
+const validateCampaignListResponse = ajv.compile(campaignListSchema);
+const validateFollowupCreateRequest = ajv.compile(followupCreateSchema.properties.request);
+const validateFollowupListResponse = ajv.compile(followupListSchema);
 const validateCustomerCreateRequest = ajv.compile(customerCreateSchema.properties.request);
 const validateCustomerListResponse = ajv.compile(customerListSchema);
 const validateCustomerLifecycleEventPayload = ajv.compile(customerEventsSchema);
@@ -190,6 +200,34 @@ export function leadStageUpdateValid(body) {
 export function leadListValid(body) {
   const ok = validateLeadListResponse(body);
   return { ok: Boolean(ok), errors: validateLeadListResponse.errors ?? [] };
+}
+
+export function campaignCreateValid(body) {
+  const ok = validateCampaignCreateRequest(body?.request);
+  const errors = [...(validateCampaignCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function campaignStateUpdateValid(body) {
+  const ok = validateCampaignStateUpdateRequest(body?.request);
+  const errors = [...(validateCampaignStateUpdateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function campaignListValid(body) {
+  const ok = validateCampaignListResponse(body);
+  return { ok: Boolean(ok), errors: validateCampaignListResponse.errors ?? [] };
+}
+
+export function followupCreateValid(body) {
+  const ok = validateFollowupCreateRequest(body?.request);
+  const errors = [...(validateFollowupCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function followupListValid(body) {
+  const ok = validateFollowupListResponse(body);
+  return { ok: Boolean(ok), errors: validateFollowupListResponse.errors ?? [] };
 }
 
 export function orchestrationCommandValid(body) {

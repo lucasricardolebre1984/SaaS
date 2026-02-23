@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/followup-create.schema.json",
+  "title": "Module 02 Follow-up Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-05-faturamento-cobranca"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "followup": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "followup_id": { "type": "string", "format": "uuid" },
+            "campaign_id": { "type": ["string", "null"], "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "lead_id": { "type": ["string", "null"], "format": "uuid" },
+            "customer_id": { "type": ["string", "null"], "format": "uuid" },
+            "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+            "message": { "type": "string", "minLength": 1 },
+            "schedule_at": { "type": "string", "format": "date-time" },
+            "channel": { "type": "string", "enum": ["whatsapp"] },
+            "status": { "type": "string", "enum": ["pending", "sent", "failed"] },
+            "metadata": { "type": "object" }
+          },
+          "required": ["phone_e164", "message", "schedule_at"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "followup"]
+    }
+  },
+  "required": ["request"]
+}

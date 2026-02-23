@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 01 rag retrieval slice)
-Active feature: mod-01-rag-retrieval-slice
+Active phase: Implement (module 02 campaign followup slice)
+Active feature: mod-02-campaign-followup-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -134,9 +134,29 @@ Active feature: mod-01-rag-retrieval-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-02-campaign-followup-slice` with contract-first campaign lifecycle and follow-up automation runtime.
+- Module 02 advanced contracts published (`campaign-create`, `campaign-state-update`, `campaign-list`, `followup-create`, `followup-list`) and integrated into contract checks.
+- Module 02 advanced runtime implemented with pluggable CRM automation store (`file` + `postgres`) and endpoints:
+  - `POST /v1/crm/campaigns`
+  - `PATCH /v1/crm/campaigns/:id/state`
+  - `GET /v1/crm/campaigns`
+  - `POST /v1/crm/followups`
+  - `GET /v1/crm/followups`
+  - `POST /internal/worker/crm-followups/drain`
+- Orchestration events expanded with:
+  - `crm.campaign.created`
+  - `crm.campaign.state.changed`
+  - `crm.followup.scheduled`
+  - `crm.followup.sent`
+  - `crm.followup.failed`
+- Postgres smoke flow expanded to cover crm campaign/follow-up creation, follow-up worker dispatch, and persisted row assertions in `crm_campaigns` and `crm_followups`.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 01 retrieval closure.
+Open next prioritized migration slice after module 02 campaign/follow-up closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

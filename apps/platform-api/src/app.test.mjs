@@ -188,6 +188,46 @@ function validLeadCreateRequest(overrides = {}) {
   };
 }
 
+function validCampaignCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '9f5f2ff8-eeca-4f3e-9cd2-4ec50f2519d3',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      campaign: {
+        campaign_id: '58b43d83-bb4d-4ad9-bfe2-e14f2f78e31b',
+        external_key: 'campaign-ext-001',
+        name: 'Campanha Follow-up VIP',
+        channel: 'whatsapp',
+        audience_segment: 'vip',
+        state: 'draft'
+      },
+      ...overrides
+    }
+  };
+}
+
+function validFollowupCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '9454f302-3218-4ca8-814f-eb8ecb5514f6',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      followup: {
+        followup_id: 'f89b34ad-1158-4fd1-8c7c-a273a049fb2d',
+        campaign_id: '58b43d83-bb4d-4ad9-bfe2-e14f2f78e31b',
+        external_key: 'followup-ext-001',
+        phone_e164: '+5511966677788',
+        message: 'Lembrete follow-up automatizado',
+        schedule_at: '2026-03-01T13:00:00.000Z',
+        channel: 'whatsapp',
+        status: 'pending'
+      },
+      ...overrides
+    }
+  };
+}
+
 function validOwnerMemoryCreateRequest(overrides = {}) {
   return {
     request: {
@@ -254,6 +294,16 @@ async function drainCrmCollections(baseUrl, limit = 10) {
   return res.json();
 }
 
+async function drainCrmFollowups(baseUrl, limit = 10, forceFailure = false) {
+  const res = await fetch(`${baseUrl}/internal/worker/crm-followups/drain`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ limit, force_failure: forceFailure })
+  });
+  assert.equal(res.status, 200);
+  return res.json();
+}
+
 let server;
 let baseUrl;
 let storageDir;
@@ -261,6 +311,7 @@ let customerStorageDir;
 let agendaStorageDir;
 let billingStorageDir;
 let leadStorageDir;
+let crmAutomationStorageDir;
 let ownerMemoryStorageDir;
 
 test.before(async () => {
@@ -269,6 +320,7 @@ test.before(async () => {
   agendaStorageDir = path.join(storageDir, 'agenda');
   billingStorageDir = path.join(storageDir, 'billing');
   leadStorageDir = path.join(storageDir, 'crm');
+  crmAutomationStorageDir = path.join(storageDir, 'crm-automation');
   ownerMemoryStorageDir = path.join(storageDir, 'owner-memory');
   server = http.createServer(
     createApp({
@@ -277,6 +329,7 @@ test.before(async () => {
       agendaStorageDir,
       billingStorageDir,
       leadStorageDir,
+      crmAutomationStorageDir,
       ownerMemoryStorageDir
     })
   );
@@ -310,6 +363,8 @@ test('GET /health returns runtime metadata', async () => {
   assert.ok(typeof body.billing.storage_dir === 'string');
   assert.equal(body.crm_leads.backend, 'file');
   assert.ok(typeof body.crm_leads.storage_dir === 'string');
+  assert.equal(body.crm_automation.backend, 'file');
+  assert.ok(typeof body.crm_automation.storage_dir === 'string');
   assert.equal(body.owner_memory.backend, 'file');
   assert.ok(typeof body.owner_memory.storage_dir === 'string');
 });
@@ -507,6 +562,165 @@ test('POST/PATCH/GET /v1/crm/leads creates, transitions, and lists leads', async
   assert.equal(listRes.status, 200);
   const listBody = await listRes.json();
   assert.ok(listBody.items.some((item) => item.lead_id === leadId));
+});
+
+test('POST/PATCH/GET /v1/crm/campaigns creates, transitions, and lists campaigns', async () => {
+  const createRes = await fetch(`${baseUrl}/v1/crm/campaigns`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validCampaignCreateRequest())
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+  assert.equal(createBody.response.status, 'created');
+  assert.equal(createBody.response.campaign.state, 'draft');
+  assert.equal(createBody.response.orchestration.lifecycle_event_name, 'crm.campaign.created');
+
+  const campaignId = createBody.response.campaign.campaign_id;
+  const patchRes = await fetch(`${baseUrl}/v1/crm/campaigns/${campaignId}/state`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: 'a78d2f03-68a5-48e4-8de3-14f4f74693cc',
+        tenant_id: 'tenant_automania',
+        source_module: 'mod-02-whatsapp-crm',
+        changes: {
+          to_state: 'scheduled',
+          trigger: 'schedule_campaign'
+        }
+      }
+    })
+  });
+  assert.equal(patchRes.status, 200);
+  const patchBody = await patchRes.json();
+  assert.equal(patchBody.response.status, 'updated');
+  assert.equal(patchBody.response.campaign.state, 'scheduled');
+  assert.equal(patchBody.response.orchestration.lifecycle_event_name, 'crm.campaign.state.changed');
+
+  const invalidPatch = await fetch(`${baseUrl}/v1/crm/campaigns/${campaignId}/state`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: '9f2d8b16-2d45-4714-bfc9-ed8f13b66adb',
+        tenant_id: 'tenant_automania',
+        source_module: 'mod-02-whatsapp-crm',
+        changes: {
+          to_state: 'completed',
+          trigger: 'invalid_direct_close'
+        }
+      }
+    })
+  });
+  assert.equal(invalidPatch.status, 400);
+  const invalidBody = await invalidPatch.json();
+  assert.equal(invalidBody.error, 'transition_error');
+
+  const listRes = await fetch(`${baseUrl}/v1/crm/campaigns?tenant_id=tenant_automania`);
+  assert.equal(listRes.status, 200);
+  const listBody = await listRes.json();
+  assert.ok(listBody.items.some((item) => item.campaign_id === campaignId));
+});
+
+test('POST/GET /v1/crm/followups + worker drain success path', async () => {
+  const campaignRes = await fetch(`${baseUrl}/v1/crm/campaigns`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validCampaignCreateRequest({
+      request_id: 'a86fa107-c24b-42f4-8309-a2a7f283eb73',
+      campaign: {
+        campaign_id: 'ead88931-5f6f-46f8-a7dd-429f48ece8d4',
+        external_key: 'campaign-ext-002',
+        name: 'Campanha Follow-up Success',
+        channel: 'whatsapp',
+        state: 'scheduled'
+      }
+    }))
+  });
+  assert.equal(campaignRes.status, 200);
+
+  const createRes = await fetch(`${baseUrl}/v1/crm/followups`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validFollowupCreateRequest({
+      request_id: 'cbf8a73a-1069-4f53-90f7-cf6796ab2dbe',
+      correlation_id: 'f85b7308-a7af-451d-8370-e50f7de39f6a',
+      followup: {
+        followup_id: '2ff4c0fc-cf06-4d8a-86d7-26b95f2fa3a7',
+        campaign_id: 'ead88931-5f6f-46f8-a7dd-429f48ece8d4',
+        external_key: 'followup-ext-002',
+        phone_e164: '+5511944443333',
+        message: 'Follow-up success dispatch',
+        schedule_at: '2025-01-01T09:00:00.000Z',
+        channel: 'whatsapp',
+        status: 'pending'
+      }
+    }))
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+  assert.equal(createBody.response.status, 'created');
+  assert.equal(createBody.response.orchestration.lifecycle_event_name, 'crm.followup.scheduled');
+
+  const drain = await drainCrmFollowups(baseUrl, 10, false);
+  assert.ok(drain.processed_count >= 1);
+  assert.ok(drain.processed.some((item) => item.followup_id === createBody.response.followup.followup_id));
+
+  const listRes = await fetch(`${baseUrl}/v1/crm/followups?tenant_id=tenant_automania`);
+  assert.equal(listRes.status, 200);
+  const listBody = await listRes.json();
+  const followup = listBody.items.find((item) => item.followup_id === createBody.response.followup.followup_id);
+  assert.ok(followup);
+  assert.equal(followup.status, 'sent');
+
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${createBody.response.orchestration.correlation_id}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+  assert.ok(traceBody.events.some((item) => item.name === 'crm.followup.scheduled'));
+  assert.ok(traceBody.events.some((item) => item.name === 'crm.followup.sent'));
+});
+
+test('POST /internal/worker/crm-followups/drain marks failed followup on provider failure', async () => {
+  const createRes = await fetch(`${baseUrl}/v1/crm/followups`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validFollowupCreateRequest({
+      request_id: '16e9a560-a6c7-4141-9710-b4f83663f243',
+      correlation_id: '1aa7b13d-90f9-4eac-af57-71ec95e67e70',
+      followup: {
+        followup_id: '6113d975-cded-4f22-b31e-c7f23ad9e707',
+        campaign_id: null,
+        external_key: 'followup-ext-003',
+        phone_e164: '+5511933322211',
+        message: 'please fail this dispatch',
+        schedule_at: '2025-01-01T08:00:00.000Z',
+        channel: 'whatsapp',
+        status: 'pending'
+      }
+    }))
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+  const correlationId = createBody.response.orchestration.correlation_id;
+
+  const drain = await drainCrmFollowups(baseUrl, 10, false);
+  assert.ok(drain.processed.some((item) => item.followup_id === createBody.response.followup.followup_id));
+  assert.ok(drain.failed_count >= 1);
+
+  const failedListRes = await fetch(`${baseUrl}/v1/crm/followups?tenant_id=tenant_automania&status=failed`);
+  assert.equal(failedListRes.status, 200);
+  const failedList = await failedListRes.json();
+  assert.ok(failedList.items.some((item) => item.followup_id === createBody.response.followup.followup_id));
+
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+  assert.ok(traceBody.events.some((item) => item.name === 'crm.followup.failed'));
 });
 
 test('POST/GET /v1/billing/charges creates and lists charges', async () => {

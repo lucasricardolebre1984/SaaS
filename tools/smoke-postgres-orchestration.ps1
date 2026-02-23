@@ -182,6 +182,61 @@ try {
     throw 'Lead create did not return created/idempotent.'
   }
 
+  $campaignPayload = @{
+    request = @{
+      request_id = [guid]::NewGuid().ToString()
+      tenant_id = 'tenant_automania'
+      source_module = 'mod-02-whatsapp-crm'
+      campaign = @{
+        campaign_id = [guid]::NewGuid().ToString()
+        external_key = "smoke-campaign-$([guid]::NewGuid().ToString())"
+        name = 'Campanha Smoke CRM'
+        channel = 'whatsapp'
+        state = 'scheduled'
+      }
+    }
+  }
+  Write-Host 'Creating CRM campaign...'
+  $campaignCreate = Invoke-RestMethod -Uri "$apiBaseUrl/v1/crm/campaigns" `
+    -Method Post -ContentType 'application/json' -Body ($campaignPayload | ConvertTo-Json -Depth 8)
+  if ($campaignCreate.response.status -notin @('created', 'idempotent')) {
+    throw 'Campaign create did not return created/idempotent.'
+  }
+  $campaignId = $campaignCreate.response.campaign.campaign_id
+
+  $followupCorrelation = [guid]::NewGuid().ToString()
+  $followupPayload = @{
+    request = @{
+      request_id = [guid]::NewGuid().ToString()
+      tenant_id = 'tenant_automania'
+      source_module = 'mod-02-whatsapp-crm'
+      correlation_id = $followupCorrelation
+      followup = @{
+        followup_id = [guid]::NewGuid().ToString()
+        campaign_id = $campaignId
+        external_key = "smoke-followup-$([guid]::NewGuid().ToString())"
+        phone_e164 = '+5511994445566'
+        message = 'Follow-up de teste smoke postgres'
+        schedule_at = '2025-01-01T12:00:00.000Z'
+        channel = 'whatsapp'
+        status = 'pending'
+      }
+    }
+  }
+  Write-Host 'Creating CRM follow-up...'
+  $followupCreate = Invoke-RestMethod -Uri "$apiBaseUrl/v1/crm/followups" `
+    -Method Post -ContentType 'application/json' -Body ($followupPayload | ConvertTo-Json -Depth 8)
+  if ($followupCreate.response.status -notin @('created', 'idempotent')) {
+    throw 'Follow-up create did not return created/idempotent.'
+  }
+
+  Write-Host 'Draining CRM follow-up worker...'
+  $followupDrain = Invoke-RestMethod -Uri "$apiBaseUrl/internal/worker/crm-followups/drain" `
+    -Method Post -ContentType 'application/json' -Body (@{ limit = 10 } | ConvertTo-Json)
+  if ($followupDrain.processed_count -lt 1) {
+    throw 'CRM follow-up worker did not process pending follow-ups.'
+  }
+
   $chargePayload = @{
     request = @{
       request_id = [guid]::NewGuid().ToString()
@@ -303,6 +358,17 @@ try {
     throw 'Expected owner.context.promoted event not found.'
   }
 
+  Write-Host 'Fetching CRM follow-up trace...'
+  $followupTrace = Invoke-RestMethod -Uri "$apiBaseUrl/internal/orchestration/trace?correlation_id=$followupCorrelation" `
+    -Method Get
+  $followupEventNames = @($followupTrace.events | ForEach-Object { $_.name })
+  if (-not ($followupEventNames -contains 'crm.followup.scheduled')) {
+    throw 'Expected crm.followup.scheduled event not found.'
+  }
+  if (-not (($followupEventNames -contains 'crm.followup.sent') -or ($followupEventNames -contains 'crm.followup.failed'))) {
+    throw 'Expected crm.followup terminal event not found.'
+  }
+
   Write-Host 'Validating persisted rows in Postgres...'
   $commandCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.orchestration_commands;"
@@ -316,6 +382,10 @@ try {
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.billing_payments;"
   $crmLeadCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.crm_leads;"
+  $crmCampaignCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
+    psql -U fabio -d fabio_dev -tAc "select count(*) from public.crm_campaigns;"
+  $crmFollowupCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
+    psql -U fabio -d fabio_dev -tAc "select count(*) from public.crm_followups;"
   $ownerMemoryCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
     psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_memory_entries;"
   $ownerPromotionCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
@@ -327,6 +397,8 @@ try {
   $billingChargeCount = [int]($billingChargeCountRaw | Select-Object -First 1).Trim()
   $billingPaymentCount = [int]($billingPaymentCountRaw | Select-Object -First 1).Trim()
   $crmLeadCount = [int]($crmLeadCountRaw | Select-Object -First 1).Trim()
+  $crmCampaignCount = [int]($crmCampaignCountRaw | Select-Object -First 1).Trim()
+  $crmFollowupCount = [int]($crmFollowupCountRaw | Select-Object -First 1).Trim()
   $ownerMemoryCount = [int]($ownerMemoryCountRaw | Select-Object -First 1).Trim()
   $ownerPromotionCount = [int]($ownerPromotionCountRaw | Select-Object -First 1).Trim()
 
@@ -336,6 +408,8 @@ try {
   if ($billingChargeCount -lt 1) { throw "Expected >=1 billing charge row, got $billingChargeCount." }
   if ($billingPaymentCount -lt 1) { throw "Expected >=1 billing payment row, got $billingPaymentCount." }
   if ($crmLeadCount -lt 1) { throw "Expected >=1 crm lead row, got $crmLeadCount." }
+  if ($crmCampaignCount -lt 1) { throw "Expected >=1 crm campaign row, got $crmCampaignCount." }
+  if ($crmFollowupCount -lt 1) { throw "Expected >=1 crm followup row, got $crmFollowupCount." }
   if ($ownerMemoryCount -lt 1) { throw "Expected >=1 owner memory row, got $ownerMemoryCount." }
   if ($ownerPromotionCount -lt 1) { throw "Expected >=1 owner promotion row, got $ownerPromotionCount." }
 
@@ -344,7 +418,8 @@ try {
   Write-Host "correlation_id=$correlationId"
   Write-Host "billing_correlation_id=$billingCorrelation"
   Write-Host "memory_correlation_id=$memoryCorrelation"
-  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount"
+  Write-Host "followup_correlation_id=$followupCorrelation"
+  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount crm_campaigns=$crmCampaignCount crm_followups=$crmFollowupCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount"
 }
 finally {
   if ($apiProcess -and -not $apiProcess.HasExited) {

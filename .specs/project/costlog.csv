@@ -53,3 +53,8 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01R-003 owner context retrieval runtime endpoint
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01R-004 postgres smoke retrieval checkpoint
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01R-005 governance and checkpoint closure for module 01 retrieval slice
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02A-001 module 02 advanced campaign and followup contracts
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02A-002 crm automation store abstraction file and postgres
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02A-003 campaign and followup runtime endpoints and worker
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02A-004 orchestration event expansion and executable contract checks
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M02A-005 mod 02 campaign followup governance closure

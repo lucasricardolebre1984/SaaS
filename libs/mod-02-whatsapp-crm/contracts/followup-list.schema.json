@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/followup-list.schema.json",
+  "title": "Module 02 Follow-up List Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "followup_id": { "type": "string", "format": "uuid" },
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "campaign_id": { "type": ["string", "null"], "format": "uuid" },
+          "external_key": { "type": ["string", "null"] },
+          "lead_id": { "type": ["string", "null"], "format": "uuid" },
+          "customer_id": { "type": ["string", "null"], "format": "uuid" },
+          "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+          "message": { "type": "string", "minLength": 1 },
+          "schedule_at": { "type": "string", "format": "date-time" },
+          "channel": { "type": "string", "enum": ["whatsapp"] },
+          "status": { "type": "string", "enum": ["pending", "sent", "failed"] },
+          "provider_message_id": { "type": ["string", "null"] },
+          "last_error_code": { "type": ["string", "null"] },
+          "last_error_message": { "type": ["string", "null"] },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "followup_id",
+          "tenant_id",
+          "phone_e164",
+          "message",
+          "schedule_at",
+          "channel",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    }
+  },
+  "required": ["tenant_id", "count", "items"]
+}

@@ -29,6 +29,9 @@ async function gracefulShutdown(signal) {
       if (typeof app.leadStore?.close === 'function') {
         await app.leadStore.close();
       }
+      if (typeof app.crmAutomationStore?.close === 'function') {
+        await app.crmAutomationStore.close();
+      }
       if (typeof app.ownerMemoryStore?.close === 'function') {
         await app.ownerMemoryStore.close();
       }

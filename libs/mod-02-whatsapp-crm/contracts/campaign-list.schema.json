@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/campaign-list.schema.json",
+  "title": "Module 02 Campaign List Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": { "type": "string", "format": "uuid" },
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "external_key": { "type": ["string", "null"] },
+          "name": { "type": "string", "minLength": 3 },
+          "channel": { "type": "string", "enum": ["whatsapp"] },
+          "audience_segment": { "type": ["string", "null"] },
+          "state": {
+            "type": "string",
+            "enum": ["draft", "scheduled", "running", "paused", "completed", "canceled", "failed"]
+          },
+          "scheduled_at": { "type": ["string", "null"], "format": "date-time" },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "campaign_id",
+          "tenant_id",
+          "name",
+          "channel",
+          "state",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    }
+  },
+  "required": ["tenant_id", "count", "items"]
+}

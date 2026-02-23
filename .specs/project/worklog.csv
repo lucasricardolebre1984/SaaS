@@ -57,3 +57,8 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-23,23:59,23:59,0.30,Implement,mod-01-rag-retrieval-slice,M01R-003,pair,done,Implemented owner context retrieval endpoint with contract validation
 2026-02-23,23:59,23:59,0.15,Implement,mod-01-rag-retrieval-slice,M01R-004,pair,done,Expanded postgres smoke flow with retrieval checkpoint
 2026-02-23,23:59,23:59,0.15,Implement,mod-01-rag-retrieval-slice,M01R-005,pair,done,Updated governance docs metrics logs and validated nx tests contract checks and postgres smoke
+2026-02-23,23:59,23:59,0.25,Implement,mod-02-campaign-followup-slice,M02A-001,pair,done,Published campaign and followup contracts with schema validation
+2026-02-23,23:59,23:59,0.45,Implement,mod-02-campaign-followup-slice,M02A-002,pair,done,Implemented crm automation store abstraction file and postgres
+2026-02-23,23:59,23:59,0.65,Implement,mod-02-campaign-followup-slice,M02A-003,pair,done,Implemented campaign and followup runtime endpoints plus followup worker
+2026-02-23,23:59,23:59,0.25,Implement,mod-02-campaign-followup-slice,M02A-004,pair,done,Expanded orchestration events and executable contract coverage
+2026-02-23,23:59,23:59,0.20,Implement,mod-02-campaign-followup-slice,M02A-005,pair,done,Validated gates and closed governance checkpoint for mod 02 advanced slice

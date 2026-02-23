@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/campaign-create.schema.json",
+  "title": "Module 02 Campaign Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "campaign": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "campaign_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "name": { "type": "string", "minLength": 3 },
+            "channel": { "type": "string", "enum": ["whatsapp"] },
+            "audience_segment": { "type": "string", "minLength": 1 },
+            "state": {
+              "type": "string",
+              "enum": ["draft", "scheduled", "running", "paused", "completed", "canceled", "failed"]
+            },
+            "scheduled_at": { "type": ["string", "null"], "format": "date-time" },
+            "metadata": { "type": "object" }
+          },
+          "required": ["name", "channel"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "campaign"]
+    }
+  },
+  "required": ["request"]
+}

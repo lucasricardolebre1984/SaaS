@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
+  campaignCreateValid,
+  campaignListValid,
+  campaignStateUpdateValid,
   appointmentCreateValid,
   appointmentUpdateValid,
   billingLifecycleEventPayloadValid,
@@ -14,6 +17,8 @@ import {
   customerLifecycleEventPayloadValid,
   customerListValid,
   evolutionWebhookValid,
+  followupCreateValid,
+  followupListValid,
   leadCreateValid,
   leadListValid,
   leadStageUpdateValid,
@@ -35,6 +40,7 @@ import { createCustomerStore } from './customer-store.mjs';
 import { createAgendaStore } from './agenda-store.mjs';
 import { createBillingStore } from './billing-store.mjs';
 import { createLeadStore } from './lead-store.mjs';
+import { createCrmAutomationStore } from './crm-automation-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
@@ -536,6 +542,94 @@ function createCrmLeadCreatedEvent(lead, correlationId, traceId) {
   };
 }
 
+function createCrmCampaignCreatedEvent(campaign, correlationId, traceId) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'crm.campaign.created',
+    tenant_id: campaign.tenant_id,
+    source_module: 'mod-02-whatsapp-crm',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    trace_id: traceId,
+    status: 'info',
+    payload: {
+      campaign_id: campaign.campaign_id,
+      channel: campaign.channel,
+      state: campaign.state,
+      scheduled_at: campaign.scheduled_at
+    }
+  };
+}
+
+function createCrmCampaignStateChangedEvent(
+  campaign,
+  previousState,
+  correlationId,
+  traceId,
+  causationId
+) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'crm.campaign.state.changed',
+    tenant_id: campaign.tenant_id,
+    source_module: 'mod-02-whatsapp-crm',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    ...(causationId ? { causation_id: causationId } : {}),
+    trace_id: traceId,
+    status: 'info',
+    payload: {
+      campaign_id: campaign.campaign_id,
+      from_state: previousState,
+      to_state: campaign.state
+    }
+  };
+}
+
+function createCrmFollowupEvent(
+  eventName,
+  followup,
+  correlationId,
+  traceId,
+  causationId,
+  extraPayload = {}
+) {
+  const statusMap = {
+    'crm.followup.scheduled': 'info',
+    'crm.followup.sent': 'completed',
+    'crm.followup.failed': 'failed'
+  };
+
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: eventName,
+    tenant_id: followup.tenant_id,
+    source_module: 'mod-02-whatsapp-crm',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    ...(causationId ? { causation_id: causationId } : {}),
+    trace_id: traceId,
+    status: statusMap[eventName],
+    payload: {
+      followup_id: followup.followup_id,
+      campaign_id: followup.campaign_id,
+      channel: followup.channel,
+      schedule_at: followup.schedule_at,
+      phone_e164: followup.phone_e164,
+      ...extraPayload
+    }
+  };
+}
+
 function createBillingCollectionSentEvent(command) {
   return {
     schema_version: ORCHESTRATION_SCHEMA_VERSION,
@@ -689,6 +783,20 @@ function leadInfo(store) {
   };
 }
 
+function crmAutomationInfo(store) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir
+  };
+}
+
 function ownerMemoryInfo(store) {
   if (store.backend === 'postgres') {
     return {
@@ -745,6 +853,13 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const crmAutomationStore = createCrmAutomationStore({
+    backend,
+    storageDir: options.crmAutomationStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
+  });
   const ownerMemoryStore = createOwnerMemoryStore({
     backend,
     storageDir: options.ownerMemoryStorageDir,
@@ -771,6 +886,7 @@ export function createApp(options = {}) {
           agenda: agendaInfo(agendaStore),
           billing: billingInfo(billingStore),
           crm_leads: leadInfo(leadStore),
+          crm_automation: crmAutomationInfo(crmAutomationStore),
           owner_memory: ownerMemoryInfo(ownerMemoryStore)
         });
       }
@@ -1000,6 +1116,463 @@ export function createApp(options = {}) {
           failed_count: failed,
           processed
         });
+      }
+
+      if (method === 'POST' && path === '/internal/worker/crm-followups/drain') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const requestedLimit = Number(body.limit ?? 10);
+        const maxItems = Number.isFinite(requestedLimit) && requestedLimit > 0
+          ? Math.min(Math.floor(requestedLimit), 100)
+          : 10;
+        const forceFailure = body.force_failure === true;
+
+        const dueFollowups = await crmAutomationStore.claimPendingFollowups(
+          maxItems,
+          new Date().toISOString()
+        );
+
+        const processed = [];
+        let succeeded = 0;
+        let failed = 0;
+        let skipped = 0;
+
+        for (const item of dueFollowups) {
+          const correlationId = item.correlation_id ?? item.followup_id;
+          const traceId = item.trace_id ?? randomUUID();
+
+          const outbound = {
+            queue_item_id: randomUUID(),
+            tenant_id: item.tenant_id,
+            trace_id: traceId,
+            correlation_id: correlationId,
+            idempotency_key: `followup:${item.followup_id}`,
+            context: {
+              type: 'followup',
+              context_id: item.followup_id,
+              task_id: item.campaign_id ?? item.followup_id,
+              module_source: 'mod-02-whatsapp-crm'
+            },
+            recipient: {
+              ...(item.customer_id ? { customer_id: item.customer_id } : {}),
+              ...(item.lead_id ? { lead_id: item.lead_id } : {}),
+              phone_e164: item.phone_e164
+            },
+            message: {
+              type: 'text',
+              text: item.message
+            },
+            retry_policy: {
+              max_attempts: 3,
+              backoff_ms: 500
+            },
+            created_at: new Date().toISOString()
+          };
+
+          const outboundValidation = outboundQueueValid(outbound);
+          if (!outboundValidation.ok) {
+            const update = await crmAutomationStore.markFollowupFailed(item.tenant_id, item.followup_id, {
+              error_code: 'OUTBOUND_CONTRACT_INVALID',
+              error_message: 'followup_outbound_payload_invalid'
+            });
+            if (!update.ok) {
+              skipped += 1;
+              processed.push({
+                followup_id: item.followup_id,
+                status: 'skipped',
+                reason: update.code
+              });
+              continue;
+            }
+
+            const failedEvent = createCrmFollowupEvent(
+              'crm.followup.failed',
+              update.followup,
+              correlationId,
+              traceId,
+              item.followup_id,
+              {
+                error_code: 'OUTBOUND_CONTRACT_INVALID',
+                retryable: false
+              }
+            );
+            const failedResult = await validateAndPersistEvent(store, failedEvent);
+            if (!failedResult.ok) {
+              return json(res, 500, {
+                error: failedResult.type,
+                details: failedResult.details
+              });
+            }
+
+            failed += 1;
+            processed.push({
+              followup_id: item.followup_id,
+              status: 'failed',
+              reason: 'outbound_contract_invalid'
+            });
+            continue;
+          }
+
+          const shouldFail = forceFailure || /fail/i.test(String(item.message ?? ''));
+          if (shouldFail) {
+            const update = await crmAutomationStore.markFollowupFailed(item.tenant_id, item.followup_id, {
+              error_code: 'PROVIDER_SEND_ERROR',
+              error_message: 'simulated_provider_failure'
+            });
+            if (!update.ok) {
+              skipped += 1;
+              processed.push({
+                followup_id: item.followup_id,
+                status: 'skipped',
+                reason: update.code
+              });
+              continue;
+            }
+
+            const failedEvent = createCrmFollowupEvent(
+              'crm.followup.failed',
+              update.followup,
+              correlationId,
+              traceId,
+              item.followup_id,
+              {
+                error_code: 'PROVIDER_SEND_ERROR',
+                retryable: true
+              }
+            );
+            const failedResult = await validateAndPersistEvent(store, failedEvent);
+            if (!failedResult.ok) {
+              return json(res, 500, {
+                error: failedResult.type,
+                details: failedResult.details
+              });
+            }
+
+            failed += 1;
+            processed.push({
+              followup_id: item.followup_id,
+              status: 'failed'
+            });
+            continue;
+          }
+
+          const update = await crmAutomationStore.markFollowupSent(item.tenant_id, item.followup_id, {
+            provider_message_id: `msg-${randomUUID()}`
+          });
+          if (!update.ok) {
+            skipped += 1;
+            processed.push({
+              followup_id: item.followup_id,
+              status: 'skipped',
+              reason: update.code
+            });
+            continue;
+          }
+
+          const sentEvent = createCrmFollowupEvent(
+            'crm.followup.sent',
+            update.followup,
+            correlationId,
+            traceId,
+            item.followup_id,
+            {
+              provider_message_id: update.followup.provider_message_id
+            }
+          );
+          const sentResult = await validateAndPersistEvent(store, sentEvent);
+          if (!sentResult.ok) {
+            return json(res, 500, {
+              error: sentResult.type,
+              details: sentResult.details
+            });
+          }
+
+          succeeded += 1;
+          processed.push({
+            followup_id: item.followup_id,
+            status: 'sent'
+          });
+        }
+
+        return json(res, 200, {
+          processed_count: processed.length,
+          succeeded_count: succeeded,
+          failed_count: failed,
+          skipped_count: skipped,
+          processed
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/crm/campaigns') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = campaignCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        let createResult;
+        try {
+          createResult = await crmAutomationStore.createCampaign({
+            campaign_id: request.campaign.campaign_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            external_key: request.campaign.external_key ?? null,
+            name: request.campaign.name,
+            channel: request.campaign.channel ?? 'whatsapp',
+            audience_segment: request.campaign.audience_segment ?? null,
+            state: request.campaign.state ?? 'draft',
+            scheduled_at: request.campaign.scheduled_at ?? null,
+            metadata: request.campaign.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const createdEvent = createCrmCampaignCreatedEvent(
+            createResult.campaign,
+            correlationId,
+            traceId
+          );
+          const eventResult = await validateAndPersistEvent(store, createdEvent);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = createdEvent.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            campaign: createResult.campaign,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'PATCH' && path.startsWith('/v1/crm/campaigns/') && path.endsWith('/state')) {
+        const campaignId = path.slice('/v1/crm/campaigns/'.length).replace('/state', '');
+        if (!campaignId) {
+          return json(res, 400, { error: 'missing_campaign_id' });
+        }
+
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = campaignStateUpdateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let updateResult;
+        try {
+          updateResult = await crmAutomationStore.updateCampaignState(
+            request.tenant_id,
+            campaignId,
+            request.changes
+          );
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        if (!updateResult.ok && updateResult.code === 'not_found') {
+          return json(res, 404, { error: 'not_found' });
+        }
+        if (!updateResult.ok) {
+          return json(res, 400, {
+            error: 'transition_error',
+            details: updateResult
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (updateResult.changed) {
+          const changedEvent = createCrmCampaignStateChangedEvent(
+            updateResult.campaign,
+            updateResult.previous_state,
+            correlationId,
+            traceId,
+            request.request_id
+          );
+          const eventResult = await validateAndPersistEvent(store, changedEvent);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = changedEvent.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: updateResult.changed ? 'updated' : 'idempotent',
+            campaign: updateResult.campaign,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/campaigns') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const items = await crmAutomationStore.listCampaigns(tenantId);
+        const response = {
+          tenant_id: tenantId,
+          count: items.length,
+          items
+        };
+        const validation = campaignListValid(response);
+        if (!validation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: validation.errors
+          });
+        }
+
+        return json(res, 200, response);
+      }
+
+      if (method === 'POST' && path === '/v1/crm/followups') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = followupCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        let createResult;
+        try {
+          createResult = await crmAutomationStore.createFollowup({
+            followup_id: request.followup.followup_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            campaign_id: request.followup.campaign_id ?? null,
+            external_key: request.followup.external_key ?? null,
+            lead_id: request.followup.lead_id ?? null,
+            customer_id: request.followup.customer_id ?? null,
+            phone_e164: request.followup.phone_e164,
+            message: request.followup.message,
+            schedule_at: request.followup.schedule_at,
+            channel: request.followup.channel ?? 'whatsapp',
+            status: request.followup.status ?? 'pending',
+            metadata: request.followup.metadata ?? {},
+            correlation_id: correlationId,
+            trace_id: traceId
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const scheduledEvent = createCrmFollowupEvent(
+            'crm.followup.scheduled',
+            createResult.followup,
+            correlationId,
+            traceId,
+            request.request_id
+          );
+          const eventResult = await validateAndPersistEvent(store, scheduledEvent);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = scheduledEvent.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            followup: createResult.followup,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/followups') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const status = parsedUrl.searchParams.get('status');
+        const items = await crmAutomationStore.listFollowups(tenantId, {
+          status: status && status.length > 0 ? status : undefined
+        });
+        const response = {
+          tenant_id: tenantId,
+          count: items.length,
+          items
+        };
+        const validation = followupListValid(response);
+        if (!validation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: validation.errors
+          });
+        }
+
+        return json(res, 200, response);
       }
 
       if (method === 'POST' && path === '/v1/crm/leads') {
@@ -2358,6 +2931,7 @@ export function createApp(options = {}) {
   handler.agendaStore = agendaStore;
   handler.billingStore = billingStore;
   handler.leadStore = leadStore;
+  handler.crmAutomationStore = crmAutomationStore;
   handler.ownerMemoryStore = ownerMemoryStore;
   return handler;
 }

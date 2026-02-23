@@ -14,6 +14,11 @@
         "module.task.failed",
         "crm.lead.created",
         "crm.lead.converted",
+        "crm.campaign.created",
+        "crm.campaign.state.changed",
+        "crm.followup.scheduled",
+        "crm.followup.sent",
+        "crm.followup.failed",
         "customer.created",
         "customer.updated",
         "agenda.reminder.scheduled",
@@ -197,6 +202,122 @@
               "customer_id": { "type": "string", "format": "uuid" }
             },
             "required": ["lead_id", "customer_id"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.campaign.created" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "campaign_id": { "type": "string", "format": "uuid" },
+              "channel": { "type": "string", "enum": ["whatsapp"] },
+              "state": {
+                "type": "string",
+                "enum": ["draft", "scheduled", "running", "paused", "completed", "canceled", "failed"]
+              },
+              "scheduled_at": { "type": ["string", "null"], "format": "date-time" }
+            },
+            "required": ["campaign_id", "channel", "state"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.campaign.state.changed" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "campaign_id": { "type": "string", "format": "uuid" },
+              "from_state": {
+                "type": "string",
+                "enum": ["draft", "scheduled", "running", "paused", "completed", "canceled", "failed"]
+              },
+              "to_state": {
+                "type": "string",
+                "enum": ["draft", "scheduled", "running", "paused", "completed", "canceled", "failed"]
+              }
+            },
+            "required": ["campaign_id", "from_state", "to_state"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.followup.scheduled" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "followup_id": { "type": "string", "format": "uuid" },
+              "campaign_id": { "type": ["string", "null"], "format": "uuid" },
+              "channel": { "type": "string", "enum": ["whatsapp"] },
+              "schedule_at": { "type": "string", "format": "date-time" },
+              "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" }
+            },
+            "required": ["followup_id", "channel", "schedule_at", "phone_e164"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.followup.sent" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "completed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "followup_id": { "type": "string", "format": "uuid" },
+              "campaign_id": { "type": ["string", "null"], "format": "uuid" },
+              "channel": { "type": "string", "enum": ["whatsapp"] },
+              "schedule_at": { "type": "string", "format": "date-time" },
+              "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+              "provider_message_id": { "type": "string", "minLength": 1 }
+            },
+            "required": ["followup_id", "channel", "schedule_at", "phone_e164", "provider_message_id"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.followup.failed" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "failed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "followup_id": { "type": "string", "format": "uuid" },
+              "campaign_id": { "type": ["string", "null"], "format": "uuid" },
+              "channel": { "type": "string", "enum": ["whatsapp"] },
+              "schedule_at": { "type": "string", "format": "date-time" },
+              "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+              "error_code": { "type": "string", "minLength": 1 },
+              "retryable": { "type": "boolean" }
+            },
+            "required": ["followup_id", "channel", "schedule_at", "phone_e164", "error_code", "retryable"]
           }
         }
       }
