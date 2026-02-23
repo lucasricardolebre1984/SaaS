@@ -100,6 +100,7 @@ test('GET /health returns runtime metadata', async () => {
   const body = await res.json();
   assert.equal(body.status, 'ok');
   assert.equal(body.service, 'app-platform-api');
+  assert.equal(body.orchestration.backend, 'file');
   assert.ok(typeof body.orchestration.storage_dir === 'string');
   assert.ok(typeof body.orchestration.policy_path === 'string');
   assert.ok(typeof body.orchestration.queue_file === 'string');

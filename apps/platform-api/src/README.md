@@ -16,6 +16,12 @@ Runtime skeleton placeholder for API orchestration surface.
 
 ## Runtime Notes
 
-- Orchestration envelopes are persisted as NDJSON in `.runtime-data/orchestration/`.
-- Module task queue state is persisted in `.runtime-data/orchestration/module-task-queue.json`.
+- Store backend:
+  - `file` (default): persists in `.runtime-data/orchestration/`
+  - `postgres`: persists in PostgreSQL tables (auto-migrate on startup)
+- For `postgres` backend configure:
+  - `ORCHESTRATION_STORE_BACKEND=postgres`
+  - `ORCHESTRATION_PG_DSN=postgres://...`
+  - optional `ORCHESTRATION_PG_SCHEMA=public`
 - Task planning uses policy file: `apps/platform-api/config/task-routing.policy.json`.
+- SQL baseline: `apps/platform-api/sql/orchestration-postgres.sql`.

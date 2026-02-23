@@ -12,8 +12,7 @@ Implement the first executable runtime slice for dual concierge flow:
 ## Scope
 - `app-platform-api` receives and validates requests using existing contracts.
 - `app-platform-api` simulates contract-valid in-memory orchestration dispatch and lifecycle events.
-- Orchestration envelopes are durably persisted in local NDJSON storage.
-- No relational database persistence yet.
+- Orchestration envelopes are persisted through pluggable store backends (`file` default, `postgres` optional).
 - Module task processing is asynchronous through internal queue/worker boundary.
 - No external provider calls yet.
 
@@ -26,6 +25,7 @@ Implement the first executable runtime slice for dual concierge flow:
 6. `GET /internal/orchestration/trace?correlation_id={uuid}` returns command/event trace preserving correlation id.
 7. Downstream task routing is policy-driven from versioned routing config (not hardcoded regex routing).
 8. `POST /internal/worker/module-tasks/drain` processes queued module tasks and emits lifecycle events.
+9. Runtime storage backend can be switched by configuration without changing API contracts.
 
 ## Non-Functional Requirements
 - JSON schema validation via Ajv.

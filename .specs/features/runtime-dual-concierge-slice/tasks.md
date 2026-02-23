@@ -82,3 +82,20 @@ Date: 2026-02-23
   - apps/platform-api/src/orchestration-store.mjs
   - apps/platform-api/src/app.mjs
   - apps/platform-api/src/app.test.mjs
+
+## RDS-008 - Add pluggable relational persistence adapter (Postgres)
+- Status: done
+- Output:
+  - orchestration store refactored to backend factory (`file` and `postgres`)
+  - Postgres adapter created for commands/events/queue lifecycle with auto-migrate option
+  - SQL schema baseline added for operational setup
+- Verification:
+  - `nx run app-platform-api:test` passes on `file` backend after store abstraction
+  - `nx run contract-tests:contract-checks` remains passing
+  - Postgres live integration test pending (no local DB provisioned in this checkpoint)
+- Evidence:
+  - apps/platform-api/src/orchestration-store.mjs
+  - apps/platform-api/src/orchestration-store-file.mjs
+  - apps/platform-api/src/orchestration-store-postgres.mjs
+  - apps/platform-api/sql/orchestration-postgres.sql
+  - apps/platform-api/src/app.mjs

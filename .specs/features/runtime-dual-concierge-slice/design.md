@@ -7,7 +7,9 @@ Date: 2026-02-23
 - App: `app-platform-api`
 - Node HTTP server (no framework dependency)
 - Ajv validators loaded from contract artifacts in `libs/`
-- Local durable orchestration storage: NDJSON append-only files
+- Pluggable orchestration storage:
+  - `file`: NDJSON + queue JSON snapshots
+  - `postgres`: relational tables with JSON envelopes
 - Policy-driven task planner loaded from `apps/platform-api/config/task-routing.policy.json`
 
 ## Endpoints
@@ -42,6 +44,7 @@ Date: 2026-02-23
   - terminal event `module.task.completed` or `module.task.failed` (policy route flag)
 - All envelopes share the same `correlation_id` per interaction and are stored in bounded in-memory cache plus durable NDJSON files.
 - Queue state is persisted in `module-task-queue.json` with `pending` and `history`.
+- Postgres schema baseline is available in `apps/platform-api/sql/orchestration-postgres.sql`.
 
 ## Response Pattern
 - Success:

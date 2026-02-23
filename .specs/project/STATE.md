@@ -48,9 +48,10 @@ Active feature: runtime-dual-concierge-slice
 - Runtime orchestration stub now emits validated command/event envelopes with in-memory trace endpoints and preserved correlation id.
 - Runtime now persists orchestration envelopes in durable NDJSON storage and applies policy-driven downstream task routing.
 - Runtime now has queue/worker boundary for module-task lifecycle with durable queue rehydration.
+- Runtime store now supports pluggable backend (`file` default, `postgres` adapter) with SQL baseline for relational persistence.
 
 ## Next Checkpoint
-Replace NDJSON local durability with relational persistence (Postgres schema) while preserving queue/worker contract behavior.
+Run integration checkpoint with real Postgres instance (migrations + smoke flow) and close operational runbook for backend switch.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

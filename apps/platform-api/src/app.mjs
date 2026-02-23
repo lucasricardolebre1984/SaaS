@@ -177,8 +177,6 @@ function createModuleTaskCommand(request, ownerCommand, taskPlan) {
 }
 
 function createModuleTaskCreatedEvent(moduleTaskCommand) {
-  const nowIso = new Date().toISOString();
-  const taskId = moduleTaskCommand.payload.task_id;
   const targetModule = moduleTaskCommand.target_module;
   return {
     schema_version: ORCHESTRATION_SCHEMA_VERSION,
@@ -188,12 +186,12 @@ function createModuleTaskCreatedEvent(moduleTaskCommand) {
     tenant_id: moduleTaskCommand.tenant_id,
     source_module: 'mod-01-owner-concierge',
     target_module: targetModule,
-    emitted_at: nowIso,
+    emitted_at: new Date().toISOString(),
     correlation_id: moduleTaskCommand.correlation_id,
     causation_id: moduleTaskCommand.command_id,
     trace_id: moduleTaskCommand.trace_id,
     payload: {
-      task_id: taskId,
+      task_id: moduleTaskCommand.payload.task_id,
       task_type: moduleTaskCommand.payload.task_type,
       target_module: targetModule
     }
@@ -264,31 +262,31 @@ function createModuleTaskTerminalEvent(queueItem) {
   };
 }
 
-function persistCommand(store, command) {
+async function persistCommandSafely(store, command) {
   try {
-    store.appendCommand(command);
+    await store.appendCommand(command);
     return null;
   } catch (error) {
     return error;
   }
 }
 
-function persistEvent(store, event) {
+async function persistEventSafely(store, event) {
   try {
-    store.appendEvent(event);
+    await store.appendEvent(event);
     return null;
   } catch (error) {
     return error;
   }
 }
 
-function validateAndPersistEvent(store, event) {
+async function validateAndPersistEvent(store, event) {
   const validation = orchestrationEventValid(event);
   if (!validation.ok) {
     return { ok: false, type: 'contract_generation_error', details: validation.errors };
   }
 
-  const storageError = persistEvent(store, event);
+  const storageError = await persistEventSafely(store, event);
   if (storageError) {
     return {
       ok: false,
@@ -300,305 +298,333 @@ function validateAndPersistEvent(store, event) {
   return { ok: true };
 }
 
+function orchestrationInfo(store, policyPath) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null,
+      queue_file: null,
+      policy_path: policyPath
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir,
+    queue_file: store.queueFilePath,
+    policy_path: policyPath
+  };
+}
+
 export function createApp(options = {}) {
   const store = createOrchestrationStore({
+    backend: options.orchestrationBackend,
     storageDir: options.orchestrationStorageDir ?? options.storageDir,
-    logLimit: options.orchestrationLogLimit ?? ORCHESTRATION_LOG_LIMIT
+    logLimit: options.orchestrationLogLimit ?? ORCHESTRATION_LOG_LIMIT,
+    pgConnectionString: options.orchestrationPgDsn,
+    pgSchema: options.orchestrationPgSchema,
+    pgAutoMigrate: options.orchestrationPgAutoMigrate
   });
   const taskPlanner = createTaskPlanner({
     policyPath: options.taskRoutingPolicyPath
   });
 
-  return async function app(req, res) {
+  const handler = async function app(req, res) {
     const { method, url } = req;
     const parsedUrl = new URL(url ?? '/', 'http://localhost');
     const path = parsedUrl.pathname;
 
-    if (method === 'GET' && path === '/health') {
-      return json(res, 200, {
-        status: 'ok',
-        service: 'app-platform-api',
-        orchestration: {
-          storage_dir: store.storageDir,
-          policy_path: taskPlanner.policyPath,
-          queue_file: store.queueFilePath
+    try {
+      if (method === 'GET' && path === '/health') {
+        return json(res, 200, {
+          status: 'ok',
+          service: 'app-platform-api',
+          orchestration: orchestrationInfo(store, taskPlanner.policyPath)
+        });
+      }
+
+      if (method === 'GET' && path === '/internal/orchestration/commands') {
+        const commands = await store.getCommands();
+        return json(res, 200, {
+          count: commands.length,
+          items: commands
+        });
+      }
+
+      if (method === 'GET' && path === '/internal/orchestration/events') {
+        const events = await store.getEvents();
+        return json(res, 200, {
+          count: events.length,
+          items: events
+        });
+      }
+
+      if (method === 'GET' && path === '/internal/orchestration/trace') {
+        const correlationId = parsedUrl.searchParams.get('correlation_id');
+        if (!correlationId) {
+          return json(res, 400, { error: 'missing_correlation_id' });
         }
-      });
-    }
 
-    if (method === 'GET' && path === '/internal/orchestration/commands') {
-      const commands = store.getCommands();
-      return json(res, 200, {
-        count: commands.length,
-        items: commands
-      });
-    }
-
-    if (method === 'GET' && path === '/internal/orchestration/events') {
-      const events = store.getEvents();
-      return json(res, 200, {
-        count: events.length,
-        items: events
-      });
-    }
-
-    if (method === 'GET' && path === '/internal/orchestration/trace') {
-      const correlationId = parsedUrl.searchParams.get('correlation_id');
-      if (!correlationId) {
-        return json(res, 400, { error: 'missing_correlation_id' });
+        const trace = await store.getTrace(correlationId);
+        return json(res, 200, {
+          correlation_id: correlationId,
+          commands: trace.commands,
+          events: trace.events
+        });
       }
 
-      const trace = store.getTrace(correlationId);
-      return json(res, 200, {
-        correlation_id: correlationId,
-        commands: trace.commands,
-        events: trace.events
-      });
-    }
-
-    if (method === 'GET' && path === '/internal/orchestration/module-task-queue') {
-      const queue = store.getModuleTaskQueue();
-      return json(res, 200, {
-        pending_count: queue.pending.length,
-        history_count: queue.history.length,
-        pending: queue.pending,
-        history: queue.history
-      });
-    }
-
-    if (method === 'POST' && path === '/internal/worker/module-tasks/drain') {
-      const body = await readJsonBody(req);
-      if (body === null) {
-        return json(res, 400, { error: 'invalid_json' });
+      if (method === 'GET' && path === '/internal/orchestration/module-task-queue') {
+        const queue = await store.getModuleTaskQueue();
+        return json(res, 200, {
+          pending_count: queue.pending.length,
+          history_count: queue.history.length,
+          pending: queue.pending,
+          history: queue.history
+        });
       }
 
-      const requestedLimit = Number(body.limit ?? 1);
-      const maxItems = Number.isFinite(requestedLimit) && requestedLimit > 0
-        ? Math.min(Math.floor(requestedLimit), 100)
-        : 1;
+      if (method === 'POST' && path === '/internal/worker/module-tasks/drain') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
 
-      const processed = [];
-      let failed = 0;
-      let succeeded = 0;
-      for (let i = 0; i < maxItems; i += 1) {
-        const queueItem = store.claimNextModuleTask();
-        if (!queueItem) break;
+        const requestedLimit = Number(body.limit ?? 1);
+        const maxItems = Number.isFinite(requestedLimit) && requestedLimit > 0
+          ? Math.min(Math.floor(requestedLimit), 100)
+          : 1;
 
-        const acceptedEvent = createModuleTaskAcceptedEvent(queueItem);
-        const acceptedResult = validateAndPersistEvent(store, acceptedEvent);
-        if (!acceptedResult.ok) {
-          return json(res, 500, {
-            error: acceptedResult.type,
-            details: acceptedResult.details
+        const processed = [];
+        let failed = 0;
+        let succeeded = 0;
+        for (let i = 0; i < maxItems; i += 1) {
+          const queueItem = await store.claimNextModuleTask();
+          if (!queueItem) break;
+
+          const acceptedEvent = createModuleTaskAcceptedEvent(queueItem);
+          const acceptedResult = await validateAndPersistEvent(store, acceptedEvent);
+          if (!acceptedResult.ok) {
+            return json(res, 500, {
+              error: acceptedResult.type,
+              details: acceptedResult.details
+            });
+          }
+
+          const terminalEvent = createModuleTaskTerminalEvent(queueItem);
+          const terminalResult = await validateAndPersistEvent(store, terminalEvent);
+          if (!terminalResult.ok) {
+            return json(res, 500, {
+              error: terminalResult.type,
+              details: terminalResult.details
+            });
+          }
+
+          const completionStatus = terminalEvent.name === 'module.task.failed' ? 'failed' : 'completed';
+          const completed = await store.completeModuleTask(queueItem.queue_item_id, {
+            status: completionStatus,
+            error_code: terminalEvent.payload?.error_code,
+            result_summary: terminalEvent.payload?.result_summary
+          });
+
+          if (!completed) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: `unable_to_complete_queue_item:${queueItem.queue_item_id}`
+            });
+          }
+
+          if (completionStatus === 'failed') {
+            failed += 1;
+          } else {
+            succeeded += 1;
+          }
+
+          processed.push({
+            queue_item_id: queueItem.queue_item_id,
+            task_id: queueItem.command.payload.task_id,
+            correlation_id: queueItem.command.correlation_id,
+            status: completionStatus
           });
         }
 
-        const terminalEvent = createModuleTaskTerminalEvent(queueItem);
-        const terminalResult = validateAndPersistEvent(store, terminalEvent);
-        if (!terminalResult.ok) {
-          return json(res, 500, {
-            error: terminalResult.type,
-            details: terminalResult.details
+        return json(res, 200, {
+          processed_count: processed.length,
+          succeeded_count: succeeded,
+          failed_count: failed,
+          processed
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/interaction') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = ownerInteractionValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
           });
         }
 
-        const completionStatus = terminalEvent.name === 'module.task.failed' ? 'failed' : 'completed';
-        const completed = store.completeModuleTask(queueItem.queue_item_id, {
-          status: completionStatus,
-          error_code: terminalEvent.payload?.error_code,
-          result_summary: terminalEvent.payload?.result_summary
-        });
-
-        if (!completed) {
-          return json(res, 500, {
-            error: 'storage_error',
-            details: `unable_to_complete_queue_item:${queueItem.queue_item_id}`
-          });
-        }
-
-        if (completionStatus === 'failed') {
-          failed += 1;
-        } else {
-          succeeded += 1;
-        }
-
-        processed.push({
-          queue_item_id: queueItem.queue_item_id,
-          task_id: queueItem.command.payload.task_id,
-          correlation_id: queueItem.command.correlation_id,
-          status: completionStatus
-        });
-      }
-
-      return json(res, 200, {
-        processed_count: processed.length,
-        succeeded_count: succeeded,
-        failed_count: failed,
-        processed
-      });
-    }
-
-    if (method === 'POST' && path === '/v1/owner-concierge/interaction') {
-      const body = await readJsonBody(req);
-      if (body === null) {
-        return json(res, 400, { error: 'invalid_json' });
-      }
-
-      const validation = ownerInteractionValid(body);
-      if (!validation.ok) {
-        return json(res, 400, {
-          error: 'validation_error',
-          details: validation.errors
-        });
-      }
-
-      const request = body.request;
-      const correlationId = randomUUID();
-      const traceId = randomUUID();
-      const ownerCommand = createOwnerCommandEnvelope(request, correlationId, traceId);
-      const ownerCommandValidation = orchestrationCommandValid(ownerCommand);
-      if (!ownerCommandValidation.ok) {
-        return json(res, 500, {
-          error: 'contract_generation_error',
-          details: ownerCommandValidation.errors
-        });
-      }
-      const ownerPersistError = persistCommand(store, ownerCommand);
-      if (ownerPersistError) {
-        return json(res, 500, {
-          error: 'storage_error',
-          details: String(ownerPersistError.message ?? ownerPersistError)
-        });
-      }
-
-      const ownerCommandCreatedEvent = createOwnerCommandCreatedEvent(ownerCommand);
-      const ownerEventResult = validateAndPersistEvent(store, ownerCommandCreatedEvent);
-      if (!ownerEventResult.ok) {
-        return json(res, 500, {
-          error: ownerEventResult.type,
-          details: ownerEventResult.details
-        });
-      }
-
-      const taskPlan = taskPlanner.plan(request);
-      const moduleTaskCommand = createModuleTaskCommand(request, ownerCommand, taskPlan);
-      if (moduleTaskCommand) {
-        const moduleTaskCommandValidation = orchestrationCommandValid(moduleTaskCommand);
-        if (!moduleTaskCommandValidation.ok) {
+        const request = body.request;
+        const correlationId = randomUUID();
+        const traceId = randomUUID();
+        const ownerCommand = createOwnerCommandEnvelope(request, correlationId, traceId);
+        const ownerCommandValidation = orchestrationCommandValid(ownerCommand);
+        if (!ownerCommandValidation.ok) {
           return json(res, 500, {
             error: 'contract_generation_error',
-            details: moduleTaskCommandValidation.errors
+            details: ownerCommandValidation.errors
           });
         }
-        const moduleTaskPersistError = persistCommand(store, moduleTaskCommand);
-        if (moduleTaskPersistError) {
+        const ownerPersistError = await persistCommandSafely(store, ownerCommand);
+        if (ownerPersistError) {
           return json(res, 500, {
             error: 'storage_error',
-            details: String(moduleTaskPersistError.message ?? moduleTaskPersistError)
+            details: String(ownerPersistError.message ?? ownerPersistError)
           });
         }
 
-        const createdEvent = createModuleTaskCreatedEvent(moduleTaskCommand);
-        const createdEventResult = validateAndPersistEvent(store, createdEvent);
-        if (!createdEventResult.ok) {
+        const ownerCommandCreatedEvent = createOwnerCommandCreatedEvent(ownerCommand);
+        const ownerEventResult = await validateAndPersistEvent(store, ownerCommandCreatedEvent);
+        if (!ownerEventResult.ok) {
           return json(res, 500, {
-            error: createdEventResult.type,
-            details: createdEventResult.details
+            error: ownerEventResult.type,
+            details: ownerEventResult.details
           });
         }
 
-        try {
-          store.enqueueModuleTask(moduleTaskCommand, {
-            simulateFailure: taskPlan?.simulate_failure === true
-          });
-        } catch (error) {
-          return json(res, 500, {
-            error: 'storage_error',
-            details: String(error.message ?? error)
+        const taskPlan = taskPlanner.plan(request);
+        const moduleTaskCommand = createModuleTaskCommand(request, ownerCommand, taskPlan);
+        if (moduleTaskCommand) {
+          const moduleTaskCommandValidation = orchestrationCommandValid(moduleTaskCommand);
+          if (!moduleTaskCommandValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: moduleTaskCommandValidation.errors
+            });
+          }
+          const moduleTaskPersistError = await persistCommandSafely(store, moduleTaskCommand);
+          if (moduleTaskPersistError) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(moduleTaskPersistError.message ?? moduleTaskPersistError)
+            });
+          }
+
+          const createdEvent = createModuleTaskCreatedEvent(moduleTaskCommand);
+          const createdEventResult = await validateAndPersistEvent(store, createdEvent);
+          if (!createdEventResult.ok) {
+            return json(res, 500, {
+              error: createdEventResult.type,
+              details: createdEventResult.details
+            });
+          }
+
+          try {
+            await store.enqueueModuleTask(moduleTaskCommand, {
+              simulateFailure: taskPlan?.simulate_failure === true
+            });
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+        }
+
+        const session_state = ownerSessionStateFromRequest(request);
+        const avatar_state = avatarStateFromRequest(request);
+        const downstreamTasks = moduleTaskCommand
+          ? [{
+            task_id: moduleTaskCommand.payload.task_id,
+            target_module: moduleTaskCommand.target_module,
+            task_type: moduleTaskCommand.payload.task_type,
+            status: 'queued'
+          }]
+          : undefined;
+
+        const response = {
+          request_id: request.request_id,
+          status: 'accepted',
+          owner_command: {
+            command_id: ownerCommand.command_id,
+            correlation_id: ownerCommand.correlation_id,
+            name: ownerCommand.name
+          },
+          session_state,
+          avatar_state,
+          assistant_output: {
+            text: request.operation === 'send_message'
+              ? 'Interaction accepted and task queued for worker processing.'
+              : 'Operation accepted.'
+          }
+        };
+
+        if (downstreamTasks) {
+          response.downstream_tasks = downstreamTasks;
+        }
+
+        return json(res, 200, { response });
+      }
+
+      if (method === 'POST' && path === '/provider/evolution/webhook') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = evolutionWebhookValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
           });
         }
-      }
 
-      const session_state = ownerSessionStateFromRequest(request);
-      const avatar_state = avatarStateFromRequest(request);
-      const downstreamTasks = moduleTaskCommand
-        ? [{
-          task_id: moduleTaskCommand.payload.task_id,
-          target_module: moduleTaskCommand.target_module,
-          task_type: moduleTaskCommand.payload.task_type,
-          status: 'queued'
-        }]
-        : undefined;
-
-      const response = {
-        request_id: request.request_id,
-        status: 'accepted',
-        owner_command: {
-          command_id: ownerCommand.command_id,
-          correlation_id: ownerCommand.correlation_id,
-          name: ownerCommand.name
-        },
-        session_state,
-        avatar_state,
-        assistant_output: {
-          text: request.operation === 'send_message'
-            ? 'Interaction accepted and task queued for worker processing.'
-            : 'Operation accepted.'
-        }
-      };
-
-      if (downstreamTasks) {
-        response.downstream_tasks = downstreamTasks;
-      }
-
-      return json(res, 200, { response });
-    }
-
-    if (method === 'POST' && path === '/provider/evolution/webhook') {
-      const body = await readJsonBody(req);
-      if (body === null) {
-        return json(res, 400, { error: 'invalid_json' });
-      }
-
-      const validation = evolutionWebhookValid(body);
-      if (!validation.ok) {
-        return json(res, 400, {
-          error: 'validation_error',
-          details: validation.errors
+        return json(res, 200, {
+          status: 'accepted',
+          normalized: {
+            tenant_id: body.tenant_id,
+            event_type: body.event_type,
+            message_id: body.payload.message_id,
+            delivery_state: body.payload.delivery_state ?? 'unknown'
+          }
         });
       }
 
-      return json(res, 200, {
-        status: 'accepted',
-        normalized: {
-          tenant_id: body.tenant_id,
-          event_type: body.event_type,
-          message_id: body.payload.message_id,
-          delivery_state: body.payload.delivery_state ?? 'unknown'
+      if (method === 'POST' && path === '/provider/evolution/outbound/validate') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
         }
-      });
-    }
 
-    if (method === 'POST' && path === '/provider/evolution/outbound/validate') {
-      const body = await readJsonBody(req);
-      if (body === null) {
-        return json(res, 400, { error: 'invalid_json' });
-      }
+        const validation = outboundQueueValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
 
-      const validation = outboundQueueValid(body);
-      if (!validation.ok) {
-        return json(res, 400, {
-          error: 'validation_error',
-          details: validation.errors
+        return json(res, 200, {
+          status: 'valid',
+          queue_item_id: body.queue_item_id
         });
       }
 
-      return json(res, 200, {
-        status: 'valid',
-        queue_item_id: body.queue_item_id
+      return json(res, 404, { error: 'not_found' });
+    } catch (error) {
+      return json(res, 500, {
+        error: 'runtime_error',
+        details: String(error?.message ?? error)
       });
     }
-
-    return json(res, 404, { error: 'not_found' });
   };
+
+  handler.store = store;
+  return handler;
 }

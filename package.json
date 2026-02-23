@@ -10,6 +10,9 @@
     "start:day": "powershell -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -SkipInstall",
     "end:day": "powershell -ExecutionPolicy Bypass -File ./tools/end-day.ps1 -ShowPending"
   },
+  "dependencies": {
+    "pg": "^8.16.3"
+  },
   "devDependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
