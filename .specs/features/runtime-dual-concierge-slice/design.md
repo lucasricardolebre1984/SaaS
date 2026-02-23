@@ -7,6 +7,8 @@ Date: 2026-02-23
 - App: `app-platform-api`
 - Node HTTP server (no framework dependency)
 - Ajv validators loaded from contract artifacts in `libs/`
+- Local durable orchestration storage: NDJSON append-only files
+- Policy-driven task planner loaded from `apps/platform-api/config/task-routing.policy.json`
 
 ## Endpoints
 1. `GET /health`
@@ -30,11 +32,11 @@ Date: 2026-02-23
   - emit command envelope `owner.command.create`
   - emit event envelope `owner.command.created`
 - For `send_message` operations:
-  - infer downstream task route and emit `module.task.create`
+  - infer downstream task route via explicit policy rules and emit `module.task.create`
   - simulate lifecycle events:
     - always `module.task.created` + `module.task.accepted`
-    - terminal event `module.task.completed` or `module.task.failed` (keyword-based simulation)
-- All envelopes share the same `correlation_id` per interaction and are kept in bounded in-memory logs.
+    - terminal event `module.task.completed` or `module.task.failed` (policy route flag)
+- All envelopes share the same `correlation_id` per interaction and are stored in bounded in-memory cache plus durable NDJSON files.
 
 ## Response Pattern
 - Success:

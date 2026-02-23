@@ -14,3 +14,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-001..003 runtime dual concierge endpoints and tests
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-004 runtime slice governance closure
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-005 orchestration dispatch stub and correlation trace endpoints
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-006 durable orchestration store and policy-driven routing

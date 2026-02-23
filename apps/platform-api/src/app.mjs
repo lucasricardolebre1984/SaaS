@@ -6,6 +6,8 @@ import {
   orchestrationEventValid,
   ownerInteractionValid
 } from './schemas.mjs';
+import { createOrchestrationStore } from './orchestration-store.mjs';
+import { createTaskPlanner } from './task-planner.mjs';
 
 const ORCHESTRATION_SCHEMA_VERSION = '1.0.0';
 const ORCHESTRATION_LOG_LIMIT = 200;
@@ -26,13 +28,6 @@ async function readJsonBody(req) {
     return JSON.parse(raw);
   } catch {
     return null;
-  }
-}
-
-function appendLog(list, entry) {
-  list.push(entry);
-  if (list.length > ORCHESTRATION_LOG_LIMIT) {
-    list.shift();
   }
 }
 
@@ -78,41 +73,6 @@ function avatarStateFromRequest(request) {
   }
 
   return { enabled: false, state: 'disabled' };
-}
-
-function inferTaskRouting(text) {
-  const normalized = String(text ?? '').toLowerCase();
-
-  if (/(cobr|fatura|pagament)/.test(normalized)) {
-    return {
-      target_module: 'mod-05-faturamento-cobranca',
-      task_type: 'billing.collection.request'
-    };
-  }
-
-  if (/(agenda|compromisso|reuni)/.test(normalized)) {
-    return {
-      target_module: 'mod-04-agenda',
-      task_type: 'agenda.commitment.schedule'
-    };
-  }
-
-  if (/(cliente|cadastro|contato)/.test(normalized)) {
-    return {
-      target_module: 'mod-03-clientes',
-      task_type: 'customer.upsert'
-    };
-  }
-
-  return {
-    target_module: 'mod-02-whatsapp-crm',
-    task_type: 'crm.followup.send'
-  };
-}
-
-function shouldSimulateTaskFailure(request) {
-  if (request.operation !== 'send_message') return false;
-  return /\b(falha|erro|fail)\b/i.test(String(request.payload?.text ?? ''));
 }
 
 function createOwnerCommandEnvelope(request, correlationId, traceId) {
@@ -178,10 +138,8 @@ function createOwnerCommandCreatedEvent(ownerCommand) {
   };
 }
 
-function createModuleTaskCommand(request, ownerCommand) {
-  if (request.operation !== 'send_message') return null;
-
-  const routing = inferTaskRouting(request.payload?.text);
+function createModuleTaskCommand(request, ownerCommand, taskPlan) {
+  if (!taskPlan) return null;
   const taskId = randomUUID();
 
   return {
@@ -191,7 +149,7 @@ function createModuleTaskCommand(request, ownerCommand) {
     name: 'module.task.create',
     tenant_id: request.tenant_id,
     source_module: 'mod-01-owner-concierge',
-    target_module: routing.target_module,
+    target_module: taskPlan.target_module,
     created_at: new Date().toISOString(),
     correlation_id: ownerCommand.correlation_id,
     causation_id: ownerCommand.command_id,
@@ -203,15 +161,16 @@ function createModuleTaskCommand(request, ownerCommand) {
     },
     payload: {
       task_id: taskId,
-      task_type: routing.task_type,
-      priority: 'normal',
+      task_type: taskPlan.task_type,
+      priority: taskPlan.priority,
       input: {
         request_id: request.request_id,
         session_id: request.session_id,
         text: String(request.payload?.text ?? ''),
         attachments_count: Array.isArray(request.payload?.attachments)
           ? request.payload.attachments.length
-          : 0
+          : 0,
+        planning_rule: taskPlan.rule_id
       }
     }
   };
@@ -305,9 +264,32 @@ function createModuleTaskEvents(moduleTaskCommand, fail) {
   ];
 }
 
-export function createApp() {
-  const commandLog = [];
-  const eventLog = [];
+function persistCommand(store, command) {
+  try {
+    store.appendCommand(command);
+    return null;
+  } catch (error) {
+    return error;
+  }
+}
+
+function persistEvent(store, event) {
+  try {
+    store.appendEvent(event);
+    return null;
+  } catch (error) {
+    return error;
+  }
+}
+
+export function createApp(options = {}) {
+  const store = createOrchestrationStore({
+    storageDir: options.orchestrationStorageDir ?? options.storageDir,
+    logLimit: options.orchestrationLogLimit ?? ORCHESTRATION_LOG_LIMIT
+  });
+  const taskPlanner = createTaskPlanner({
+    policyPath: options.taskRoutingPolicyPath
+  });
 
   return async function app(req, res) {
     const { method, url } = req;
@@ -315,20 +297,29 @@ export function createApp() {
     const path = parsedUrl.pathname;
 
     if (method === 'GET' && path === '/health') {
-      return json(res, 200, { status: 'ok', service: 'app-platform-api' });
+      return json(res, 200, {
+        status: 'ok',
+        service: 'app-platform-api',
+        orchestration: {
+          storage_dir: store.storageDir,
+          policy_path: taskPlanner.policyPath
+        }
+      });
     }
 
     if (method === 'GET' && path === '/internal/orchestration/commands') {
+      const commands = store.getCommands();
       return json(res, 200, {
-        count: commandLog.length,
-        items: commandLog
+        count: commands.length,
+        items: commands
       });
     }
 
     if (method === 'GET' && path === '/internal/orchestration/events') {
+      const events = store.getEvents();
       return json(res, 200, {
-        count: eventLog.length,
-        items: eventLog
+        count: events.length,
+        items: events
       });
     }
 
@@ -338,12 +329,11 @@ export function createApp() {
         return json(res, 400, { error: 'missing_correlation_id' });
       }
 
-      const commands = commandLog.filter((item) => item.correlation_id === correlationId);
-      const events = eventLog.filter((item) => item.correlation_id === correlationId);
+      const trace = store.getTrace(correlationId);
       return json(res, 200, {
         correlation_id: correlationId,
-        commands,
-        events
+        commands: trace.commands,
+        events: trace.events
       });
     }
 
@@ -372,7 +362,13 @@ export function createApp() {
           details: ownerCommandValidation.errors
         });
       }
-      appendLog(commandLog, ownerCommand);
+      const ownerPersistError = persistCommand(store, ownerCommand);
+      if (ownerPersistError) {
+        return json(res, 500, {
+          error: 'storage_error',
+          details: String(ownerPersistError.message ?? ownerPersistError)
+        });
+      }
 
       const ownerCommandCreatedEvent = createOwnerCommandCreatedEvent(ownerCommand);
       const ownerCommandCreatedValidation = orchestrationEventValid(ownerCommandCreatedEvent);
@@ -382,9 +378,16 @@ export function createApp() {
           details: ownerCommandCreatedValidation.errors
         });
       }
-      appendLog(eventLog, ownerCommandCreatedEvent);
+      const ownerEventPersistError = persistEvent(store, ownerCommandCreatedEvent);
+      if (ownerEventPersistError) {
+        return json(res, 500, {
+          error: 'storage_error',
+          details: String(ownerEventPersistError.message ?? ownerEventPersistError)
+        });
+      }
 
-      const moduleTaskCommand = createModuleTaskCommand(request, ownerCommand);
+      const taskPlan = taskPlanner.plan(request);
+      const moduleTaskCommand = createModuleTaskCommand(request, ownerCommand, taskPlan);
       if (moduleTaskCommand) {
         const moduleTaskCommandValidation = orchestrationCommandValid(moduleTaskCommand);
         if (!moduleTaskCommandValidation.ok) {
@@ -393,10 +396,19 @@ export function createApp() {
             details: moduleTaskCommandValidation.errors
           });
         }
-        appendLog(commandLog, moduleTaskCommand);
+        const moduleTaskPersistError = persistCommand(store, moduleTaskCommand);
+        if (moduleTaskPersistError) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(moduleTaskPersistError.message ?? moduleTaskPersistError)
+          });
+        }
       }
 
-      const moduleTaskEvents = createModuleTaskEvents(moduleTaskCommand, shouldSimulateTaskFailure(request));
+      const moduleTaskEvents = createModuleTaskEvents(
+        moduleTaskCommand,
+        taskPlan?.simulate_failure === true
+      );
       for (const evt of moduleTaskEvents) {
         const eventValidation = orchestrationEventValid(evt);
         if (!eventValidation.ok) {
@@ -405,7 +417,13 @@ export function createApp() {
             details: eventValidation.errors
           });
         }
-        appendLog(eventLog, evt);
+        const eventPersistError = persistEvent(store, evt);
+        if (eventPersistError) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(eventPersistError.message ?? eventPersistError)
+          });
+        }
       }
 
       const session_state = ownerSessionStateFromRequest(request);

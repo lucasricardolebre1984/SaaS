@@ -52,3 +52,19 @@ Date: 2026-02-23
   - apps/platform-api/src/app.mjs
   - apps/platform-api/src/schemas.mjs
   - apps/platform-api/src/app.test.mjs
+
+## RDS-006 - Add durable store and policy-driven routing
+- Status: done
+- Output:
+  - orchestration commands/events persisted to local NDJSON files with startup rehydration
+  - task planner moved to explicit policy config file
+  - runtime tests cover durable trace reload and policy-based routing
+- Verification:
+  - `nx run app-platform-api:test` passes with storage and policy assertions
+  - `nx run contract-tests:contract-checks` remains passing
+- Evidence:
+  - apps/platform-api/src/orchestration-store.mjs
+  - apps/platform-api/src/task-planner.mjs
+  - apps/platform-api/config/task-routing.policy.json
+  - apps/platform-api/src/app.mjs
+  - apps/platform-api/src/app.test.mjs

@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { createApp } from './app.mjs';
 
 function validOwnerRequest() {
@@ -64,9 +67,11 @@ function validOutboundQueueRequest() {
 
 let server;
 let baseUrl;
+let storageDir;
 
 test.before(async () => {
-  server = http.createServer(createApp());
+  storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-orch-'));
+  server = http.createServer(createApp({ orchestrationStorageDir: storageDir }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   baseUrl = `http://127.0.0.1:${address.port}`;
@@ -76,6 +81,7 @@ test.after(async () => {
   await new Promise((resolve, reject) => {
     server.close((err) => (err ? reject(err) : resolve()));
   });
+  await fs.rm(storageDir, { recursive: true, force: true });
 });
 
 test('GET /health returns ok', async () => {
@@ -120,6 +126,11 @@ test('POST /v1/owner-concierge/interaction accepts valid request', async () => {
   for (const evt of traceBody.events) {
     assert.equal(evt.correlation_id, correlationId);
   }
+
+  const commandsRaw = await fs.readFile(path.join(storageDir, 'commands.ndjson'), 'utf8');
+  const eventsRaw = await fs.readFile(path.join(storageDir, 'events.ndjson'), 'utf8');
+  assert.match(commandsRaw, /owner\.command\.create/);
+  assert.match(eventsRaw, /owner\.command\.created/);
 });
 
 test('POST /v1/owner-concierge/interaction rejects invalid request', async () => {
@@ -159,6 +170,46 @@ test('POST /v1/owner-concierge/interaction emits failed lifecycle when requested
   const eventNames = traceBody.events.map((item) => item.name);
   assert.ok(eventNames.includes('module.task.failed'));
   assert.ok(!eventNames.includes('module.task.completed'));
+});
+
+test('POST /v1/owner-concierge/interaction applies routing policy and survives app restart', async () => {
+  const payload = validOwnerRequest();
+  payload.request.payload.text = 'preciso fazer cobranca vencida';
+
+  const res = await fetch(`${baseUrl}/v1/owner-concierge/interaction`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+
+  assert.equal(body.response.downstream_tasks.length, 1);
+  assert.equal(body.response.downstream_tasks[0].target_module, 'mod-05-faturamento-cobranca');
+  assert.equal(body.response.downstream_tasks[0].task_type, 'billing.collection.request');
+
+  const correlationId = body.response.owner_command.correlation_id;
+
+  const rehydratedServer = http.createServer(
+    createApp({ orchestrationStorageDir: storageDir })
+  );
+  await new Promise((resolve) => rehydratedServer.listen(0, '127.0.0.1', resolve));
+  const rehydratedPort = rehydratedServer.address().port;
+  const rehydratedBaseUrl = `http://127.0.0.1:${rehydratedPort}`;
+
+  try {
+    const traceRes = await fetch(
+      `${rehydratedBaseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+    );
+    assert.equal(traceRes.status, 200);
+    const traceBody = await traceRes.json();
+    assert.ok(traceBody.commands.length >= 2);
+    assert.ok(traceBody.events.length >= 3);
+  } finally {
+    await new Promise((resolve, reject) => {
+      rehydratedServer.close((err) => (err ? reject(err) : resolve()));
+    });
+  }
 });
 
 test('GET /internal/orchestration/trace requires correlation_id', async () => {

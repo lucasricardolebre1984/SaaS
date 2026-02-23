@@ -46,9 +46,10 @@ Active feature: runtime-dual-concierge-slice
 - Runtime dual concierge slice implemented in app-platform-api with contract-validated endpoints.
 - Runtime tests added and passing via `nx run app-platform-api:test`.
 - Runtime orchestration stub now emits validated command/event envelopes with in-memory trace endpoints and preserved correlation id.
+- Runtime now persists orchestration envelopes in durable NDJSON storage and applies policy-driven downstream task routing.
 
 ## Next Checkpoint
-Persist orchestration envelopes (commands/events) to durable storage and replace keyword-based stub routing with explicit policy-driven task planning.
+Replace NDJSON local durability with relational persistence (Postgres schema) and split orchestration dispatch into dedicated worker/queue boundary.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

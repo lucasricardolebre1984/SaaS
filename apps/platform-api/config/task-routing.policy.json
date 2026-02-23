@@ -1,0 +1,51 @@
+{
+  "version": "1.0.0",
+  "default_route": {
+    "target_module": "mod-02-whatsapp-crm",
+    "task_type": "crm.followup.send",
+    "priority": "normal",
+    "simulate_failure": false
+  },
+  "rules": [
+    {
+      "id": "billing_collection",
+      "keywords": ["cobrar", "cobranca", "fatura", "pagamento"],
+      "route": {
+        "target_module": "mod-05-faturamento-cobranca",
+        "task_type": "billing.collection.request",
+        "priority": "high",
+        "simulate_failure": false
+      }
+    },
+    {
+      "id": "agenda_commitment",
+      "keywords": ["agenda", "compromisso", "reuniao", "reunião"],
+      "route": {
+        "target_module": "mod-04-agenda",
+        "task_type": "agenda.commitment.schedule",
+        "priority": "normal",
+        "simulate_failure": false
+      }
+    },
+    {
+      "id": "customer_upsert",
+      "keywords": ["cliente", "cadastro", "contato"],
+      "route": {
+        "target_module": "mod-03-clientes",
+        "task_type": "customer.upsert",
+        "priority": "normal",
+        "simulate_failure": false
+      }
+    },
+    {
+      "id": "simulate_failure",
+      "keywords": ["falha", "erro", "fail"],
+      "route": {
+        "target_module": "mod-02-whatsapp-crm",
+        "task_type": "crm.followup.send",
+        "priority": "normal",
+        "simulate_failure": true
+      }
+    }
+  ]
+}
