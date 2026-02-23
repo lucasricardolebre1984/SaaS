@@ -1,0 +1,19 @@
+{
+  "template": "saas-starter",
+  "version": "1",
+  "placeholders": [
+    "saas_name",
+    "tenant_id",
+    "layout_default",
+    "palette_default",
+    "generated_at"
+  ],
+  "files": [
+    "README.md",
+    "RUNBOOK.md",
+    "config/theme.json",
+    "config/modules.json",
+    "apps/owner-console/theme-preset.json",
+    "apps/crm-console/theme-preset.json"
+  ]
+}

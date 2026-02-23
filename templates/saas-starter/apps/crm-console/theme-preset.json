@@ -1,0 +1,6 @@
+{
+  "tenant_id": "{{tenant_id}}",
+  "layout": "{{layout_default}}",
+  "palette": "{{palette_default}}",
+  "target": "crm-console"
+}

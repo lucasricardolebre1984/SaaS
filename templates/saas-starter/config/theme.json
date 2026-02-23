@@ -1,0 +1,7 @@
+{
+  "saas_name": "{{saas_name}}",
+  "tenant_id": "{{tenant_id}}",
+  "layout_default": "{{layout_default}}",
+  "palette_default": "{{palette_default}}",
+  "generated_at": "{{generated_at}}"
+}

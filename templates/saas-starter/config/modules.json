@@ -1,0 +1,29 @@
+{
+  "modules": [
+    {
+      "id": "mod-01-owner-concierge",
+      "label": "Chat IA",
+      "enabled": true
+    },
+    {
+      "id": "mod-02-whatsapp-crm",
+      "label": "CRM WhatsApp",
+      "enabled": true
+    },
+    {
+      "id": "mod-03-clientes",
+      "label": "Clientes",
+      "enabled": true
+    },
+    {
+      "id": "mod-04-agenda",
+      "label": "Agenda",
+      "enabled": true
+    },
+    {
+      "id": "mod-05-faturamento-cobranca",
+      "label": "Faturamento/Cobranca",
+      "enabled": true
+    }
+  ]
+}

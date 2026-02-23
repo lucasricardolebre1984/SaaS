@@ -1,7 +1,7 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Specify (milestone 2 template generator slice)
+Active phase: Implement (milestone 2 template generator slice)
 Active feature: milestone-2-template-generator-slice
 
 ## Current Decisions
@@ -258,9 +258,16 @@ Active feature: milestone-2-template-generator-slice
   - `.specs/features/milestone-2-template-generator-slice/spec.md`
   - `.specs/features/milestone-2-template-generator-slice/design.md`
   - `.specs/features/milestone-2-template-generator-slice/tasks.md`
+- M2T-001..004 completed:
+  - template manifest and placeholder model published in `templates/saas-starter` + `docs/templates/manifest.md`
+  - generator script implemented: `tools/generate-saas-starter.mjs`
+  - package command wired: `npm run generate:saas-starter`
+  - dry-run, generation, conflict-protection, and overwrite paths validated
+- Generation validation artifact:
+  - `.tmp/generated-saas/automania-prime`
 
 ## Next Checkpoint
-Complete draft-to-approved cycle for `milestone-2-template-generator-slice` and start implementation task `M2T-001`.
+Close `milestone-2-template-generator-slice` checkpoint commit and evaluate Milestone 2 exit criteria.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
