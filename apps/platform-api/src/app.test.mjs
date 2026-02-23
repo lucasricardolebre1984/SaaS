@@ -95,6 +95,31 @@ test('POST /v1/owner-concierge/interaction accepts valid request', async () => {
   const body = await res.json();
   assert.equal(body.response.status, 'accepted');
   assert.equal(body.response.owner_command.name, 'owner.command.create');
+  assert.equal(body.response.downstream_tasks.length, 1);
+
+  const correlationId = body.response.owner_command.correlation_id;
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+  assert.equal(traceBody.correlation_id, correlationId);
+
+  const commandNames = traceBody.commands.map((item) => item.name);
+  assert.deepEqual(commandNames, ['owner.command.create', 'module.task.create']);
+
+  const eventNames = traceBody.events.map((item) => item.name);
+  assert.ok(eventNames.includes('owner.command.created'));
+  assert.ok(eventNames.includes('module.task.created'));
+  assert.ok(eventNames.includes('module.task.accepted'));
+  assert.ok(eventNames.includes('module.task.completed'));
+
+  for (const cmd of traceBody.commands) {
+    assert.equal(cmd.correlation_id, correlationId);
+  }
+  for (const evt of traceBody.events) {
+    assert.equal(evt.correlation_id, correlationId);
+  }
 });
 
 test('POST /v1/owner-concierge/interaction rejects invalid request', async () => {
@@ -109,6 +134,38 @@ test('POST /v1/owner-concierge/interaction rejects invalid request', async () =>
   assert.equal(res.status, 400);
   const body = await res.json();
   assert.equal(body.error, 'validation_error');
+});
+
+test('POST /v1/owner-concierge/interaction emits failed lifecycle when requested', async () => {
+  const payload = validOwnerRequest();
+  payload.request.payload.text = 'forcar fail no modulo 2';
+
+  const res = await fetch(`${baseUrl}/v1/owner-concierge/interaction`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.match(body.response.assistant_output.text, /failed/i);
+
+  const correlationId = body.response.owner_command.correlation_id;
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+
+  const eventNames = traceBody.events.map((item) => item.name);
+  assert.ok(eventNames.includes('module.task.failed'));
+  assert.ok(!eventNames.includes('module.task.completed'));
+});
+
+test('GET /internal/orchestration/trace requires correlation_id', async () => {
+  const res = await fetch(`${baseUrl}/internal/orchestration/trace`);
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.error, 'missing_correlation_id');
 });
 
 test('POST /provider/evolution/webhook accepts valid request', async () => {

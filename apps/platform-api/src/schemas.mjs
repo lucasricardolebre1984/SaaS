@@ -17,10 +17,17 @@ function readJson(relativePath) {
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 addFormats(ajv);
 
+const orchestrationBaseSchema = readJson('libs/core/orchestration-contracts/schemas/base.schema.json');
+const orchestrationCommandsSchema = readJson('libs/core/orchestration-contracts/schemas/commands.schema.json');
+const orchestrationEventsSchema = readJson('libs/core/orchestration-contracts/schemas/events.schema.json');
 const multimodalApiSchema = readJson('libs/mod-01-owner-concierge/contracts/multimodal-api.schema.json');
 const evolutionWebhookSchema = readJson('libs/mod-02-whatsapp-crm/integration/evolution-webhook.schema.json');
 const outboundQueueSchema = readJson('libs/mod-02-whatsapp-crm/integration/outbound-queue.schema.json');
 
+ajv.addSchema(orchestrationBaseSchema, orchestrationBaseSchema.$id);
+
+const validateOrchestrationCommand = ajv.compile(orchestrationCommandsSchema);
+const validateOrchestrationEvent = ajv.compile(orchestrationEventsSchema);
 const validateOwnerRequest = ajv.compile(multimodalApiSchema.properties.request);
 const validateEvolutionWebhook = ajv.compile(evolutionWebhookSchema);
 const validateOutboundQueue = ajv.compile(outboundQueueSchema);
@@ -89,4 +96,14 @@ export function evolutionWebhookValid(body) {
 export function outboundQueueValid(body) {
   const ok = validateOutboundQueue(body);
   return { ok: Boolean(ok), errors: validateOutboundQueue.errors ?? [] };
+}
+
+export function orchestrationCommandValid(body) {
+  const ok = validateOrchestrationCommand(body);
+  return { ok: Boolean(ok), errors: validateOrchestrationCommand.errors ?? [] };
+}
+
+export function orchestrationEventValid(body) {
+  const ok = validateOrchestrationEvent(body);
+  return { ok: Boolean(ok), errors: validateOrchestrationEvent.errors ?? [] };
 }

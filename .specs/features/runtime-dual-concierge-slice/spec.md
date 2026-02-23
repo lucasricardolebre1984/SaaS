@@ -11,6 +11,7 @@ Implement the first executable runtime slice for dual concierge flow:
 
 ## Scope
 - `app-platform-api` receives and validates requests using existing contracts.
+- `app-platform-api` simulates contract-valid in-memory orchestration dispatch and lifecycle events.
 - No database persistence yet.
 - No external provider calls yet.
 
@@ -20,6 +21,7 @@ Implement the first executable runtime slice for dual concierge flow:
 3. `POST /provider/evolution/outbound/validate` validates outbound queue contract.
 4. `GET /health` returns runtime health.
 5. Contract-driven tests must run in Nx.
+6. `GET /internal/orchestration/trace?correlation_id={uuid}` returns in-memory command/event trace preserving correlation id.
 
 ## Non-Functional Requirements
 - JSON schema validation via Ajv.

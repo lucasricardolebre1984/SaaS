@@ -38,3 +38,17 @@ Date: 2026-02-23
   - STATE/worklog/costlog updates
 - Verification:
   - checkpoint consistent with execution evidence
+
+## RDS-005 - Add in-memory orchestration dispatch simulation
+- Status: done
+- Output:
+  - runtime emits `owner.command.create` and `module.task.create` envelopes validated against core orchestration contracts
+  - runtime simulates downstream task lifecycle events (`module.task.created`, `module.task.accepted`, `module.task.completed`/`module.task.failed`)
+  - internal trace endpoints available for correlation inspection
+- Verification:
+  - `nx run app-platform-api:test` passes with correlation and lifecycle assertions
+  - `nx run contract-tests:contract-checks` remains passing
+- Evidence:
+  - apps/platform-api/src/app.mjs
+  - apps/platform-api/src/schemas.mjs
+  - apps/platform-api/src/app.test.mjs
