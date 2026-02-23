@@ -36,3 +36,4 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-23,23:59,23:59,0.45,Implement,mod-04-agenda-slice,M04-003,pair,done,Implemented agenda endpoints for appointment create/update and reminder create/list
 2026-02-23,23:59,23:59,0.35,Implement,mod-04-agenda-slice,M04-004,pair,done,Implemented reminder lifecycle orchestration events and dispatch command flow with trace coverage
 2026-02-23,23:59,23:59,0.20,Implement,mod-04-agenda-slice,M04-005,pair,done,Updated governance docs and validated nx tests contract checks and postgres smoke
+2026-02-23,23:59,23:59,0.25,Specify,mod-05-faturamento-cobranca-slice,M05-000,pair,done,Opened draft spec/design/tasks for module 05 faturamento cobranca migration slice

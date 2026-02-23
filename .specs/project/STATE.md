@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement + Validate (module 04 agenda slice)
-Active feature: mod-04-agenda-slice
+Active phase: Specify (module 05 faturamento/cobranca slice)
+Active feature: mod-05-faturamento-cobranca-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -77,9 +77,10 @@ Active feature: mod-04-agenda-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened `mod-05-faturamento-cobranca-slice` with draft `spec/design/tasks` for contract-first billing migration.
 
 ## Next Checkpoint
-Open module 05 (faturamento/cobranca) migration slice specs and repeat contract-first execution.
+Approve `mod-05-faturamento-cobranca-slice` artifacts and start `M05-001`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
