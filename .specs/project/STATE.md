@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement + Validate (runtime dual concierge slice)
-Active feature: runtime-dual-concierge-slice
+Active phase: Specify (module 03 clientes slice)
+Active feature: mod-03-clientes-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -53,9 +53,10 @@ Active feature: runtime-dual-concierge-slice
 - Postgres smoke stack is explicitly isolated in Docker project `fabio-postgres-smoke` (no shared container/volume with `fabio2`).
 - Backend switch operational runbook finalized with explicit rollback path (`file` backend toggle).
 - Runtime CI workflow published with two-stage gate: contracts/runtime tests + Postgres smoke.
+- Started feature `mod-03-clientes-slice` with draft spec/design/tasks for first domain migration beyond runtime foundation.
 
 ## Next Checkpoint
-Start first domain migration slice (Module 03 - Clientes) on top of stable dual-concierge runtime gates.
+Approve `mod-03-clientes-slice` spec/design/tasks and start M03-001 implementation.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
