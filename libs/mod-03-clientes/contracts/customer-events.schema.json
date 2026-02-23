@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-03/customer-events.schema.json",
+  "title": "Module 03 Customer Lifecycle Events",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "enum": ["customer.created", "customer.updated"] },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "customer_id": { "type": "string", "format": "uuid" },
+        "origin": { "type": "string", "enum": ["manual_owner", "lead_conversion"] },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "external_key": { "type": ["string", "null"] },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+        }
+      },
+      "required": ["customer_id", "origin", "status", "source_module"]
+    }
+  },
+  "required": ["name", "payload"]
+}

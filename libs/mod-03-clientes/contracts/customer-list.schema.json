@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-03/customer-list.schema.json",
+  "title": "Module 03 Customer List Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": { "type": "string", "format": "uuid" },
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "display_name": { "type": "string", "minLength": 2 },
+          "primary_phone": {
+            "type": ["string", "null"],
+            "pattern": "^\\+[1-9][0-9]{7,14}$"
+          },
+          "primary_email": { "type": ["string", "null"], "format": "email" },
+          "origin": { "type": "string", "enum": ["manual_owner", "lead_conversion"] },
+          "status": { "type": "string", "enum": ["active", "inactive"] },
+          "external_key": { "type": ["string", "null"] },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "customer_id",
+          "tenant_id",
+          "display_name",
+          "origin",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    }
+  },
+  "required": ["tenant_id", "count", "items"]
+}

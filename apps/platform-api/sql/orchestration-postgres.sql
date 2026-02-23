@@ -46,3 +46,24 @@ CREATE TABLE IF NOT EXISTS public.orchestration_module_task_queue (
 
 CREATE INDEX IF NOT EXISTS orchestration_module_task_queue_status_idx
   ON public.orchestration_module_task_queue (status, enqueued_at);
+
+CREATE TABLE IF NOT EXISTS public.customers (
+  customer_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  primary_phone TEXT NULL,
+  primary_email TEXT NULL,
+  origin TEXT NOT NULL,
+  status TEXT NOT NULL,
+  external_key TEXT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS customers_tenant_external_key_ux
+  ON public.customers (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS customers_tenant_created_idx
+  ON public.customers (tenant_id, created_at);

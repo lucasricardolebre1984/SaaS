@@ -13,6 +13,8 @@
         "module.task.failed",
         "crm.lead.created",
         "crm.lead.converted",
+        "customer.created",
+        "customer.updated",
         "agenda.reminder.scheduled",
         "billing.charge.created",
         "billing.collection.requested",
@@ -169,6 +171,64 @@
               "customer_id": { "type": "string", "format": "uuid" }
             },
             "required": ["lead_id", "customer_id"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "customer.created" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-03-clientes" },
+          "target_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "customer_id": { "type": "string", "format": "uuid" },
+              "origin": {
+                "type": "string",
+                "enum": ["manual_owner", "lead_conversion"]
+              },
+              "status": { "type": "string", "enum": ["active", "inactive"] },
+              "external_key": { "type": ["string", "null"] },
+              "source_module": {
+                "type": "string",
+                "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+              }
+            },
+            "required": ["customer_id", "origin", "status", "source_module"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "customer.updated" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-03-clientes" },
+          "target_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "customer_id": { "type": "string", "format": "uuid" },
+              "origin": {
+                "type": "string",
+                "enum": ["manual_owner", "lead_conversion"]
+              },
+              "status": { "type": "string", "enum": ["active", "inactive"] },
+              "external_key": { "type": ["string", "null"] },
+              "source_module": {
+                "type": "string",
+                "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+              }
+            },
+            "required": ["customer_id", "origin", "status", "source_module"]
           }
         }
       }

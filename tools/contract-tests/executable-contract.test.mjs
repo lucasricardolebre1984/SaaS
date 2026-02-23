@@ -50,6 +50,8 @@ test('orchestration events include mandatory core events', () => {
     'module.task.failed',
     'crm.lead.created',
     'crm.lead.converted',
+    'customer.created',
+    'customer.updated',
     'billing.collection.requested',
     'billing.collection.sent',
     'billing.collection.failed'

@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('all', 'contracts', 'mod01', 'mod02', 'persona', 'metrics', 'data-model')]
+  [ValidateSet('all', 'contracts', 'mod01', 'mod02', 'mod03', 'persona', 'metrics', 'data-model')]
   [string]$Scope = 'all'
 )
 
@@ -28,6 +28,11 @@ function Get-FilesByScope {
         'libs/mod-02-whatsapp-crm/tests/*.json'
       )
     }
+    'mod03' {
+      return @(
+        'libs/mod-03-clientes/contracts/*.json'
+      )
+    }
     'persona' {
       return @(
         'libs/core/persona-registry/schemas/*.json',
@@ -52,6 +57,7 @@ function Get-FilesByScope {
         'libs/mod-02-whatsapp-crm/domain/*.json',
         'libs/mod-02-whatsapp-crm/integration/*.json',
         'libs/mod-02-whatsapp-crm/tests/*.json',
+        'libs/mod-03-clientes/contracts/*.json',
         'libs/core/persona-registry/schemas/*.json',
         'tenants/sample-tenant-001/personas/*.json',
         'tenants/sample-tenant-001/policies/*.json',

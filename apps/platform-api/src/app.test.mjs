@@ -39,6 +39,50 @@ function validWebhookRequest() {
   };
 }
 
+function validCustomerCreateManualRequest() {
+  return {
+    request: {
+      request_id: 'fcece7b7-f855-4d2f-876f-4908f4cf7de5',
+      tenant_id: 'tenant_automania',
+      origin: 'manual_owner',
+      source_module: 'mod-01-owner-concierge',
+      customer: {
+        customer_id: '6a317f2d-9334-4f2f-9246-b71f264f4a83',
+        external_key: 'manual-owner-001',
+        display_name: 'Joao Cliente',
+        primary_phone: '+5511988887777',
+        primary_email: 'joao@example.com',
+        status: 'active',
+        metadata: {
+          notes: 'manual seed'
+        }
+      }
+    }
+  };
+}
+
+function validCustomerCreateLeadRequest() {
+  return {
+    request: {
+      request_id: 'f5550d0a-85c8-4539-84d8-51bd90fca925',
+      tenant_id: 'tenant_automania',
+      origin: 'lead_conversion',
+      source_module: 'mod-02-whatsapp-crm',
+      customer: {
+        customer_id: '35c84f2c-b6be-4aa0-9342-1e77e0de02da',
+        external_key: 'lead-conv-001',
+        display_name: 'Maria Lead',
+        primary_phone: '+5511977776666',
+        status: 'active'
+      },
+      lead: {
+        lead_id: '9dc658ba-9108-4879-a7ef-d0dc3066e9d2',
+        stage: 'won'
+      }
+    }
+  };
+}
+
 function validOutboundQueueRequest() {
   return {
     queue_item_id: '4b95088b-0868-444f-b5f8-97dabbdad6d1',
@@ -78,10 +122,17 @@ async function drainWorker(baseUrl, limit = 10) {
 let server;
 let baseUrl;
 let storageDir;
+let customerStorageDir;
 
 test.before(async () => {
   storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-orch-'));
-  server = http.createServer(createApp({ orchestrationStorageDir: storageDir }));
+  customerStorageDir = path.join(storageDir, 'customers');
+  server = http.createServer(
+    createApp({
+      orchestrationStorageDir: storageDir,
+      customerStorageDir
+    })
+  );
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   baseUrl = `http://127.0.0.1:${address.port}`;
@@ -104,6 +155,101 @@ test('GET /health returns runtime metadata', async () => {
   assert.ok(typeof body.orchestration.storage_dir === 'string');
   assert.ok(typeof body.orchestration.policy_path === 'string');
   assert.ok(typeof body.orchestration.queue_file === 'string');
+  assert.equal(body.customers.backend, 'file');
+  assert.ok(typeof body.customers.storage_dir === 'string');
+});
+
+test('POST /v1/customers creates customer and emits lifecycle event', async () => {
+  const createRes = await fetch(`${baseUrl}/v1/customers`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validCustomerCreateManualRequest())
+  });
+  const createBody = await createRes.json();
+  if (createRes.status !== 200) {
+    throw new Error(`customer-create-failure: ${JSON.stringify(createBody)}`);
+  }
+  assert.equal(createBody.response.status, 'created');
+  assert.equal(createBody.response.customer.display_name, 'Joao Cliente');
+  assert.equal(createBody.response.orchestration.lifecycle_event_name, 'customer.created');
+
+  const listRes = await fetch(`${baseUrl}/v1/customers?tenant_id=tenant_automania`);
+  assert.equal(listRes.status, 200);
+  const listBody = await listRes.json();
+  assert.ok(listBody.count >= 1);
+  assert.ok(listBody.items.some((item) => item.customer_id === createBody.response.customer.customer_id));
+
+  const getRes = await fetch(
+    `${baseUrl}/v1/customers/${createBody.response.customer.customer_id}?tenant_id=tenant_automania`
+  );
+  assert.equal(getRes.status, 200);
+  const getBody = await getRes.json();
+  assert.equal(getBody.customer.display_name, 'Joao Cliente');
+
+  const correlationId = createBody.response.orchestration.correlation_id;
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+  assert.ok(traceBody.commands.some((item) => item.name === 'customer.record.upsert'));
+  assert.ok(traceBody.events.some((item) => item.name === 'customer.created'));
+});
+
+test('POST /v1/customers is idempotent by tenant+external_key', async () => {
+  const payload = validCustomerCreateManualRequest();
+  payload.request.request_id = '86f0fd95-7f07-4933-a5e4-a0ff04920ce9';
+
+  const first = await fetch(`${baseUrl}/v1/customers`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(first.status, 200);
+  const firstBody = await first.json();
+  assert.equal(firstBody.response.status, 'idempotent');
+  assert.equal(firstBody.response.orchestration.lifecycle_event_name, null);
+
+  const secondPayload = validCustomerCreateManualRequest();
+  secondPayload.request.request_id = '3db8de6b-f673-43a8-b57d-ab37ca8b453f';
+  secondPayload.request.customer.display_name = 'Nome Ignorado Por Idempotencia';
+  const second = await fetch(`${baseUrl}/v1/customers`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(secondPayload)
+  });
+  assert.equal(second.status, 200);
+  const secondBody = await second.json();
+  assert.equal(secondBody.response.status, 'idempotent');
+  assert.equal(secondBody.response.customer.customer_id, firstBody.response.customer.customer_id);
+  assert.equal(secondBody.response.customer.display_name, firstBody.response.customer.display_name);
+});
+
+test('POST /v1/customers accepts lead conversion origin from module 02', async () => {
+  const res = await fetch(`${baseUrl}/v1/customers`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validCustomerCreateLeadRequest())
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.response.status, 'created');
+  assert.equal(body.response.customer.origin, 'lead_conversion');
+  assert.equal(body.response.orchestration.lifecycle_event_name, 'customer.created');
+});
+
+test('POST /v1/customers rejects invalid origin/source mapping', async () => {
+  const payload = validCustomerCreateLeadRequest();
+  payload.request.source_module = 'mod-01-owner-concierge';
+
+  const res = await fetch(`${baseUrl}/v1/customers`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.error, 'validation_error');
 });
 
 test('POST /v1/owner-concierge/interaction queues module task and trace is preserved', async () => {
@@ -214,7 +360,10 @@ test('routing policy and queued state survive app restart', async () => {
   const correlationId = body.response.owner_command.correlation_id;
 
   const rehydratedServer = http.createServer(
-    createApp({ orchestrationStorageDir: storageDir })
+    createApp({
+      orchestrationStorageDir: storageDir,
+      customerStorageDir
+    })
   );
   await new Promise((resolve) => rehydratedServer.listen(0, '127.0.0.1', resolve));
   const rehydratedPort = rehydratedServer.address().port;

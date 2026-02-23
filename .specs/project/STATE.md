@@ -1,7 +1,7 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Specify (module 03 clientes slice)
+Active phase: Implement + Validate (module 03 clientes slice)
 Active feature: mod-03-clientes-slice
 
 ## Current Decisions
@@ -54,9 +54,17 @@ Active feature: mod-03-clientes-slice
 - Backend switch operational runbook finalized with explicit rollback path (`file` backend toggle).
 - Runtime CI workflow published with two-stage gate: contracts/runtime tests + Postgres smoke.
 - Started feature `mod-03-clientes-slice` with draft spec/design/tasks for first domain migration beyond runtime foundation.
+- Module 03 contracts published (`customer-create`, `customer-list`, `customer-events`) and integrated into contract checks.
+- Module 03 runtime implemented with customer store abstraction (file + postgres) and endpoints `POST/GET /v1/customers`.
+- Lead conversion mapper (`mod-02 -> mod-03`) implemented with origin/source validation guards.
+- Orchestration events expanded with `customer.created` and `customer.updated`, preserving correlation trace flow.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Approve `mod-03-clientes-slice` spec/design/tasks and start M03-001 implementation.
+Open module 04 (Agenda) migration slice specs and apply the same contract-first execution pattern.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

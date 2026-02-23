@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
+  customerCreateValid,
+  customerLifecycleEventPayloadValid,
+  customerListValid,
   evolutionWebhookValid,
   outboundQueueValid,
   orchestrationCommandValid,
@@ -8,6 +11,11 @@ import {
 } from './schemas.mjs';
 import { createOrchestrationStore } from './orchestration-store.mjs';
 import { createTaskPlanner } from './task-planner.mjs';
+import { createCustomerStore } from './customer-store.mjs';
+import {
+  mapCustomerCreateRequestToCommandPayload,
+  mapCustomerCreateRequestToStoreRecord
+} from './customer-mapper.mjs';
 
 const ORCHESTRATION_SCHEMA_VERSION = '1.0.0';
 const ORCHESTRATION_LOG_LIMIT = 200;
@@ -262,6 +270,68 @@ function createModuleTaskTerminalEvent(queueItem) {
   };
 }
 
+function actorFromCustomerSourceModule(sourceModule) {
+  if (sourceModule === 'mod-02-whatsapp-crm') {
+    return {
+      actor_type: 'agent',
+      channel: 'whatsapp'
+    };
+  }
+
+  return {
+    actor_type: 'owner',
+    channel: 'ui-chat'
+  };
+}
+
+function createCustomerUpsertCommandEnvelope(request, customerId, correlationId, traceId) {
+  const actor = actorFromCustomerSourceModule(request.source_module);
+  const payload = mapCustomerCreateRequestToCommandPayload(request, customerId);
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'command',
+    command_id: randomUUID(),
+    name: 'customer.record.upsert',
+    tenant_id: request.tenant_id,
+    source_module: request.source_module,
+    target_module: 'mod-03-clientes',
+    created_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    trace_id: traceId,
+    actor: {
+      actor_id: request.request_id,
+      actor_type: actor.actor_type,
+      channel: actor.channel
+    },
+    payload
+  };
+}
+
+function createCustomerLifecycleEvent(command, customer, action) {
+  const eventName = action === 'updated' ? 'customer.updated' : 'customer.created';
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: eventName,
+    tenant_id: command.tenant_id,
+    source_module: 'mod-03-clientes',
+    target_module: command.source_module,
+    emitted_at: new Date().toISOString(),
+    correlation_id: command.correlation_id,
+    causation_id: command.command_id,
+    trace_id: command.trace_id,
+    status: 'info',
+    payload: {
+      customer_id: customer.customer_id,
+      origin: customer.origin,
+      status: customer.status,
+      external_key: customer.external_key ?? null,
+      source_module: command.source_module
+    }
+  };
+}
+
 async function persistCommandSafely(store, command) {
   try {
     await store.appendCommand(command);
@@ -316,14 +386,40 @@ function orchestrationInfo(store, policyPath) {
   };
 }
 
+function customerInfo(store) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir
+  };
+}
+
 export function createApp(options = {}) {
+  const backend = options.orchestrationBackend;
+  const pgConnectionString = options.orchestrationPgDsn;
+  const pgSchema = options.orchestrationPgSchema;
+  const pgAutoMigrate = options.orchestrationPgAutoMigrate;
+
   const store = createOrchestrationStore({
-    backend: options.orchestrationBackend,
+    backend,
     storageDir: options.orchestrationStorageDir ?? options.storageDir,
     logLimit: options.orchestrationLogLimit ?? ORCHESTRATION_LOG_LIMIT,
-    pgConnectionString: options.orchestrationPgDsn,
-    pgSchema: options.orchestrationPgSchema,
-    pgAutoMigrate: options.orchestrationPgAutoMigrate
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
+  });
+  const customerStore = createCustomerStore({
+    backend,
+    storageDir: options.customerStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
   });
   const taskPlanner = createTaskPlanner({
     policyPath: options.taskRoutingPolicyPath
@@ -339,7 +435,8 @@ export function createApp(options = {}) {
         return json(res, 200, {
           status: 'ok',
           service: 'app-platform-api',
-          orchestration: orchestrationInfo(store, taskPlanner.policyPath)
+          orchestration: orchestrationInfo(store, taskPlanner.policyPath),
+          customers: customerInfo(customerStore)
         });
       }
 
@@ -453,6 +550,150 @@ export function createApp(options = {}) {
           failed_count: failed,
           processed
         });
+      }
+
+      if (method === 'POST' && path === '/v1/customers') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = customerCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const customerId = request.customer.customer_id ?? randomUUID();
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        const customerUpsertCommand = createCustomerUpsertCommandEnvelope(
+          request,
+          customerId,
+          correlationId,
+          traceId
+        );
+        const commandValidation = orchestrationCommandValid(customerUpsertCommand);
+        if (!commandValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: commandValidation.errors
+          });
+        }
+        const commandPersistError = await persistCommandSafely(store, customerUpsertCommand);
+        if (commandPersistError) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(commandPersistError.message ?? commandPersistError)
+          });
+        }
+
+        let upsertResult;
+        try {
+          upsertResult = await customerStore.upsertCustomer(
+            mapCustomerCreateRequestToStoreRecord(request, customerId)
+          );
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (upsertResult.action !== 'idempotent') {
+          const lifecycleEvent = createCustomerLifecycleEvent(
+            customerUpsertCommand,
+            upsertResult.customer,
+            upsertResult.action
+          );
+          const payloadValidation = customerLifecycleEventPayloadValid({
+            name: lifecycleEvent.name,
+            payload: lifecycleEvent.payload
+          });
+          if (!payloadValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: payloadValidation.errors
+            });
+          }
+
+          const eventValidation = orchestrationEventValid(lifecycleEvent);
+          if (!eventValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: eventValidation.errors
+            });
+          }
+
+          const eventPersistError = await persistEventSafely(store, lifecycleEvent);
+          if (eventPersistError) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(eventPersistError.message ?? eventPersistError)
+            });
+          }
+
+          lifecycleEventName = lifecycleEvent.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: upsertResult.action,
+            customer: upsertResult.customer,
+            orchestration: {
+              command_id: customerUpsertCommand.command_id,
+              correlation_id: customerUpsertCommand.correlation_id,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/customers') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const items = await customerStore.listCustomers(tenantId);
+        const response = {
+          tenant_id: tenantId,
+          count: items.length,
+          items
+        };
+        const validation = customerListValid(response);
+        if (!validation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: validation.errors
+          });
+        }
+
+        return json(res, 200, response);
+      }
+
+      if (method === 'GET' && path.startsWith('/v1/customers/')) {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+        const customerId = path.slice('/v1/customers/'.length);
+        if (!customerId) {
+          return json(res, 400, { error: 'missing_customer_id' });
+        }
+
+        const customer = await customerStore.getCustomerById(tenantId, customerId);
+        if (!customer) {
+          return json(res, 404, { error: 'not_found' });
+        }
+
+        return json(res, 200, { customer });
       }
 
       if (method === 'POST' && path === '/v1/owner-concierge/interaction') {
@@ -626,5 +867,6 @@ export function createApp(options = {}) {
   };
 
   handler.store = store;
+  handler.customerStore = customerStore;
   return handler;
 }

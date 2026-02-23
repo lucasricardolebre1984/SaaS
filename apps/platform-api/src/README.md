@@ -5,6 +5,9 @@ Runtime skeleton placeholder for API orchestration surface.
 ## Endpoints
 
 - `GET /health`
+- `POST /v1/customers`
+- `GET /v1/customers?tenant_id=...`
+- `GET /v1/customers/:id?tenant_id=...`
 - `POST /v1/owner-concierge/interaction`
 - `POST /provider/evolution/webhook`
 - `POST /provider/evolution/outbound/validate`
@@ -19,6 +22,9 @@ Runtime skeleton placeholder for API orchestration surface.
 - Store backend:
   - `file` (default): persists in `.runtime-data/orchestration/`
   - `postgres`: persists in PostgreSQL tables (auto-migrate on startup)
+- Customer store backend follows the same toggle (`ORCHESTRATION_STORE_BACKEND`) and persists:
+  - `file`: `.runtime-data/customers/`
+  - `postgres`: `public.customers`
 - For `postgres` backend configure:
   - `ORCHESTRATION_STORE_BACKEND=postgres`
   - `ORCHESTRATION_PG_DSN=postgres://...`

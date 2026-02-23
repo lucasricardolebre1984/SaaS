@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-03/customer-create.schema.json",
+  "title": "Module 03 Customer Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "origin": { "type": "string", "enum": ["manual_owner", "lead_conversion"] },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "customer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "customer_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "display_name": { "type": "string", "minLength": 2 },
+            "primary_phone": {
+              "type": "string",
+              "pattern": "^\\+[1-9][0-9]{7,14}$"
+            },
+            "primary_email": { "type": "string", "format": "email" },
+            "status": { "type": "string", "enum": ["active", "inactive"] },
+            "metadata": { "type": "object" }
+          },
+          "required": ["display_name"]
+        },
+        "lead": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lead_id": { "type": "string", "format": "uuid" },
+            "stage": {
+              "type": "string",
+              "enum": ["new", "qualified", "proposal", "won", "lost"]
+            }
+          },
+          "required": ["lead_id"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "origin", "source_module", "customer"]
+    }
+  },
+  "required": ["request"]
+}

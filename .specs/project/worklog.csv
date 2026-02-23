@@ -24,3 +24,9 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-23,23:59,23:59,0.35,Implement,runtime-dual-concierge-slice,RDS-009,pair,done,Validated isolated Postgres smoke flow and finalized backend-switch runbook with rollback
 2026-02-23,23:59,23:59,0.30,Implement,runtime-dual-concierge-slice,RDS-010,pair,done,Published Runtime CI workflow with contract/runtime checks and postgres smoke gate
 2026-02-23,23:59,23:59,0.25,Specify,mod-03-clientes-slice,M03-000,pair,done,Opened draft spec/design/tasks for module 03 clientes migration slice
+2026-02-23,23:59,23:59,0.30,Implement,mod-03-clientes-slice,M03-001,pair,done,Published module 03 customer contracts and integrated into contract checks
+2026-02-23,23:59,23:59,0.40,Implement,mod-03-clientes-slice,M03-002,pair,done,Implemented customer store abstraction with file and postgres adapters
+2026-02-23,23:59,23:59,0.45,Implement,mod-03-clientes-slice,M03-003,pair,done,Implemented customer create/list/get runtime endpoints with schema validation
+2026-02-23,23:59,23:59,0.25,Implement,mod-03-clientes-slice,M03-004,pair,done,Added deterministic lead conversion mapper from module 02 to module 03 contracts
+2026-02-23,23:59,23:59,0.25,Implement,mod-03-clientes-slice,M03-005,pair,done,Added customer lifecycle orchestration events with correlation trace coverage
+2026-02-23,23:59,23:59,0.15,Implement,mod-03-clientes-slice,M03-006,pair,done,Updated state/worklog/costlog and validated runtime+contract+postgres smoke gates

@@ -23,6 +23,9 @@ const orchestrationEventsSchema = readJson('libs/core/orchestration-contracts/sc
 const multimodalApiSchema = readJson('libs/mod-01-owner-concierge/contracts/multimodal-api.schema.json');
 const evolutionWebhookSchema = readJson('libs/mod-02-whatsapp-crm/integration/evolution-webhook.schema.json');
 const outboundQueueSchema = readJson('libs/mod-02-whatsapp-crm/integration/outbound-queue.schema.json');
+const customerCreateSchema = readJson('libs/mod-03-clientes/contracts/customer-create.schema.json');
+const customerListSchema = readJson('libs/mod-03-clientes/contracts/customer-list.schema.json');
+const customerEventsSchema = readJson('libs/mod-03-clientes/contracts/customer-events.schema.json');
 
 ajv.addSchema(orchestrationBaseSchema, orchestrationBaseSchema.$id);
 
@@ -31,6 +34,9 @@ const validateOrchestrationEvent = ajv.compile(orchestrationEventsSchema);
 const validateOwnerRequest = ajv.compile(multimodalApiSchema.properties.request);
 const validateEvolutionWebhook = ajv.compile(evolutionWebhookSchema);
 const validateOutboundQueue = ajv.compile(outboundQueueSchema);
+const validateCustomerCreateRequest = ajv.compile(customerCreateSchema.properties.request);
+const validateCustomerListResponse = ajv.compile(customerListSchema);
+const validateCustomerLifecycleEventPayload = ajv.compile(customerEventsSchema);
 
 function operationSpecificOwnerErrors(request) {
   const errors = [];
@@ -106,4 +112,49 @@ export function orchestrationCommandValid(body) {
 export function orchestrationEventValid(body) {
   const ok = validateOrchestrationEvent(body);
   return { ok: Boolean(ok), errors: validateOrchestrationEvent.errors ?? [] };
+}
+
+export function customerCreateValid(body) {
+  const ok = validateCustomerCreateRequest(body?.request);
+  const errors = [...(validateCustomerCreateRequest.errors ?? [])];
+
+  const request = body?.request;
+  if (request?.origin === 'lead_conversion') {
+    if (request.source_module !== 'mod-02-whatsapp-crm') {
+      errors.push({
+        instancePath: '/request/source_module',
+        message: 'must be mod-02-whatsapp-crm when origin=lead_conversion'
+      });
+    }
+    if (!request.lead || typeof request.lead !== 'object') {
+      errors.push({
+        instancePath: '/request/lead',
+        message: 'must be provided when origin=lead_conversion'
+      });
+    } else if (typeof request.lead.lead_id !== 'string' || request.lead.lead_id.length === 0) {
+      errors.push({
+        instancePath: '/request/lead/lead_id',
+        message: 'must be provided when origin=lead_conversion'
+      });
+    }
+  }
+
+  if (request?.origin === 'manual_owner' && request.source_module !== 'mod-01-owner-concierge') {
+    errors.push({
+      instancePath: '/request/source_module',
+      message: 'must be mod-01-owner-concierge when origin=manual_owner'
+    });
+  }
+
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function customerListValid(body) {
+  const ok = validateCustomerListResponse(body);
+  return { ok: Boolean(ok), errors: validateCustomerListResponse.errors ?? [] };
+}
+
+export function customerLifecycleEventPayloadValid(body) {
+  const ok = validateCustomerLifecycleEventPayload(body);
+  return { ok: Boolean(ok), errors: validateCustomerLifecycleEventPayload.errors ?? [] };
 }

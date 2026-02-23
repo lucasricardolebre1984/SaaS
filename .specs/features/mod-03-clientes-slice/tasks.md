@@ -1,20 +1,22 @@
 # Tasks - mod-03-clientes-slice
 
-Status: Draft
+Status: Done
 Date: 2026-02-23
 
 ## M03-001 - Publish module 03 customer contracts
-- Status: pending
+- Status: done
 - Output:
   - customer create/list/get payload schemas
   - customer lifecycle event payload schema
 - Verification:
   - contract checks parse all schemas
 - Evidence:
-  - libs/mod-03-clientes/contracts/*
+  - libs/mod-03-clientes/contracts/customer-create.schema.json
+  - libs/mod-03-clientes/contracts/customer-list.schema.json
+  - libs/mod-03-clientes/contracts/customer-events.schema.json
 
 ## M03-002 - Implement customer store abstraction
-- Status: pending
+- Status: done
 - Output:
   - customer store interface
   - file adapter
@@ -22,10 +24,13 @@ Date: 2026-02-23
 - Verification:
   - unit/runtime tests pass for both backends
 - Evidence:
-  - apps/platform-api/src/customer-store*.mjs
+  - apps/platform-api/src/customer-store.mjs
+  - apps/platform-api/src/customer-store-file.mjs
+  - apps/platform-api/src/customer-store-postgres.mjs
+  - apps/platform-api/sql/orchestration-postgres.sql
 
 ## M03-003 - Implement customer runtime endpoints
-- Status: pending
+- Status: done
 - Output:
   - `POST /v1/customers`
   - `GET /v1/customers`
@@ -37,7 +42,7 @@ Date: 2026-02-23
   - apps/platform-api/src/app.test.mjs
 
 ## M03-004 - Add lead conversion mapping from module 02
-- Status: pending
+- Status: done
 - Output:
   - deterministic mapper from module 02 conversion payload to module 03 contract
 - Verification:
@@ -47,17 +52,18 @@ Date: 2026-02-23
   - apps/platform-api/src/app.test.mjs
 
 ## M03-005 - Emit customer lifecycle events in orchestration trace
-- Status: pending
+- Status: done
 - Output:
   - `customer.created` and `customer.updated` event emission
 - Verification:
   - trace endpoint reflects new lifecycle events for customer flows
 - Evidence:
+  - libs/core/orchestration-contracts/schemas/events.schema.json
   - apps/platform-api/src/app.mjs
   - apps/platform-api/src/app.test.mjs
 
 ## M03-006 - Governance and metrics checkpoint
-- Status: pending
+- Status: done
 - Output:
   - STATE/worklog/costlog updated
 - Verification:

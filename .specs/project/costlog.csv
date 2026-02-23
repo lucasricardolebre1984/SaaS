@@ -20,3 +20,9 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-009 isolated Postgres smoke checkpoint and backend switch runbook closure
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,RDS-010 runtime CI workflow with contract/runtime and postgres smoke gates
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-000 module 03 clientes slice specs kickoff
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-001 module 03 customer contracts publication
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-002 customer store abstraction file+postgres
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-003 customer runtime endpoints
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-004 module 02 lead conversion mapper
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-005 customer lifecycle event emission and trace validation
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-006 governance and checkpoint closure for module 03 slice

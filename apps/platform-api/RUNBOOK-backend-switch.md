@@ -69,3 +69,6 @@ No contract/API changes are required for rollback.
 ## SQL Baseline
 
 Reference schema: `apps/platform-api/sql/orchestration-postgres.sql`
+
+Also includes Module 03 baseline table:
+- `public.customers`

@@ -21,6 +21,8 @@ export type EventName =
   | "module.task.failed"
   | "crm.lead.created"
   | "crm.lead.converted"
+  | "customer.created"
+  | "customer.updated"
   | "agenda.reminder.scheduled"
   | "billing.charge.created"
   | "billing.collection.requested"
