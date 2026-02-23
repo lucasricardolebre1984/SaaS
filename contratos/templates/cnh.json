@@ -1,0 +1,199 @@
+{
+  "id": "cnh",
+  "nome": "CONTRATO DE PRESTACAO DE SERVICOS - CNH CASSADA E RECURSO DE MULTAS",
+  "tipo": "cnh",
+  "categoria": "CNH CASSADA E RECURSO DE MULTAS",
+  "subtitulo": "CNH - Cassacao/Suspensao e Recurso de Multas",
+  "descricao": "Template institucional para defesa administrativa e judicial de CNH e multas de transito.",
+  "versao": "1.1.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:/Users/Lucas/Downloads/CNHMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "cnh_numero",
+      "label": "Numero da CNH",
+      "tipo": "texto",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLAUSULA PRIMEIRA - DO OBJETO",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestacao de servicos de assessoria tecnica especializada para defesa administrativa e judicial contra suspensao, cassacao da CNH e multas de transito aplicadas ao(à) CONTRATANTE.\n\n**1.2.** O servico compreende analise tecnica das infracoes, identificacao de nulidades e vicios, elaboracao de recursos e, quando necessario, medidas judiciais.\n\n**1.3.** A CONTRATADA atua na defesa tecnica e nao garante percentual fixo de desconto em multas, que depende do caso concreto e das regras do orgao autuador."
+    },
+    {
+      "numero": "CLAUSULA SEGUNDA - DAS OBRIGACOES DA CONTRATADA",
+      "titulo": "",
+      "conteudo": "**2.1.** A CONTRATADA se compromete a:\n\n**a)** analisar notificacoes e processos administrativos;\n**b)** elaborar e protocolar recursos e defesas cabiveis;\n**c)** acompanhar os processos ate decisao final;\n**d)** informar o(a) CONTRATANTE sobre andamentos e resultados;\n**e)** atuar com diligencia tecnica e juridica."
+    },
+    {
+      "numero": "CLAUSULA TERCEIRA - DAS OBRIGACOES DO(A) CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**3.1.** O(A) CONTRATANTE se compromete a:\n\n**a)** fornecer documentacao completa e veridica (CNH, CRLV, notificacoes e multas);\n**b)** cumprir os pagamentos acordados;\n**c)** nao pagar multas objeto do recurso sem comunicacao previa;\n**d)** atender convocacoes para diligencias e audiencias quando necessario."
+    },
+    {
+      "numero": "CLAUSULA QUARTA - DO VALOR E DA FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** O valor total deste contrato e de **R$ [VALOR] ([VALOR EXTENSO])**, pago da seguinte forma:\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]) no ato da assinatura.\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), primeira em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e demais sucessivas a cada 30 dias.\n\n**4.2.** Em antecipacao de parcelas, pode haver desconto de 1,5% ao mes, limitado a 15%."
+    },
+    {
+      "numero": "CLAUSULA QUINTA - DO PRAZO DE EXECUCAO",
+      "titulo": "",
+      "conteudo": "**5.1.** A CONTRATADA realizara analise tecnica, elaboracao e protocolo dos recursos em ate 15 dias uteis, contados da assinatura, pagamento e entrega completa da documentacao.\n\n**5.2.** O prazo de decisao dos orgaos de transito independe da CONTRATADA."
+    },
+    {
+      "numero": "CLAUSULA SEXTA - DA GARANTIA DE ENTREGA",
+      "titulo": "",
+      "conteudo": "**6.1.** A CONTRATADA garante a entrega dos servicos no prazo pactuado ou devolucao integral dos valores pagos.\n\n**6.2.** Nao sendo possivel protocolar no prazo por culpa da CONTRATADA, a restituicao ocorrera em ate 10 dias uteis.\n\n**6.3.** Esta garantia refere-se a entrega do servico contratado e nao ao deferimento do recurso."
+    },
+    {
+      "numero": "CLAUSULA SETIMA - DA GARANTIA DE ACOMPANHAMENTO",
+      "titulo": "",
+      "conteudo": "**7.1.** A CONTRATADA oferece acompanhamento do processo por ate 90 dias apos o protocolo.\n\n**7.2.** Durante esse periodo, havera monitoramento processual e atualizacao ao(à) CONTRATANTE."
+    },
+    {
+      "numero": "CLAUSULA OITAVA - DO INADIMPLEMENTO",
+      "titulo": "",
+      "conteudo": "**8.1.** Em caso de atraso no pagamento, incidem multa de 20%, juros de 1% ao mes (pro rata die) e correcao monetaria pelo IPCA/IBGE.\n\n**8.2.** Atraso superior a 30 dias suspende os servicos.\n\n**8.3.** Persistindo por mais 15 dias apos suspensao, perde-se o direito ao servico e aos valores pagos."
+    },
+    {
+      "numero": "CLAUSULA NONA - DA RESCISAO",
+      "titulo": "",
+      "conteudo": "**9.1.** Rescisao pelo(a) CONTRATANTE apos inicio dos servicos: multa de 20% do valor total, sem ressarcimento.\n\n**9.2.** Desistencia unilateral nao gera devolucao, salvo inadimplemento da CONTRATADA."
+    },
+    {
+      "numero": "CLAUSULA DECIMA - DA PROTECAO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**10.1.** Os dados pessoais serao tratados exclusivamente para execucao deste contrato, conforme a Lei no 13.709/2018.\n\n**10.2.** O(A) CONTRATANTE pode exercer direitos pelo e-mail **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLAUSULA DECIMA PRIMEIRA - DA CONFIDENCIALIDADE",
+      "titulo": "",
+      "conteudo": "**11.1.** As partes se obrigam ao sigilo absoluto das informacoes trocadas."
+    },
+    {
+      "numero": "CLAUSULA DECIMA SEGUNDA - DO FORO",
+      "titulo": "",
+      "conteudo": "**12.1.** Fica eleito o foro da Comarca de Ribeirao Preto/SP, ressalvado o foro do domicilio do(a) CONTRATANTE quando aplicavel.\n\nRibeirao Preto, [DATA].\n\n**CONTRATANTE:** _________________________________\n[NOME COMPLETO DO CLIENTE]\n\n**CNH:** [NÚMERO CNH]\n\n**CONTRATADA:** _________________________________\nFC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA"
+    }
+  ]
+}

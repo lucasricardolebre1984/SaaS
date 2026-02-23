@@ -1,0 +1,192 @@
+{
+  "id": "revisional",
+  "nome": "CONTRATO DE PRESTAÇÃO DE SERVIÇOS – AÇÃO REVISIONAL E SUSPENSÃO DE BUSCA E APREENSÃO",
+  "tipo": "revisional",
+  "categoria": "AÇÃO REVISIONAL E SUSPENSÃO DE BUSCA E APREENSÃO",
+  "subtitulo": "AÇÃO REVISIONAL E SUSPENSÃO DE BUSCA E APREENSÃO",
+  "descricao": "Template institucional para ação revisional e suspensão de busca e apreensão.",
+  "versao": "1.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:\\Users\\Lucas\\Downloads\\REVISIONALMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLÁUSULA PRIMEIRA – DO OBJETO",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestação de serviços jurídicos de assessoria e representação processual para ajuizamento de **Ação Revisional** de contrato de financiamento de bem móvel (veículo), com pedido liminar de suspensão de busca e apreensão.\n\n**1.2.** O serviço compreende:\n- Análise técnica do contrato de financiamento e demonstrativo de débito;\n- Elaboração de inicial de Ação Revisional com pedido de liminar;\n- Protocolo da ação junto ao Poder Judiciário competente;\n- Acompanhamento processual até a decisão liminar de suspensão da busca e apreensão.\n\n**1.3.** O objetivo imediato é a **suspensão da busca e apreensão** do veículo do(a) **CONTRATANTE**, mediante decisão judicial liminar, no prazo de até **20 (vinte) dias úteis** da assinatura deste contrato e entrega da documentação necessária.\n\n**1.4.** A **CONTRATADA** não se responsabiliza pelo pagamento das parcelas atrasadas do financiamento nem pela quitação do débito, limitando-se à defesa judicial contra a busca e apreensão e revisão das cláusulas contratuais abusivas."
+    },
+    {
+      "numero": "CLÁUSULA SEGUNDA – DAS OBRIGAÇÕES DA CONTRATADA",
+      "titulo": "",
+      "conteudo": "**2.1.** A **CONTRATADA** se compromete a:\n\n**a)** Analisar urgentemente o contrato de financiamento e documentação do veículo;\n**b)** Elaborar e protocolar a Ação Revisional com pedido liminar no prazo de até 20 dias úteis;\n**c)** Acompanhar o processo junto ao Poder Judiciário até a decisão de suspensão;\n**d)** Informar o(a) **CONTRATANTE** sobre o andamento processual e resultado da liminar;\n**e)** Atuar com urgência compatível com o risco iminente de busca e apreensão."
+    },
+    {
+      "numero": "CLÁUSULA TERCEIRA – DAS OBRIGAÇÕES DO(A) CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**3.1.** O(A) **CONTRATANTE** se compromete a:\n\n**a)** Fornecer urgentemente toda a documentação (contrato de financiamento, CRLV, CNH, comprovantes de pagamento, notificações da financeira, boletos atrasados);\n**b)** Efetuar o pagamento dos honorários nas datas e valores acordados;\n**c)** Não ocultar ou vender o veículo durante o processo;\n**d)** Manter a **CONTRATADA** informada sobre tentativas de busca e apreensão pela financeira."
+    },
+    {
+      "numero": "CLÁUSULA QUARTA – DO VALOR E DA FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** Pelos serviços prestados, o(a) **CONTRATANTE** pagará à **CONTRATADA** o valor total de **R$ [VALOR] ([VALOR EXTENSO])**, da seguinte forma:\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]), no ato da assinatura deste contrato;\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), vencendo a primeira em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e as demais sucessivamente a cada 30 (trinta) dias.\n\n**4.2.** **Antecipação:** Desconto de 1,5% ao mês, máximo 15%, mediante solicitação prévia de 2 dias úteis e PIX aleatório em 24 horas."
+    },
+    {
+      "numero": "CLÁUSULA QUINTA – DO PRAZO DE EXECUÇÃO",
+      "titulo": "",
+      "conteudo": "**5.1.** A **CONTRATADA** protocolará a Ação Revisional com pedido liminar no prazo de até **20 (vinte) dias úteis**, contados da assinatura do contrato, confirmação do pagamento da entrada e entrega completa da documentação.\n\n**5.2.** O prazo para decisão judicial depende do Tribunal/Vara competente, podendo variar conforme a movimentação processual, porém a **CONTRATADA** se compromete a protocolar no prazo acima."
+    },
+    {
+      "numero": "CLÁUSULA SEXTA – DA GARANTIA DE RESULTADO",
+      "titulo": "",
+      "conteudo": "**6.1.** A **CONTRATADA** garante a **suspensão da busca e apreensão** do veículo mediante decisão judicial liminar no prazo de até 20 dias úteis, ou a **devolução integral** dos valores pagos.\n\n**6.2.** Caso não seja possível obter a suspensão da busca e apreensão no prazo estipulado por culpa da **CONTRATADA**, o(a) **CONTRATANTE** terá direito à restituição integral dos valores pagos, sem ônus, no prazo de até 10 (dez) dias úteis.\n\n**6.3.** A garantia não se aplica se a busca e apreensão ocorrer antes do protocolo da ação por culpa do(a) **CONTRATANTE** (ex: atraso na entrega de documentos, impedimento de acesso ao veículo para fiscalização, etc.).\n\n**6.4.** A garantia refere-se à suspensão da busca e apreensão (liminar), não ao mérito da Ação Revisional (revisão do contrato), que será analisado em momento posterior pelo Poder Judiciário."
+    },
+    {
+      "numero": "CLÁUSULA SÉTIMA – DA GARANTIA DE ACOMPANHAMENTO",
+      "titulo": "",
+      "conteudo": "**7.1.** A **CONTRATADA** acompanhará o processo até a decisão final da liminar (suspensão ou não da busca e apreensão).\n\n**7.2.** Após a suspensão, a **CONTRATADA** acompanhará o processo por até **90 (noventa) dias** ou até decisão de mérito, o que ocorrer primeiro."
+    },
+    {
+      "numero": "CLÁUSULA OITAVA – DO INADIMPLEMENTO",
+      "titulo": "",
+      "conteudo": "**8.1.** Em caso de atraso no pagamento, o valor devido será acrescido de:\n\n**a)** **Multa de 20% (vinte por cento)**;\n\n**b)** Juros de mora de **1% (um por cento)** ao mês, *pro rata die*;\n\n**c)** Correção monetária pelo IPCA/IBGE.\n\n**8.2.** **Suspensão:** Atraso superior a 30 (trinta) dias suspende os serviços até regularização.\n\n**8.3.** **Perda do direito:** Persistindo o atraso por mais 15 (quinze) dias após suspensão, perde-se o direito ao serviço e aos valores pagos."
+    },
+    {
+      "numero": "CLÁUSULA NONA – DA RESCISÃO",
+      "titulo": "",
+      "conteudo": "**9.1.** Rescisão pelo(a) **CONTRATANTE** após início dos serviços: **multa de 20%** do valor total, sem ressarcimento.\n\n**9.2.** Desistência unilateral não gera direito a devolução, salvo inadimplemento da **CONTRATADA** (Cláusula Sexta)."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA – DA PROTEÇÃO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**10.1.** Conforme LGPD (Lei 13.709/2018), dados tratados exclusivamente para execução deste contrato.\n\n**10.2.** O(A) **CONTRATANTE** pode exercer direitos pelo e-mail: **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA PRIMEIRA – DA CONFIDENCIALIDADE",
+      "titulo": "",
+      "conteudo": "**11.1.** Sigilo absoluto das informações trocadas entre as partes."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA SEGUNDA – DO FORO",
+      "titulo": "",
+      "conteudo": "**12.1.** Foro da Comarca de Ribeirão Preto/SP, ressalvado o foro do domicílio do(a) **CONTRATANTE** conforme CDC.\n\n---\n\nRibeirão Preto, [DATA].\n\n---\n\n**CONTRATANTE:** _________________________________\n[NOME COMPLETO DO CLIENTE]\n\n**CONTRATADA:** _________________________________\nFC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA\n\n---\n\n**Testemunha 1:** _________________________________\nNome: _________________________________ CPF: _________________________________\n\n**Testemunha 2:** _________________________________\nNome: _________________________________ CPF: _________________________________"
+    }
+  ]
+}

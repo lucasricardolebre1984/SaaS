@@ -1,0 +1,10 @@
+date,provider,service,environment,amount_brl,amount_usd,category,reference
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-001 contract freeze
+2026-02-23,internal,engineering-time,local,0.00,0.00,automation,SKL-005 start-day bootstrap
+2026-02-23,internal,engineering-time,local,0.00,0.00,automation,SKL-006 end-day checkpoint
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-002 CRM domain model
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-003 data model baseline
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-004 module 01 multimodal UX contracts
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-005 evolution integration baseline
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-006 tenant persona packaging baseline
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-007 observability and finops maps

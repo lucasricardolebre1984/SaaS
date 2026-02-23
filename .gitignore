@@ -1,0 +1,16 @@
+
+.nx/installation
+.nx/cache
+.nx/workspace-data
+.tmp/
+node_modules/
+dist/
+coverage/
+tmp/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+

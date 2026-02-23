@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/evolution-webhook.schema.json",
+  "title": "Module 02 Evolution Webhook Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "provider": { "const": "evolution-api" },
+    "instance_id": { "type": "string", "minLength": 1 },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "message.inbound",
+        "message.delivery_update",
+        "message.read_update",
+        "message.failed",
+        "connection.update",
+        "qr.updated"
+      ]
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "trace_id": { "type": "string", "minLength": 8 },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "signature": { "type": "string", "minLength": 8 },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "message_id": { "type": "string", "minLength": 1 },
+        "from_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+        "to_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+        "message_type": { "type": "string", "enum": ["text", "audio", "image", "file"] },
+        "text": { "type": "string" },
+        "media_url": { "type": "string", "minLength": 1 },
+        "delivery_state": { "type": "string", "enum": ["queued", "sent", "delivered", "read", "failed"] },
+        "error_code": { "type": "string" },
+        "raw": { "type": "object" }
+      },
+      "required": ["message_id", "message_type", "raw"]
+    }
+  },
+  "required": [
+    "event_id",
+    "tenant_id",
+    "provider",
+    "instance_id",
+    "event_type",
+    "occurred_at",
+    "trace_id",
+    "signature",
+    "payload"
+  ]
+}

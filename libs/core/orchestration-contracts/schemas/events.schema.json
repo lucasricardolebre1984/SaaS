@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/orchestration/events.schema.json",
+  "title": "SaaS Standard v1 Events",
+  "type": "object",
+  "properties": {
+    "name": {
+      "enum": [
+        "owner.command.created",
+        "module.task.created",
+        "module.task.accepted",
+        "module.task.completed",
+        "module.task.failed",
+        "crm.lead.created",
+        "crm.lead.converted",
+        "agenda.reminder.scheduled",
+        "billing.charge.created",
+        "billing.collection.requested",
+        "billing.collection.sent",
+        "billing.collection.failed"
+      ]
+    }
+  },
+  "allOf": [
+    { "$ref": "./base.schema.json#/$defs/eventEnvelope" },
+    {
+      "if": { "properties": { "name": { "const": "owner.command.created" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "owner_command_id": { "type": "string", "format": "uuid" },
+              "mode": { "type": "string", "enum": ["one-shot", "continuous"] }
+            },
+            "required": ["owner_command_id", "mode"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "module.task.created" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "task_type": { "type": "string", "minLength": 3 },
+              "target_module": { "$ref": "./base.schema.json#/$defs/moduleId" }
+            },
+            "required": ["task_id", "task_type", "target_module"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "module.task.accepted" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": [
+              "mod-02-whatsapp-crm",
+              "mod-03-clientes",
+              "mod-04-agenda",
+              "mod-05-faturamento-cobranca"
+            ]
+          },
+          "status": { "const": "accepted" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "accepted_by": { "type": "string", "minLength": 1 }
+            },
+            "required": ["task_id", "accepted_by"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "module.task.completed" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": [
+              "mod-02-whatsapp-crm",
+              "mod-03-clientes",
+              "mod-04-agenda",
+              "mod-05-faturamento-cobranca"
+            ]
+          },
+          "status": { "const": "completed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "result_summary": { "type": "string", "minLength": 1 },
+              "output_ref": { "type": "string", "minLength": 1 }
+            },
+            "required": ["task_id", "result_summary"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "module.task.failed" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": [
+              "mod-02-whatsapp-crm",
+              "mod-03-clientes",
+              "mod-04-agenda",
+              "mod-05-faturamento-cobranca"
+            ]
+          },
+          "status": { "const": "failed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "error_code": { "type": "string", "minLength": 1 },
+              "error_message": { "type": "string", "minLength": 1 },
+              "retryable": { "type": "boolean" }
+            },
+            "required": ["task_id", "error_code", "error_message", "retryable"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.lead.created" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lead_id": { "type": "string", "format": "uuid" },
+              "source_channel": { "type": "string", "enum": ["whatsapp", "web", "manual"] },
+              "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+              "stage": { "type": "string", "enum": ["new", "qualified", "proposal", "won", "lost"] }
+            },
+            "required": ["lead_id", "source_channel", "phone_e164", "stage"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.lead.converted" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-03-clientes" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lead_id": { "type": "string", "format": "uuid" },
+              "customer_id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["lead_id", "customer_id"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "agenda.reminder.scheduled" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-04-agenda" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "reminder_id": { "type": "string", "format": "uuid" },
+              "schedule_at": { "type": "string", "format": "date-time" },
+              "target_channel": { "type": "string", "enum": ["ui-chat", "whatsapp"] }
+            },
+            "required": ["reminder_id", "schedule_at", "target_channel"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "billing.charge.created" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-05-faturamento-cobranca" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "charge_id": { "type": "string", "format": "uuid" },
+              "customer_id": { "type": "string", "format": "uuid" },
+              "amount": { "type": "number", "minimum": 0 },
+              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+            },
+            "required": ["charge_id", "customer_id", "amount", "currency"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "billing.collection.requested" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-05-faturamento-cobranca" },
+          "target_module": { "const": "mod-02-whatsapp-crm" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "charge_id": { "type": "string", "format": "uuid" },
+              "channel": { "type": "string", "enum": ["whatsapp"] }
+            },
+            "required": ["charge_id", "channel"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "billing.collection.sent" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-05-faturamento-cobranca" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "charge_id": { "type": "string", "format": "uuid" },
+              "message_id": { "type": "string", "minLength": 1 },
+              "sent_at": { "type": "string", "format": "date-time" }
+            },
+            "required": ["charge_id", "message_id", "sent_at"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "billing.collection.failed" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-05-faturamento-cobranca" },
+          "status": { "const": "failed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "charge_id": { "type": "string", "format": "uuid" },
+              "error_code": { "type": "string", "minLength": 1 },
+              "retryable": { "type": "boolean" }
+            },
+            "required": ["charge_id", "error_code", "retryable"]
+          }
+        }
+      }
+    }
+  ]
+}

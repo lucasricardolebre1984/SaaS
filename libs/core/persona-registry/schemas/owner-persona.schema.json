@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/persona/owner-persona.schema.json",
+  "title": "Owner Persona Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "persona_type": { "const": "owner" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "display_name": { "type": "string", "minLength": 2 },
+        "role": { "type": "string", "minLength": 2 },
+        "language": { "type": "string", "minLength": 2 },
+        "tone": { "type": "string", "enum": ["neutral", "executive", "friendly"] }
+      },
+      "required": ["display_name", "role", "language", "tone"]
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "orchestrate_modules": { "type": "boolean" },
+        "can_create_tasks": { "type": "boolean" },
+        "can_update_agenda": { "type": "boolean" },
+        "can_trigger_billing": { "type": "boolean" }
+      },
+      "required": [
+        "orchestrate_modules",
+        "can_create_tasks",
+        "can_update_agenda",
+        "can_trigger_billing"
+      ]
+    },
+    "model_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default_model": { "type": "string", "minLength": 3 },
+        "fallback_models": { "type": "array", "items": { "type": "string", "minLength": 3 } },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2 }
+      },
+      "required": ["default_model", "temperature"]
+    },
+    "memory_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rag_enabled": { "type": "boolean" },
+        "silent_learning_writes": { "type": "boolean", "enum": [false] },
+        "promotion_mode": { "type": "string", "enum": ["manual-review", "policy-gated"] }
+      },
+      "required": ["rag_enabled", "silent_learning_writes", "promotion_mode"]
+    },
+    "avatar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "asset_path": { "type": "string", "minLength": 1 },
+        "voice_profile": { "type": "string", "minLength": 1 }
+      },
+      "required": ["enabled", "asset_path", "voice_profile"]
+    }
+  },
+  "required": [
+    "schema_version",
+    "persona_type",
+    "identity",
+    "capabilities",
+    "model_preferences",
+    "memory_policy",
+    "avatar"
+  ]
+}

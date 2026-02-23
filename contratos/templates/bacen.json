@@ -1,0 +1,187 @@
+{
+  "id": "bacen",
+  "nome": "CONTRATO DE PRESTACAO DE SERVICOS - BACEN REMOCAO SCR",
+  "tipo": "bacen",
+  "categoria": "BACEN REMOCAO SCR",
+  "subtitulo": "Bacen - Remocao SCR",
+  "descricao": "Template institucional para regularizacao de apontamentos de prejuizo no SCR do Banco Central.",
+  "versao": "1.1.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:/Users/Lucas/Downloads/BACENMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLAUSULA PRIMEIRA - DO OBJETO",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestacao de servicos de consultoria e intermediacao administrativa para regularizacao de apontamentos de prejuizo no Sistema de Informacoes de Credito (SCR) do Banco Central do Brasil.\n\n**1.2.** O servico inclui analise do caso, elaboracao de requerimentos administrativos e acompanhamento junto as instituicoes financeiras credoras.\n\n**1.3.** Este servico nao representa quitacao de dividas do(a) CONTRATANTE, mas sim regularizacao administrativa dos registros no SCR."
+    },
+    {
+      "numero": "CLAUSULA SEGUNDA - DAS OBRIGACOES DA CONTRATADA",
+      "titulo": "",
+      "conteudo": "**2.1.** A CONTRATADA se compromete a:\n\n**a)** analisar tecnicamente a situacao do(a) CONTRATANTE no SCR;\n**b)** elaborar e protocolar os requerimentos necessarios;\n**c)** acompanhar os procedimentos administrativos ate sua conclusao;\n**d)** manter o(a) CONTRATANTE informado(a) sobre as etapas do processo;\n**e)** atuar com etica, diligencia e boa-fe na execucao do servico."
+    },
+    {
+      "numero": "CLAUSULA TERCEIRA - DAS OBRIGACOES DO(A) CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**3.1.** O(A) CONTRATANTE se compromete a:\n\n**a)** fornecer documentos e informacoes veridicas e completas;\n**b)** cumprir os pagamentos nas datas acordadas;\n**c)** nao tratar diretamente do objeto contratual com instituicoes financeiras sem conhecimento da CONTRATADA."
+    },
+    {
+      "numero": "CLAUSULA QUARTA - DO VALOR E DA FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** Pelos servicos prestados, o(a) CONTRATANTE pagara o valor total de **R$ [VALOR] ([VALOR EXTENSO])**.\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]), no ato da assinatura.\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), com primeira parcela em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e demais sucessivas a cada 30 dias."
+    },
+    {
+      "numero": "CLAUSULA QUINTA - DO PRAZO DE EXECUCAO",
+      "titulo": "",
+      "conteudo": "**5.1.** O prazo estimado para conclusao dos servicos e de 45 a 60 dias uteis, contados da assinatura, confirmacao do pagamento inicial e entrega da documentacao necessaria."
+    },
+    {
+      "numero": "CLAUSULA SEXTA - DA GARANTIA DE RESULTADO E REEMBOLSO",
+      "titulo": "",
+      "conteudo": "**6.1.** O servico possui garantia vinculada a efetiva execucao do escopo contratado.\n\n**6.2.** Nao havendo conclusao do servico no prazo maximo pactuado por culpa da CONTRATADA, sera devida devolucao integral dos valores pagos em ate 30 dias uteis.\n\n**6.3.** Atraso no reembolso sujeita a CONTRATADA a multa de 10% sobre o valor devido, acrescida de juros de mora de 1% ao mes."
+    },
+    {
+      "numero": "CLAUSULA SETIMA - DO INADIMPLEMENTO DO(A) CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**7.1.** Em caso de atraso no pagamento, incidem:\n\n**a)** multa de 10% sobre a parcela em atraso;\n**b)** juros de mora de 1% ao mes, pro rata die;\n**c)** correcao monetaria pelo IPCA/IBGE.\n\n**7.2.** Atraso superior a 30 dias pode ensejar suspensao dos servicos e cobranca dos valores devidos."
+    },
+    {
+      "numero": "CLAUSULA OITAVA - DA ALOCACAO DE RECURSOS",
+      "titulo": "",
+      "conteudo": "**8.1.** O(A) CONTRATANTE declara ciencia de que, apos a assinatura e pagamento inicial, a CONTRATADA aloca de forma imediata recursos humanos e tecnicos para execucao do servico.\n\n**8.2.** Em razao dessa alocacao, eventual desistenca unilateral apos o inicio da execucao nao gera devolucao dos valores pagos, ressalvadas as hipoteses de inadimplemento da CONTRATADA."
+    },
+    {
+      "numero": "CLAUSULA NONA - DA CONFIDENCIALIDADE",
+      "titulo": "",
+      "conteudo": "**9.1.** As partes se obrigam a manter sigilo sobre dados, documentos e informacoes trocadas em razao deste contrato."
+    },
+    {
+      "numero": "CLAUSULA DECIMA - DA LGPD",
+      "titulo": "",
+      "conteudo": "**10.1.** Os dados pessoais serao tratados exclusivamente para execucao deste contrato, conforme a Lei no 13.709/2018 (LGPD).\n\n**10.2.** O(A) CONTRATANTE pode exercer direitos de titular pelo e-mail **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLAUSULA DECIMA PRIMEIRA - DO FORO",
+      "titulo": "",
+      "conteudo": "**11.1.** Fica eleito o foro da Comarca de Ribeirao Preto/SP para dirimir controversias oriundas deste contrato, ressalvado o foro do domicilio do consumidor quando aplicavel.\n\nRibeirao Preto, [DATA].\n\n**CONTRATANTE:** _________________________________\n[NOME COMPLETO DO CLIENTE]\n\n**CONTRATADA:** _________________________________\nFC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA"
+    }
+  ]
+}

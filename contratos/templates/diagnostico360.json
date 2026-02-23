@@ -1,0 +1,172 @@
+{
+  "id": "diagnostico360",
+  "nome": "CONTRATO DE PRESTAÇÃO DE SERVIÇOS – DIAGNÓSTICO 360",
+  "tipo": "diagnostico360",
+  "categoria": "DIAGNÓSTICO 360",
+  "subtitulo": "DIAGNÓSTICO 360",
+  "descricao": "Template institucional para diagnóstico 360.",
+  "versao": "1.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:\\Users\\Lucas\\Downloads\\DIAGNOSTICO360MODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLÁUSULA PRIMEIRA – DO OBJETO",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestação de serviço de análise aprofundada do perfil de crédito do(a) CONTRATANTE, denominado **Diagnóstico 360**, com o objetivo de identificar a situação atual do seu rating e histórico financeiro junto aos principais birôs de crédito (Serasa, SPC, Boa Vista, CDL, CENPROT)."
+    },
+    {
+      "numero": "CLÁUSULA SEGUNDA – DO ESCOPO E ENTREGÁVEL",
+      "titulo": "",
+      "conteudo": "**2.1.** O serviço compreende:\n\n**a)** Levantamento de informações de crédito (score, histórico de pagamentos, dívidas negativadas, consultas ao CPF/CNPJ);\n\n**b)** Análise técnica das informações para identificar causas de rating baixo;\n\n**c)** Elaboração e entrega de **Relatório de Diagnóstico e Plano de Ação**, contendo:\n   - Panorama completo da situação de crédito;\n   - Identificação dos principais pontos de melhoria;\n   - Proposta de serviço de execução (a ser contratada separadamente, se houver interesse).\n\n**2.2.** A obrigação da CONTRATADA neste instrumento é de **meio**, comprometendo-se a realizar a análise com máxima diligência e entregar o relatório, não incluindo a execução de ações de melhoria."
+    },
+    {
+      "numero": "CLÁUSULA TERCEIRA – DO PRAZO",
+      "titulo": "",
+      "conteudo": "**3.1.** O **Relatório de Diagnóstico e Plano de Ação** será entregue no prazo de até **10 (dez) dias úteis**, a contar da confirmação do pagamento e do fornecimento de todas as informações necessárias pelo(a) CONTRATANTE."
+    },
+    {
+      "numero": "CLÁUSULA QUARTA – DO VALOR E FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** Pelo serviço de Diagnóstico 360, o(a) CONTRATANTE pagará à CONTRATADA o valor total de **R$ [VALOR] ([VALOR EXTENSO])**.\n\n**4.2.** O pagamento deverá ser realizado **no ato da contratação**, via PIX, boleto ou cartão de crédito.\n\n**4.3.** Este valor é **único e não reembolsável**, exceto no exercício do direito de arrependimento em até 7 (sete) dias (Lei nº 8.078/90)."
+    },
+    {
+      "numero": "CLÁUSULA QUINTA – DAS OBRIGAÇÕES",
+      "titulo": "",
+      "conteudo": "**5.1.** Da CONTRATADA:\n- Prestar o serviço com zelo e competência técnica;\n- Manter sigilo absoluto sobre as informações;\n- Entregar o relatório no prazo estabelecido.\n\n**5.2.** Do(a) CONTRATANTE:\n- Realizar o pagamento na data prevista;\n- Fornecer informações e documentos solicitados de forma ágil e verídica."
+    },
+    {
+      "numero": "CLÁUSULA SEXTA – INDEPENDÊNCIA DOS SERVIÇOS",
+      "titulo": "",
+      "conteudo": "**6.1.** A assinatura deste contrato e a realização do Diagnóstico 360 **não obrigam** o(a) CONTRATANTE a contratar o serviço de execução proposto, nem obrigam a CONTRATADA a executá-lo sem contratação em instrumento próprio."
+    },
+    {
+      "numero": "CLÁUSULA SÉTIMA – DA PROTEÇÃO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**7.1.** Em conformidade com a LGPD (Lei nº 13.709/2018), a CONTRATADA tratará os dados pessoais com finalidade exclusiva de executar este contrato.\n\n**7.2.** O(A) CONTRATANTE pode exercer direitos de titular pelo e-mail: **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLÁUSULA OITAVA – DO FORO",
+      "titulo": "",
+      "conteudo": "**8.1.** As partes elegem o foro da Comarca de Ribeirão Preto/SP, renunciando a qualquer outro, ressalvada a faculdade do(a) CONTRATANTE de propor ação no foro de seu domicílio, conforme CDC.\n\n---\n\nRibeirão Preto, [DATA].\n\n---\n\n**CONTRATANTE:** _________________________________\n[NOME COMPLETO DO CLIENTE]\n\n**CONTRATADA:** _________________________________\nFC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/persona/whatsapp-persona.schema.json",
+  "title": "WhatsApp Persona Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "persona_type": { "const": "whatsapp" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "display_name": { "type": "string", "minLength": 2 },
+        "language": { "type": "string", "minLength": 2 },
+        "tone": { "type": "string", "enum": ["neutral", "concierge", "sales"] }
+      },
+      "required": ["display_name", "language", "tone"]
+    },
+    "conversation_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_message_chars": { "type": "integer", "minimum": 50, "maximum": 2000 },
+        "emoji_policy": { "type": "string", "enum": ["none", "light", "moderate"] },
+        "cta_enabled": { "type": "boolean" }
+      },
+      "required": ["max_message_chars", "emoji_policy", "cta_enabled"]
+    },
+    "lead_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "auto_capture_enabled": { "type": "boolean" },
+        "required_fields_for_qualification": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 2 },
+          "minItems": 1
+        }
+      },
+      "required": ["auto_capture_enabled", "required_fields_for_qualification"]
+    },
+    "handoff_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "human_handoff_enabled": { "type": "boolean" },
+        "reason_codes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 2 },
+          "minItems": 1
+        }
+      },
+      "required": ["human_handoff_enabled", "reason_codes"]
+    },
+    "collection_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow_collection_messages": { "type": "boolean" },
+        "escalation_after_attempts": { "type": "integer", "minimum": 1, "maximum": 10 }
+      },
+      "required": ["allow_collection_messages", "escalation_after_attempts"]
+    }
+  },
+  "required": [
+    "schema_version",
+    "persona_type",
+    "identity",
+    "conversation_style",
+    "lead_policy",
+    "handoff_policy",
+    "collection_policy"
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "id": "rating_full_pj",
+  "nome": "CONTRATO DE PRESTACAO DE SERVICOS - RATING FULL PJ",
+  "tipo": "rating_full_pj",
+  "categoria": "RATING FULL PJ",
+  "subtitulo": "Rating Full PJ",
+  "descricao": "Template institucional para execucao completa de rating empresarial com DRE e CND.",
+  "versao": "1.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:\\Users\\Lucas\\Downloads\\RATINGFULLPJMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLAUSULA PRIMEIRA - DO OBJETO E ESCOPO",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestacao de servicos de **execucao do plano de acao (modalidade Full PJ)** para melhoria do perfil de credito e regularizacao fiscal/contabil da CONTRATANTE.\n\n**1.2.** **Escopo dos servicos:**\n- Execucao de plano de acao para melhoria do Rating Comercial;\n- Assessoria contabil para elaboracao e emissao da DRE (Demonstracao do Resultado do Exercicio);\n- Assessoria para emissao da CND (Certidao Negativa de Debitos).\n\n**1.3.** **Meta de resultado condicional:** atingir classificacao minima **\"A\"** na escala de Rating Comercial.\n\n**1.4.** **Afericao:** duas consultas ao rating (assinatura e final do prazo)."
+    },
+    {
+      "numero": "CLAUSULA SEGUNDA - DO PRAZO DE EXECUCAO",
+      "titulo": "",
+      "conteudo": "**2.1.** A CONTRATADA executara os servicos e entregara o relatorio final, DRE e CND no prazo de **15 (quinze) dias uteis**, contados da assinatura deste contrato."
+    },
+    {
+      "numero": "CLAUSULA TERCEIRA - DO VALOR E DA FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**3.1.** Pelos servicos, a CONTRATANTE pagara a CONTRATADA o valor total de **R$ [VALOR] ([VALOR EXTENSO])**, da seguinte forma:\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]), no ato da assinatura;\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), vencendo a primeira em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e as demais a cada 30 dias.\n\n**3.2.** **Antecipacao:** desconto de 1,5% ao mes, maximo de 15%, mediante solicitacao previa de 2 dias uteis e PIX aleatorio em 24 horas.\n\n**3.3.** Os valores pagos sao irrevogaveis e nao reembolsaveis, exceto nas hipoteses de arrependimento em 7 dias ou garantia de resultado (Clausula Oitava)."
+    },
+    {
+      "numero": "CLAUSULA QUARTA - DAS PENALIDADES POR INADIMPLEMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** **Multa moratoria:** 20% sobre o valor em atraso, juros de 1% ao mes e correcao pelo IPCA.\n\n**4.2.** **Suspensao:** atraso superior a 30 dias suspende os servicos.\n\n**4.3.** **Perda do direito:** persistindo o atraso por mais 15 dias apos suspensao, perde-se o direito ao servico e aos valores pagos, podendo haver protesto das parcelas em aberto."
+    },
+    {
+      "numero": "CLAUSULA QUINTA - DAS OBRIGACOES DA CONTRATADA",
+      "titulo": "",
+      "conteudo": "**5.1.** Executar todos os servicos do escopo com zelo e competencia tecnica.\n\n**5.2.** Cumprir o prazo de 15 dias uteis estabelecido.\n\n**5.3.** Manter sigilo absoluto sobre as informacoes da CONTRATANTE."
+    },
+    {
+      "numero": "CLAUSULA SEXTA - DAS OBRIGACOES DA CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**6.1.** Efetuar pagamentos nas datas e valores acordados.\n\n**6.2.** Fornecer informacoes e documentos necessarios para os servicos de rating, DRE e CND.\n\n**6.3.** Cumprir rigorosamente o Anexo I - Termo de Ciencia e Compromisso (nao consultar CNPJ sem autorizacao)."
+    },
+    {
+      "numero": "CLAUSULA SETIMA - DA RESCISAO",
+      "titulo": "",
+      "conteudo": "**7.1.** **Direito de arrependimento:** ate 7 (sete) dias da assinatura, com restituicao integral.\n\n**7.2.** **Rescisao por culpa da CONTRATANTE:** descumprimento de obrigacoes (inclusive Anexo I) acarreta rescisao, multa de 20% e perda dos valores pagos."
+    },
+    {
+      "numero": "CLAUSULA OITAVA - DA GARANTIA DE RESULTADO CONDICIONAL",
+      "titulo": "",
+      "conteudo": "**8.1.** A garantia so e valida se a CONTRATANTE cumprir integralmente suas obrigacoes, especialmente as da Clausula Sexta e Anexo I.\n\n**8.2.** Ao final do prazo de 15 dias uteis, se a meta \"A\" nao for alcancada por razoes nao atribuiveis a CONTRATANTE, havera direito a restituicao integral do valor pago por este contrato. O valor do Diagnostico 360 nao e reembolsavel.\n\n**8.3.** A solicitacao de reembolso devera ser formalizada por e-mail, com pagamento em ate 30 dias uteis."
+    },
+    {
+      "numero": "CLAUSULA NONA - DA PROTECAO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**9.1.** Conforme a LGPD (Lei 13.709/2018), os dados serao tratados exclusivamente para execucao deste contrato.\n\n**9.2.** A CONTRATANTE pode exercer os direitos de titular pelo e-mail **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLAUSULA DECIMA - DO FORO",
+      "titulo": "",
+      "conteudo": "**10.1.** Fica eleito o foro da Comarca de Ribeirao Preto/SP, ressalvado o foro do domicilio da CONTRATANTE conforme CDC."
+    }
+  ]
+}

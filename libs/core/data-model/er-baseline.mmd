@@ -1,0 +1,228 @@
+erDiagram
+  TENANTS {
+    uuid id PK
+    string slug
+    string name
+    string status
+  }
+
+  CONVERSATIONS {
+    uuid id PK
+    uuid tenant_id FK
+    string mode
+    string status
+  }
+
+  CONVERSATION_MESSAGES {
+    uuid id PK
+    uuid tenant_id FK
+    uuid conversation_id FK
+    string role
+  }
+
+  CONVERSATION_ATTACHMENTS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid conversation_message_id FK
+    string kind
+  }
+
+  OWNER_COMMANDS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid conversation_id FK
+    string status
+  }
+
+  CRM_LEADS {
+    uuid id PK
+    uuid tenant_id FK
+    string current_stage
+    string phone_e164
+  }
+
+  CRM_LEAD_STAGE_HISTORY {
+    uuid id PK
+    uuid tenant_id FK
+    uuid lead_id FK
+    string from_stage
+    string to_stage
+  }
+
+  CRM_CAMPAIGNS {
+    uuid id PK
+    uuid tenant_id FK
+    string state
+  }
+
+  CRM_CAMPAIGN_RECIPIENTS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid campaign_id FK
+    uuid lead_id FK
+    uuid customer_id FK
+  }
+
+  CRM_MESSAGE_DISPATCHES {
+    uuid id PK
+    uuid tenant_id FK
+    string context_type
+    uuid context_id
+    string state
+  }
+
+  CUSTOMERS {
+    uuid id PK
+    uuid tenant_id FK
+    string full_name
+    string status
+  }
+
+  CUSTOMER_CONTACTS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid customer_id FK
+    string kind
+    string value
+  }
+
+  AGENDA_EVENTS {
+    uuid id PK
+    uuid tenant_id FK
+    string title
+    string status
+  }
+
+  AGENDA_REMINDERS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid agenda_event_id FK
+    string channel
+    string status
+  }
+
+  BILLING_CHARGES {
+    uuid id PK
+    uuid tenant_id FK
+    uuid customer_id FK
+    decimal amount
+    string status
+  }
+
+  BILLING_COLLECTION_ATTEMPTS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid charge_id FK
+    string state
+  }
+
+  BILLING_PAYMENTS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid charge_id FK
+    decimal amount_paid
+    string status
+  }
+
+  MEMORY_DOCUMENTS {
+    uuid id PK
+    uuid tenant_id FK
+    string source_type
+    string status
+  }
+
+  MEMORY_CHUNKS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid document_id FK
+    int chunk_index
+  }
+
+  MEMORY_EMBEDDINGS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid chunk_id FK
+    string model
+  }
+
+  PERSONA_PROFILES {
+    uuid id PK
+    uuid tenant_id FK
+    string persona_type
+  }
+
+  PERSONA_VERSIONS {
+    uuid id PK
+    uuid tenant_id FK
+    uuid persona_profile_id FK
+    int version_no
+  }
+
+  AUDIT_LOGS {
+    uuid id PK
+    uuid tenant_id FK
+    string action
+    string resource_type
+  }
+
+  AI_USAGE_METRICS {
+    uuid id PK
+    uuid tenant_id FK
+    string module_id
+    string model
+  }
+
+  PROVIDER_COST_ENTRIES {
+    uuid id PK
+    uuid tenant_id FK
+    string provider
+    decimal amount_usd
+  }
+
+  DOMAIN_EVENTS {
+    uuid id PK
+    uuid tenant_id FK
+    string name
+    string source_module
+  }
+
+  MODULE_TASKS {
+    uuid id PK
+    uuid tenant_id FK
+    string task_type
+    string status
+  }
+
+  TENANTS ||--o{ CONVERSATIONS : has
+  CONVERSATIONS ||--o{ CONVERSATION_MESSAGES : contains
+  CONVERSATION_MESSAGES ||--o{ CONVERSATION_ATTACHMENTS : includes
+  CONVERSATIONS ||--o{ OWNER_COMMANDS : receives
+
+  TENANTS ||--o{ CRM_LEADS : owns
+  CRM_LEADS ||--o{ CRM_LEAD_STAGE_HISTORY : tracks
+  CRM_CAMPAIGNS ||--o{ CRM_CAMPAIGN_RECIPIENTS : targets
+  CRM_LEADS ||--o{ CRM_CAMPAIGN_RECIPIENTS : includes
+  CUSTOMERS ||--o{ CRM_CAMPAIGN_RECIPIENTS : may_include
+
+  TENANTS ||--o{ CUSTOMERS : owns
+  CUSTOMERS ||--o{ CUSTOMER_CONTACTS : has
+
+  TENANTS ||--o{ AGENDA_EVENTS : owns
+  AGENDA_EVENTS ||--o{ AGENDA_REMINDERS : schedules
+
+  CUSTOMERS ||--o{ BILLING_CHARGES : billed
+  BILLING_CHARGES ||--o{ BILLING_COLLECTION_ATTEMPTS : attempts
+  BILLING_CHARGES ||--o{ BILLING_PAYMENTS : paid_by
+
+  TENANTS ||--o{ MEMORY_DOCUMENTS : stores
+  MEMORY_DOCUMENTS ||--o{ MEMORY_CHUNKS : splits
+  MEMORY_CHUNKS ||--o{ MEMORY_EMBEDDINGS : vectorizes
+
+  TENANTS ||--o{ PERSONA_PROFILES : configures
+  PERSONA_PROFILES ||--o{ PERSONA_VERSIONS : versions
+
+  TENANTS ||--o{ DOMAIN_EVENTS : emits
+  TENANTS ||--o{ MODULE_TASKS : orchestrates
+  TENANTS ||--o{ AUDIT_LOGS : audits
+  TENANTS ||--o{ AI_USAGE_METRICS : tracks
+  TENANTS ||--o{ PROVIDER_COST_ENTRIES : costs

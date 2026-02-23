@@ -1,0 +1,271 @@
+{
+  "id": "bacen",
+  "nome": "Contrato Bacen - Remoção SCR",
+  "categoria": "Bacen",
+  "descricao": "Contrato de prestação de serviços para remoção de apontamentos de prejuízo no Sistema de Informações de Crédito (SCR) do Banco Central",
+  "versao": "2.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  
+  "contratada": {
+    "nome": "FC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Graças de Negreiros Bonilha, nº 30, sala 3, Jardim Nova Aliança Sul, Ribeirão Preto/SP, CEP 14022-100"
+  },
+
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "placeholder": "João da Silva",
+      "secao": "dados_contratante",
+      "ordem": 1,
+      "obrigatorio": true,
+      "mascara": null
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "placeholder": "000.000.000-00",
+      "secao": "dados_contratante",
+      "ordem": 2,
+      "obrigatorio": true,
+      "mascara": "cpf_cnpj"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "placeholder": "email@exemplo.com",
+      "secao": "dados_contratante",
+      "ordem": 3,
+      "obrigatorio": true,
+      "mascara": null
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "placeholder": "(00) 00000-0000",
+      "secao": "dados_contratante",
+      "ordem": 4,
+      "obrigatorio": false,
+      "mascara": "telefone"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereço Completo",
+      "tipo": "texto",
+      "placeholder": "Rua, número, bairro, cidade - Estado, CEP",
+      "secao": "dados_contratante",
+      "ordem": 5,
+      "obrigatorio": true,
+      "mascara": null
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total do Contrato",
+      "tipo": "moeda",
+      "placeholder": "0,00",
+      "secao": "valores",
+      "ordem": 6,
+      "obrigatorio": true,
+      "mascara": "moeda",
+      "calcula_extenso": "valor_total_extenso"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "placeholder": "0,00",
+      "secao": "valores",
+      "ordem": 7,
+      "obrigatorio": true,
+      "mascara": "moeda",
+      "calcula_extenso": "valor_entrada_extenso"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "placeholder": "12",
+      "secao": "valores",
+      "ordem": 8,
+      "obrigatorio": true,
+      "mascara": null,
+      "calcula_extenso": "qtd_parcelas_extenso",
+      "min": 1,
+      "max": 99
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "placeholder": "0,00",
+      "secao": "valores",
+      "ordem": 9,
+      "obrigatorio": true,
+      "mascara": "moeda",
+      "calcula_extenso": "valor_parcela_extenso",
+      "formula": "(valor_total - valor_entrada) / qtd_parcelas"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1ª Parcela (dias)",
+      "tipo": "numero",
+      "placeholder": "30",
+      "secao": "valores",
+      "ordem": 10,
+      "obrigatorio": true,
+      "mascara": null,
+      "calcula_extenso": "prazo_1_extenso",
+      "min": 1
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2ª Parcela (dias)",
+      "tipo": "numero",
+      "placeholder": "60",
+      "secao": "valores",
+      "ordem": 11,
+      "obrigatorio": true,
+      "mascara": null,
+      "calcula_extenso": "prazo_2_extenso",
+      "min": 1
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local de Assinatura",
+      "tipo": "texto",
+      "placeholder": "Ribeirão Preto/SP",
+      "secao": "assinatura",
+      "ordem": 12,
+      "obrigatorio": true,
+      "mascara": null,
+      "padrao": "Ribeirão Preto/SP"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data de Assinatura",
+      "tipo": "data",
+      "placeholder": "DD/MM/AAAA",
+      "secao": "assinatura",
+      "ordem": 13,
+      "obrigatorio": true,
+      "mascara": "data",
+      "padrao": "hoje"
+    }
+  ],
+
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+
+  "clausulas": [
+    {
+      "numero": "PRIMEIRA",
+      "titulo": "DO OBJETO",
+      "conteudo": "O presente contrato tem como objeto a prestação de serviços de consultoria e intermediação administrativa pela CONTRATADA em favor do(a) CONTRATANTE, visando a adoção de procedimentos administrativos para a regularização de apontamentos de prejuízo registrados no Sistema de Informações de Crédito (SCR) do Banco Central do Brasil, vinculados ao CPF/CNPJ do(a) CONTRATANTE. O serviço consiste na análise do caso, elaboração de requerimentos e acompanhamento do processo administrativo junto às instituições financeiras credoras, buscando a baixa dos referidos apontamentos, nos termos da regulamentação vigente. Fica claro entre as partes que este serviço não se trata de quitação ou pagamento de dívidas, mas sim de um procedimento administrativo para a regularização dos registros no SCR."
+    },
+    {
+      "numero": "SEGUNDA",
+      "titulo": "DAS OBRIGAÇÕES DA CONTRATADA",
+      "conteudo": "A CONTRATADA se compromete a: Realizar uma análise detalhada da situação do(a) CONTRATANTE junto ao SCR; Elaborar e protocolar os requerimentos administrativos necessários junto às instituições financeiras pertinentes; Acompanhar o andamento dos procedimentos, empregando seus melhores esforços técnicos para a obtenção do resultado almejado; Manter o(a) CONTRATANTE informado sobre as etapas e o andamento do processo; Prestar o serviço dentro do mais alto padrão de ética e profissionalismo."
+    },
+    {
+      "numero": "TERCEIRA",
+      "titulo": "DAS OBRIGAÇÕES DO(A) CONTRATANTE",
+      "conteudo": "O(A) CONTRATANTE se compromete a: Fornecer à CONTRATADA todos os documentos e informações solicitados, de forma completa e verdadeira, para a correta execução dos serviços; Efetuar o pagamento dos honorários nas datas e valores acordados neste instrumento; Não tratar diretamente com as instituições financeiras sobre o objeto deste contrato sem o prévio conhecimento e anuência da CONTRATADA."
+    },
+    {
+      "numero": "QUARTA",
+      "titulo": "DO VALOR E DA FORMA DE PAGAMENTO",
+      "conteudo": "Pelos serviços prestados, o(a) CONTRATANTE pagará à CONTRATADA o valor total de R$ [valor_total] (valor_total_extenso), a ser pago da seguinte forma: Entrada: R$ [valor_entrada] (valor_entrada_extenso), a ser paga no ato da assinatura deste contrato. Parcelas: [qtd_parcelas] (qtd_parcelas_extenso) parcelas de R$ [valor_parcela] (valor_parcela_extenso), com vencimento em [prazo_1] (prazo_1_extenso) e [prazo_2] (prazo_2_extenso) dias, respectivamente, a contar da data de assinatura."
+    },
+    {
+      "numero": "QUINTA",
+      "titulo": "DO PRAZO DE EXECUÇÃO",
+      "conteudo": "O prazo estimado para a conclusão dos serviços é de 45 (quarenta e cinco) a 60 (sessenta) dias úteis, contados a partir da data de assinatura deste instrumento e da confirmação do pagamento da entrada."
+    },
+    {
+      "numero": "SEXTA",
+      "titulo": "DA GARANTIA DE RESULTADO E POLÍTICA DE REEMBOLSO",
+      "conteudo": "O serviço objeto deste contrato é de resultado, vinculado à efetiva baixa e atualização dos apontamentos de prejuízo no Sistema de Informações de Crédito (SCR) do Banco Central, conforme o escopo definido na Cláusula Primeira. Caso a CONTRATADA não comprove a conclusão do serviço no prazo máximo de 60 (sessenta) dias úteis, o presente contrato será considerado automaticamente rescindido por inadimplemento da CONTRATADA. Na hipótese de rescisão por descumprimento do prazo, a CONTRATADA deverá realizar a devolução integral dos valores já pagos pelo(a) CONTRATANTE, no prazo de até 30 (trinta) dias úteis após o término do prazo contratual, por meio de transferência bancária ou PIX. O atraso no reembolso além do prazo estipulado sujeitará a CONTRATADA a multa de 10% (dez por cento) sobre o valor a ser devolvido, acrescido de juros de mora de 1% (um por cento) ao mês."
+    },
+    {
+      "numero": "SÉTIMA",
+      "titulo": "DO INADIMPLEMENTO DO(A) CONTRATANTE",
+      "conteudo": "Em caso de atraso no pagamento de qualquer parcela, o valor devido será acrescido de: Multa de 10% (dez por cento) sobre o valor da parcela em atraso; Juros de mora de 1% (um por cento) ao mês, calculados pro rata die; Correção monetária pelo índice IPCA/IBGE. O atraso superior a 30 (trinta) dias no pagamento de qualquer parcela poderá ensejar a suspensão dos serviços e, a critério da CONTRATADA, a rescisão do presente contrato, sem prejuízo da cobrança dos valores devidos."
+    },
+    {
+      "numero": "OITAVA",
+      "titulo": "DA ALOCAÇÃO DE RECURSOS E DA IRREVERSIBILIDADE DOS CUSTOS",
+      "conteudo": "O(A) CONTRATANTE declara estar ciente de que o processo de contratação foi dividido em duas fases distintas: (I) a fase de análise e onboarding, de caráter gratuito e sem compromisso; e (II) a fase de execução do serviço, que se inicia imediatamente após a assinatura deste instrumento. Ao assinar este contrato, o(a) CONTRATANTE autoriza e a CONTRATADA se compromete a alocar, de forma imediata e irreversível, os recursos humanos e materiais necessários para o protocolo e acompanhamento do procedimento administrativo. Em razão do exposto, não haverá devolução dos valores pagos em caso de desistência ou arrependimento unilateral, ressalvadas as hipóteses de inadimplemento da CONTRATADA previstas na Cláusula Sexta."
+    },
+    {
+      "numero": "NONA",
+      "titulo": "DA CONFIDENCIALIDADE",
+      "conteudo": "As partes se comprometem a manter em sigilo todas as informações e documentos a que tiverem acesso em decorrência deste contrato, não podendo divulgá-los a terceiros sem a prévia autorização da outra parte."
+    },
+    {
+      "numero": "DÉCIMA",
+      "titulo": "DO FORO",
+      "conteudo": "Para dirimir quaisquer controvérsias oriundas do CONTRATO, as partes elegem o foro da Comarca de São Paulo/SP."
+    },
+    {
+      "numero": "DÉCIMA PRIMEIRA",
+      "titulo": "DOS ANEXOS",
+      "conteudo": "É parte integrante e indissociável do presente contrato o ANEXO I - TERMO DE CIÊNCIA E CONSENTIMENTO EXPRESSO, que deverá ser assinado em conjunto com este instrumento."
+    }
+  ],
+
+  "layout_config": {
+    "orientacao": "portrait",
+    "formato": "A4",
+    "margens": {
+      "topo": 30,
+      "direita": 25,
+      "fundo": 30,
+      "esquerda": 25
+    },
+    "fonte_principal": "Times New Roman",
+    "tamanho_fonte": 12,
+    "cor_fonte": "#000000",
+    "logo_cabecalho": true,
+    "rodape_numerado": true
+  },
+
+  "assinaturas": {
+    "contratante": {
+      "titulo": "CONTRATANTE",
+      "campos": ["contratante_nome", "contratante_documento"]
+    },
+    "contratada": {
+      "titulo": "CONTRATADA",
+      "nome_fixo": "FC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA",
+      "cnpj_fixo": "57.815.628/0001-62"
+    },
+    "testemunhas": {
+      "quantidade": 2,
+      "campos": ["nome", "cpf"]
+    }
+  }
+}

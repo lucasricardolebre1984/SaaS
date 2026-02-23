@@ -1,0 +1,104 @@
+{
+  "version": "1.0.0",
+  "status": "baseline",
+  "allocation_dimensions": ["tenant_id", "module_id", "provider", "service", "model", "environment"],
+  "cost_maps": [
+    {
+      "metric_key": "monthly_total_cloud_cost",
+      "definition": "Total monthly cloud and provider spend.",
+      "source_tables": ["provider_cost_entries"],
+      "group_by": ["month"],
+      "metrics_formula_ref": {
+        "id": 10,
+        "name": "Total Cloud Cost (monthly)",
+        "formula_text": "sum(all cloud invoices)"
+      }
+    },
+    {
+      "metric_key": "cost_per_environment",
+      "definition": "Monthly spend allocated by environment (dev/stage/prod/local).",
+      "source_tables": ["provider_cost_entries"],
+      "group_by": ["month", "environment"],
+      "metrics_formula_ref": {
+        "id": 11,
+        "name": "Cost per Environment",
+        "formula_text": "monthly_cost_env / env"
+      }
+    },
+    {
+      "metric_key": "cost_per_active_tenant",
+      "definition": "Monthly infrastructure and AI cost divided by active tenants.",
+      "source_tables": ["provider_cost_entries", "kpi_daily_snapshots"],
+      "group_by": ["month"],
+      "metrics_formula_ref": {
+        "id": 12,
+        "name": "Cost per Active Tenant",
+        "formula_text": "monthly_cloud_cost / active_tenants"
+      }
+    },
+    {
+      "metric_key": "cost_per_paying_customer",
+      "definition": "Monthly infrastructure and AI cost divided by paying customers.",
+      "source_tables": ["provider_cost_entries", "billing_payments"],
+      "group_by": ["month"],
+      "metrics_formula_ref": {
+        "id": 13,
+        "name": "Cost per Paying Customer",
+        "formula_text": "monthly_cloud_cost / paying_customers"
+      }
+    },
+    {
+      "metric_key": "ai_cost_per_feature",
+      "definition": "AI token/service spend allocated to a feature/task delivery.",
+      "source_tables": ["ai_usage_metrics", "provider_cost_entries", "module_tasks"],
+      "group_by": ["feature", "month"],
+      "metrics_formula_ref": {
+        "id": 14,
+        "name": "AI Cost per Feature",
+        "formula_text": "ai_token_cost_for_feature / delivered_feature"
+      }
+    },
+    {
+      "metric_key": "gross_margin_proxy",
+      "definition": "Revenue minus infra+AI cost ratio for business viability monitoring.",
+      "source_tables": ["provider_cost_entries", "billing_payments"],
+      "group_by": ["month"],
+      "metrics_formula_ref": {
+        "id": 15,
+        "name": "Gross Margin Proxy",
+        "formula_text": "(revenue - infra_cost - ai_cost) / revenue"
+      }
+    }
+  ],
+  "provider_service_breakdown": [
+    {
+      "provider": "openai",
+      "services": [
+        "chat_tokens_input",
+        "chat_tokens_output",
+        "embeddings",
+        "audio_transcription",
+        "audio_tts",
+        "image_generation"
+      ],
+      "target_modules": ["mod-01-owner-concierge", "core"]
+    },
+    {
+      "provider": "evolution-api",
+      "services": ["whatsapp_dispatch", "webhook_ingestion", "instance_runtime"],
+      "target_modules": ["mod-02-whatsapp-crm"]
+    },
+    {
+      "provider": "infrastructure",
+      "services": ["postgres", "redis", "queue", "object_storage", "compute"],
+      "target_modules": [
+        "mod-01-owner-concierge",
+        "mod-02-whatsapp-crm",
+        "mod-03-clientes",
+        "mod-04-agenda",
+        "mod-05-faturamento-cobranca",
+        "core"
+      ]
+    }
+  ]
+}

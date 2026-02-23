@@ -1,0 +1,192 @@
+{
+  "id": "aumento_score",
+  "nome": "CONTRATO DE PRESTAÇÃO DE SERVIÇOS – AUMENTO DE SCORE",
+  "tipo": "aumento_score",
+  "categoria": "AUMENTO DE SCORE",
+  "subtitulo": "AUMENTO DE SCORE",
+  "descricao": "Template institucional para aumento de score.",
+  "versao": "1.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:\\Users\\Lucas\\Downloads\\AUMENTODESCOREMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLÁUSULA PRIMEIRA – DO OBJETO",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestação de serviços de assessoria especializada para **aumento da pontuação de crédito (score)** do(a) **CONTRATANTE**, utilizando metodologia comprovada de análise e otimização de perfil financeiro.\n\n**1.2.** O serviço compreende:\n- Diagnóstico completo do perfil financeiro e comportamento de crédito;\n- Plano de ação personalizado para otimização de cadastros;\n- Renegociação estratégica junto a órgãos de proteção ao crédito;\n- Acompanhamento da evolução da pontuação.\n\n**1.3.** **Meta de Resultado:** Elevação do score para **mínimo de 800 (oitocentos) pontos** na escala de 0 a 1000, ou valor superior ao inicial demonstrado no diagnóstico, garantindo classificação de \"confiabilidade alta\" junto às instituições financeiras.\n\n**1.4.** **Consultoria Educacional:** A **CONTRATADA** oferece orientação ao(a) **CONTRATANTE** sobre boas práticas financeiras para manutenção do score elevado a longo prazo, conforme metodologia própria.\n\n**1.5.** Os serviços não incluem quitação de dívidas, mas sim a otimização do perfil de crédito e correção de informações cadastrais."
+    },
+    {
+      "numero": "CLÁUSULA SEGUNDA – DAS OBRIGAÇÕES DA CONTRATADA",
+      "titulo": "",
+      "conteudo": "**2.1.** A **CONTRATADA** se compromete a:\n\n**a)** Realizar diagnóstico detalhado do perfil de crédito atual do(a) **CONTRATANTE**;\n**b)** Executar o plano de ação utilizando metodologia comprovada para elevação do score;\n**c)** Monitorar a evolução da pontuação durante o prazo contratual;\n**d)** Prestar consultoria educacional sobre manutenção do score;\n**e)** Manter sigilo absoluto sobre as informações financeiras do(a) **CONTRATANTE**."
+    },
+    {
+      "numero": "CLÁUSULA TERCEIRA – DAS OBRIGAÇÕES DO(A) CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**3.1.** O(A) **CONTRATANTE** se compromete a:\n\n**a)** Efetuar o pagamento dos honorários nas datas e valores acordados;\n**b)** Fornecer documentação e informações necessárias de forma completa e verídica;\n**c)** **CUMPRIR RIGOROSAMENTE** o **Anexo I - Termo de Ciência e Compromisso**, abstendo-se de realizar consultas ao próprio CPF/CNPJ em birôs de crédito, simulações de financiamento, pedidos de aumento de limite ou solicitação de novos cartões durante a vigência deste contrato;\n**d)** Seguir as orientações de consultoria educacional fornecidas para manutenção do resultado.\n\n**3.2.** O descumprimento da alínea \"c\" acarretará perda automática da garantia de resultado prevista na Cláusula Sexta, uma vez que novas consultas prejudicam diretamente o trabalho técnico em execução."
+    },
+    {
+      "numero": "CLÁUSULA QUARTA – DO VALOR E DA FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** Pelos serviços prestados, o(a) **CONTRATANTE** pagará à **CONTRATADA** o valor total de **R$ [VALOR] ([VALOR EXTENSO])**, da seguinte forma:\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]), no ato da assinatura deste contrato;\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), vencendo a primeira em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e as demais sucessivamente a cada 30 (trinta) dias.\n\n**4.2.** **Antecipação:** Desconto de 1,5% ao mês, máximo 15%, mediante solicitação prévia de 2 dias úteis e PIX aleatório em 24 horas."
+    },
+    {
+      "numero": "CLÁUSULA QUINTA – DO PRAZO DE EXECUÇÃO",
+      "titulo": "",
+      "conteudo": "**5.1.** A **CONTRATADA** executará os serviços e acompanhará a evolução do score no prazo de **30 (trinta) dias úteis**, contados da assinatura do contrato, confirmação do pagamento da entrada e entrega da documentação completa.\n\n**5.2.** A pontuação será aferida ao final do prazo para verificação do cumprimento da meta de 800 pontos."
+    },
+    {
+      "numero": "CLÁUSULA SEXTA – DA GARANTIA DE RESULTADO",
+      "titulo": "",
+      "conteudo": "**6.1.** **Condição Sine Qua Non:** A garantia desta cláusula só é válida se o(a) **CONTRATANTE** cumprir integralmente a Cláusula Terceira, especialmente a obrigação de **não realizar consultas ao CPF/CNPJ** durante o prazo de execução (Anexo I).\n\n**6.2.** **Meta Garantida:** Ao final do prazo de 30 dias úteis, se o score do(a) **CONTRATANTE** não atingir o mínimo de **800 (oitocentos) pontos** (ou não apresentar evolução mínima de 200 pontos em relação ao score inicial, o que for menor), por razões não atribuíveis ao descumprimento das obrigações do(a) **CONTRATANTE**, terá direito à **restituição integral do valor pago** por este contrato.\n\n**6.3.** **Restituição:** O reembolso será efetuado em até 30 (trinta) dias úteis após a solicitação formal via e-mail, mediante comprovação do score inicial e final.\n\n**6.4.** **Opção de Extensão:** Alternativamente ao reembolso, o(a) **CONTRATANTE** poderá optar por estender o serviço por mais 15 (quinze) dias úteis, sem custo adicional, para nova tentativa de alcançar a meta."
+    },
+    {
+      "numero": "CLÁUSULA SÉTIMA – DA CONSULTORIA EDUCACIONAL E ACOMPANHAMENTO",
+      "titulo": "",
+      "conteudo": "**7.1.** Além do aumento do score, a **CONTRATADA** oferece **consultoria educacional** para manutenção da pontuação elevada a longo prazo, incluindo orientações sobre:\n- Boas práticas de pagamento;\n- Utilização adequada do crédito;\n- Monitoramento preventivo do score.\n\n**7.2.** O período de acompanhamento e consultoria estende-se por **90 (noventa) dias** após a conclusão do serviço principal."
+    },
+    {
+      "numero": "CLÁUSULA OITAVA – DO INADIMPLEMENTO",
+      "titulo": "",
+      "conteudo": "**8.1.** Em caso de atraso no pagamento, o valor devido será acrescido de:\n\n**a)** **Multa de 20% (vinte por cento)**;\n\n**b)** Juros de mora de **1% (um por cento)** ao mês, *pro rata die*;\n\n**c)** Correção monetária pelo IPCA/IBGE.\n\n**8.2.** **Suspensão:** Atraso superior a 30 (trinta) dias suspende os serviços até regularização.\n\n**8.3.** **Perda do direito:** Persistindo o atraso por mais 15 (quinze) dias após suspensão, perde-se o direito ao serviço e aos valores pagos."
+    },
+    {
+      "numero": "CLÁUSULA NONA – DA RESCISÃO",
+      "titulo": "",
+      "conteudo": "**9.1.** Rescisão pelo(a) **CONTRATANTE** após início dos serviços: **multa de 20%** do valor total, sem ressarcimento.\n\n**9.2.** Desistência unilateral não gera direito a devolução, salvo inadimplemento da **CONTRATADA** (Cláusula Sexta)."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA – DA PROTEÇÃO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**10.1.** Conforme LGPD (Lei 13.709/2018), dados tratados exclusivamente para execução deste contrato.\n\n**10.2.** O(A) **CONTRATANTE** pode exercer direitos pelo e-mail: **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA PRIMEIRA – DA CONFIDENCIALIDADE",
+      "titulo": "",
+      "conteudo": "**11.1.** Sigilo absoluto das informações trocadas entre as partes."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA SEGUNDA – DO FORO",
+      "titulo": "",
+      "conteudo": "**12.1.** Foro da Comarca de Ribeirão Preto/SP, ressalvado o foro do domicílio do(a) **CONTRATANTE** conforme CDC.\n\n---\n\nRibeirão Preto, [DATA].\n\n---\n\n**CONTRATANTE:** _________________________________\n[NOME COMPLETO DO CLIENTE]\n\n**CONTRATADA:** _________________________________\nFC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA\n\n---\n\n**Testemunha 1:** _________________________________\nNome: _________________________________ CPF: _________________________________\n\n**Testemunha 2:** _________________________________\nNome: _________________________________ CPF: _________________________________"
+    }
+  ]
+}

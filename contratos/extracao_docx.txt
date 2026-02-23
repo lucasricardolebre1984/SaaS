@@ -1,0 +1,67 @@
+=== CONTRATO BACEN - MODELO DOCX ===
+
+  CONTRATANTE:
+Nome: [NOME COMPLETO DO CLIENTE] CPF/CNPJ: [NÚMERO DO DOCUMENTO] E-mail: [E-MAIL DO CLIENTE]
+Endereço: [ENDEREÇO COMPLETO DO CLIENTE] CONTRATADA:
+Nome: FC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA
+CNPJ: 57.815.628/0001-62
+E-mail:contato@fcsolucoesﬁnanceiras.com
+Endereço: Rua Maria das Graças de Negreiros Bonilha, nº 30, sala 3, Jardim Nova Aliança Sul, Ribeirão Preto/SP, CEP 14022-100.
+As partes acima identiﬁcadas têm, entre si, justo e acertado o presente Contrato de Prestação de Serviços, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.
+CLÁUSULA PRIMEIRA - DO OBJETO
+O presente contrato tem como objeto a prestação de serviços de consultoria e intermediação administrativa pela CONTRATADA em favor do(a) CONTRATANTE, visando a adoção de procedimentos administrativos para a regularização de apontamentos de prejuízo registrados no Sistema de Informações de Crédito (SCR) do Banco Central do Brasil, vinculados ao CPF/CNPJ do(a) CONTRATANTE.
+O serviço consiste na análise do caso, elaboração de requerimentos e acompanhamento do processo administrativo junto às instituições ﬁnanceiras credoras, buscando a baixa dos referidos apontamentos, nos termos da regulamentação vigente.
+Fica claro entre as partes que este serviço não se trata de quitação ou pagamento de dívidas, mas sim de um procedimento administrativo para a regularização dos registros no
+SCR.
+CLÁUSULA SEGUNDA - DAS OBRIGAÇÕES DA CONTRATADA
+A CONTRATADA se compromete a:
+Realizar uma análise detalhada da situação do(a) CONTRATANTE junto ao SCR.
+Elaborar e protocolar os requerimentos administrativos necessários junto às instituições ﬁnanceiras pertinentes.
+Acompanhar o andamento dos procedimentos, empregando seus melhores esforços técnicos para a obtenção do resultado almejado.
+Manter o(a) CONTRATANTE informado sobre as etapas e o andamento do processo.
+Prestar o serviço dentro do mais alto padrão de ética e proﬁssionalismo.
+CLÁUSULA TERCEIRA - DAS OBRIGAÇÕES DO(A) CONTRATANTE
+3.1. O(A) CONTRATANTE se compromete a:
+Fornecer à CONTRATADA todos os documentos e informações solicitados, de forma completa e verdadeira, para a correta execução dos serviços.
+Efetuar o pagamento dos honorários nas datas e valores acordados neste instrumento.
+Não tratar diretamente com as instituições ﬁnanceiras sobre o objeto deste contrato sem o prévio conhecimento e anuência da CONTRATADA.
+CLÁUSULA QUARTA - DO VALOR E DA FORMA DE PAGAMENTO
+4.1. Pelos serviços prestados, o(a) CONTRATANTE pagará à CONTRATADA o valor total de R$ [VALOR] (VALOR EXTENSO), a ser pago da seguinte forma:
+Entrada: R$ [VALOR ENTRADA] (VALOR ENTRADA EXTENSO), a ser paga no ato da assinatura deste contrato.
+Parcelas: [ QTD PARCELAS] (PARCELA EXTENSO) parcelas de R$ [VALOR PARCELA] (VALOR PARCELA EXTENSO), com vencimento em [PRAZO 1] (PRAZO 1 EXTENSO) e [PRAZO 2] (PRAZO 2 EXTENSO) dias, respectivamente, a contar da data de assinatura.
+CLÁUSULA QUINTA - DO PRAZO DE EXECUÇÃO
+O prazo estimado para a conclusão dos serviços é de 45 (quarenta e cinco) a 60 (sessenta) dias úteis, contados a partir da data de assinatura deste instrumento e da
+conﬁrmação do pagamento da entrada.
+CLÁUSULA SEXTA - DA GARANTIA DE RESULTADO E POLÍTICA DE REEMBOLSO
+O serviço objeto deste contrato é de resultado, vinculado à efetiva baixa e atualização dos apontamentos de prejuízo no Sistema de Informações de Crédito (SCR) do Banco Central, conforme o escopo deﬁnido na Cláusula Primeira.
+Caso a CONTRATADA não comprove a conclusão do serviço no prazo máximo de 60 (sessenta) dias úteis, o presente contrato será considerado automaticamente rescindido por inadimplemento da CONTRATADA.
+Na hipótese de rescisão por descumprimento do prazo, a CONTRATADA deverá realizar a devolução integral dos valores já pagos pelo(a) CONTRATANTE, no prazo de até 30 (trinta) dias úteis após o término do prazo contratual, por meio de transferência bancária ou PIX para a conta de titularidade do(a) CONTRATANTE.
+O atraso no reembolso além do prazo estipulado no parágrafo anterior sujeitará a CONTRATADA a multa de 10% (dez por cento) sobre o valor a ser devolvido, acrescido de juros de mora de 1% (um por cento) ao mês, calculados pro rata die (por dia de atraso).
+CLÁUSULA SÉTIMA - DO INADIMPLEMENTO DO(A) CONTRATANTE
+Em caso de atraso no pagamento de qualquer parcela, o valor devido será acrescido de:
+Multa de 10% (dez por cento) sobre o valor da parcela em atraso;
+Juros de mora de 1% (um por cento) ao mês, calculados pro rata die;
+Correção monetária pelo índice IPCA/IBGE, ou outro que venha a substituí-lo.
+O atraso superior a 30 (trinta) dias no pagamento de qualquer parcela poderá ensejar a suspensão dos serviços e, a critério da CONTRATADA, a rescisão do presente contrato, sem prejuízo da cobrança dos valores devidos e da multa estipulada.
+CLÁUSULA OITAVA - DA ALOCAÇÃO DE RECURSOS E DA IRREVERSIBILIDADE DOS CUSTOS
+O(A) CONTRATANTE declara estar ciente de que o processo de contratação foi dividido em duas fases distintas: (I) a fase de análise e onboarding, de caráter gratuito e sem compromisso, na qual foram coletados e validados todos os documentos e informações; e
+(II) a fase de execução do serviço, que se inicia imediatamente após a assinatura deste instrumento e a conﬁrmação do pagamento inicial.
+Ao assinar este contrato, o(a) CONTRATANTE autoriza e a CONTRATADA se compromete a alocar, de forma imediata e irreversível, os recursos humanos e materiais necessários para o protocolo e acompanhamento do procedimento administrativo. Tais custos são comprometidos integralmente no ato da contratação.
+Em razão do exposto, o(a) CONTRATANTE manifesta seu pleno acordo e ciência de que, após a assinatura deste instrumento, não haverá, sob nenhuma hipótese, a devolução dos valores pagos em caso de desistência ou arrependimento unilateral, ressalvadas as hipóteses de inadimplemento da CONTRATADA previstas na Cláusula Sexta.
+CLÁUSULA NONA - DA CONFIDENCIALIDADE
+As partes se comprometem a manter em sigilo todas as informações e documentos a que tiverem acesso em decorrência deste contrato, não podendo divulgá-los a terceiros sem a prévia autorização da outra parte.
+CLÁUSULA DÉCIMA - DO FORO
+Para dirimir quaisquer controvérsias oriundas do CONTRATO, as partes elegem o foro da Comarca de São Paulo/SP.
+E, por estarem assim justos e contratados, ﬁrmam o presente instrumento em 2 (duas) vias de igual teor e forma.
+[Local], [Data].
+CLÁUSULA DÉCIMA PRIMEIRA - DOS ANEXOS
+É parte integrante e indissociável do presente contrato o ANEXO I - TERMO DE CIÊNCIA E CONSENTIMENTO EXPRESSO, que deverá ser assinado em conjunto com este instrumento.
+_________________________ CONTRATANTE
+[NOME DO CLIENTE]
+_________________________ CONTRATADA
+FC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA
+Testemunhas: 1.
+Nome:
+CPF:
+2.
+Nome: CPF:

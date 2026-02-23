@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "module": "mod-02-whatsapp-crm",
+  "workflows": {
+    "campaign": {
+      "states": [
+        "draft",
+        "scheduled",
+        "running",
+        "paused",
+        "completed",
+        "canceled",
+        "failed"
+      ],
+      "transitions": [
+        { "from": "draft", "to": "scheduled", "trigger": "schedule_campaign" },
+        { "from": "scheduled", "to": "running", "trigger": "start_window_open" },
+        { "from": "scheduled", "to": "canceled", "trigger": "cancel_campaign" },
+        { "from": "running", "to": "paused", "trigger": "pause_campaign" },
+        { "from": "paused", "to": "running", "trigger": "resume_campaign" },
+        { "from": "running", "to": "completed", "trigger": "batch_finished" },
+        { "from": "running", "to": "failed", "trigger": "fatal_delivery_error" },
+        { "from": "paused", "to": "canceled", "trigger": "cancel_campaign" }
+      ]
+    },
+    "collection_messaging": {
+      "entry_event": "billing.collection.requested",
+      "states": [
+        "requested",
+        "queued",
+        "sent",
+        "delivered",
+        "read",
+        "promise_to_pay",
+        "overdue_followup",
+        "paid",
+        "failed"
+      ],
+      "transitions": [
+        { "from": "requested", "to": "queued", "trigger": "enqueue_message" },
+        { "from": "queued", "to": "sent", "trigger": "provider_send_ok" },
+        { "from": "sent", "to": "delivered", "trigger": "provider_delivery_ack" },
+        { "from": "delivered", "to": "read", "trigger": "provider_read_ack" },
+        { "from": "read", "to": "promise_to_pay", "trigger": "customer_promised_payment" },
+        { "from": "read", "to": "overdue_followup", "trigger": "promise_timeout_or_no_response" },
+        { "from": "promise_to_pay", "to": "paid", "trigger": "payment_confirmed_by_module_05" },
+        { "from": "sent", "to": "failed", "trigger": "provider_send_error" },
+        { "from": "failed", "to": "queued", "trigger": "retry_eligible" }
+      ],
+      "emit_events": ["billing.collection.sent", "billing.collection.failed"],
+      "channel": "whatsapp"
+    }
+  }
+}

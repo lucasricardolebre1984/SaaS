@@ -1,0 +1,266 @@
+{
+  "version": "1.0.0",
+  "status": "draft-baseline",
+  "tables": [
+    {
+      "name": "tenants",
+      "owner_module": "core",
+      "domain": "platform",
+      "columns": ["id", "slug", "name", "status", "created_at", "updated_at"],
+      "foreign_keys": []
+    },
+    {
+      "name": "domain_events",
+      "owner_module": "core",
+      "domain": "events",
+      "columns": ["id", "tenant_id", "name", "source_module", "target_module", "correlation_id", "trace_id", "payload_json", "emitted_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "module_tasks",
+      "owner_module": "core",
+      "domain": "orchestration",
+      "columns": ["id", "tenant_id", "task_type", "source_module", "target_module", "status", "priority", "input_json", "output_json", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+
+    {
+      "name": "conversations",
+      "owner_module": "mod-01-owner-concierge",
+      "domain": "conversations",
+      "columns": ["id", "tenant_id", "owner_actor_id", "mode", "channel", "status", "created_at", "updated_at", "archived_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "conversation_messages",
+      "owner_module": "mod-01-owner-concierge",
+      "domain": "conversations",
+      "columns": ["id", "tenant_id", "conversation_id", "role", "content_text", "model", "token_input", "token_output", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "conversation_id -> conversations.id"]
+    },
+    {
+      "name": "conversation_attachments",
+      "owner_module": "mod-01-owner-concierge",
+      "domain": "conversations",
+      "columns": ["id", "tenant_id", "conversation_message_id", "kind", "storage_uri", "mime_type", "size_bytes", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "conversation_message_id -> conversation_messages.id"]
+    },
+    {
+      "name": "owner_commands",
+      "owner_module": "mod-01-owner-concierge",
+      "domain": "conversations",
+      "columns": ["id", "tenant_id", "conversation_id", "command_text", "mode", "status", "correlation_id", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "conversation_id -> conversations.id"]
+    },
+
+    {
+      "name": "crm_leads",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "leads",
+      "columns": ["id", "tenant_id", "full_name", "phone_e164", "email", "source_channel", "current_stage", "score", "owner_user_id", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "crm_lead_stage_history",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "leads",
+      "columns": ["id", "tenant_id", "lead_id", "from_stage", "to_stage", "trigger", "reason_code", "changed_at", "changed_by"],
+      "foreign_keys": ["tenant_id -> tenants.id", "lead_id -> crm_leads.id"]
+    },
+    {
+      "name": "crm_campaigns",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "leads",
+      "columns": ["id", "tenant_id", "name", "objective", "state", "schedule_at", "started_at", "completed_at", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "crm_campaign_recipients",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "leads",
+      "columns": ["id", "tenant_id", "campaign_id", "lead_id", "customer_id", "channel", "delivery_status", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "campaign_id -> crm_campaigns.id", "lead_id -> crm_leads.id", "customer_id -> customers.id"]
+    },
+    {
+      "name": "crm_message_dispatches",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "leads",
+      "columns": ["id", "tenant_id", "context_type", "context_id", "phone_e164", "message_type", "provider_message_id", "state", "error_code", "sent_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+
+    {
+      "name": "customers",
+      "owner_module": "mod-03-clientes",
+      "domain": "customers",
+      "columns": ["id", "tenant_id", "full_name", "primary_phone_e164", "primary_email", "status", "origin", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "customer_contacts",
+      "owner_module": "mod-03-clientes",
+      "domain": "customers",
+      "columns": ["id", "tenant_id", "customer_id", "kind", "value", "is_primary", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "customer_id -> customers.id"]
+    },
+    {
+      "name": "customer_identities",
+      "owner_module": "mod-03-clientes",
+      "domain": "customers",
+      "columns": ["id", "tenant_id", "customer_id", "doc_type", "doc_value_hash", "country_code", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "customer_id -> customers.id"]
+    },
+    {
+      "name": "customer_merge_audit",
+      "owner_module": "mod-03-clientes",
+      "domain": "customers",
+      "columns": ["id", "tenant_id", "source_customer_id", "target_customer_id", "reason", "performed_by", "performed_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "source_customer_id -> customers.id", "target_customer_id -> customers.id"]
+    },
+
+    {
+      "name": "agenda_events",
+      "owner_module": "mod-04-agenda",
+      "domain": "agenda",
+      "columns": ["id", "tenant_id", "title", "description", "start_at", "end_at", "timezone", "status", "created_by", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "agenda_attendees",
+      "owner_module": "mod-04-agenda",
+      "domain": "agenda",
+      "columns": ["id", "tenant_id", "agenda_event_id", "subject_type", "subject_id", "role", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "agenda_event_id -> agenda_events.id"]
+    },
+    {
+      "name": "agenda_reminders",
+      "owner_module": "mod-04-agenda",
+      "domain": "agenda",
+      "columns": ["id", "tenant_id", "agenda_event_id", "channel", "schedule_at", "status", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "agenda_event_id -> agenda_events.id"]
+    },
+    {
+      "name": "agenda_delivery_log",
+      "owner_module": "mod-04-agenda",
+      "domain": "agenda",
+      "columns": ["id", "tenant_id", "agenda_reminder_id", "provider_message_id", "delivery_status", "error_code", "logged_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "agenda_reminder_id -> agenda_reminders.id"]
+    },
+
+    {
+      "name": "billing_charges",
+      "owner_module": "mod-05-faturamento-cobranca",
+      "domain": "billing",
+      "columns": ["id", "tenant_id", "customer_id", "amount", "currency", "due_date", "status", "external_ref", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "customer_id -> customers.id"]
+    },
+    {
+      "name": "billing_charge_events",
+      "owner_module": "mod-05-faturamento-cobranca",
+      "domain": "billing",
+      "columns": ["id", "tenant_id", "charge_id", "event_type", "payload_json", "occurred_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "charge_id -> billing_charges.id"]
+    },
+    {
+      "name": "billing_collection_attempts",
+      "owner_module": "mod-05-faturamento-cobranca",
+      "domain": "billing",
+      "columns": ["id", "tenant_id", "charge_id", "channel", "attempt_no", "state", "provider_message_id", "requested_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "charge_id -> billing_charges.id"]
+    },
+    {
+      "name": "billing_payments",
+      "owner_module": "mod-05-faturamento-cobranca",
+      "domain": "billing",
+      "columns": ["id", "tenant_id", "charge_id", "amount_paid", "currency", "paid_at", "provider", "provider_tx_id", "status"],
+      "foreign_keys": ["tenant_id -> tenants.id", "charge_id -> billing_charges.id"]
+    },
+
+    {
+      "name": "memory_documents",
+      "owner_module": "core",
+      "domain": "memory",
+      "columns": ["id", "tenant_id", "source_type", "source_ref", "title", "status", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "memory_chunks",
+      "owner_module": "core",
+      "domain": "memory",
+      "columns": ["id", "tenant_id", "document_id", "chunk_index", "content_text", "token_count", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "document_id -> memory_documents.id"]
+    },
+    {
+      "name": "memory_embeddings",
+      "owner_module": "core",
+      "domain": "memory",
+      "columns": ["id", "tenant_id", "chunk_id", "provider", "model", "vector_ref", "dimensions", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "chunk_id -> memory_chunks.id"]
+    },
+    {
+      "name": "memory_promotion_queue",
+      "owner_module": "core",
+      "domain": "memory",
+      "columns": ["id", "tenant_id", "candidate_type", "candidate_ref", "review_status", "reviewed_by", "promoted_at", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+
+    {
+      "name": "persona_profiles",
+      "owner_module": "core",
+      "domain": "personas",
+      "columns": ["id", "tenant_id", "persona_type", "name", "is_active", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "persona_versions",
+      "owner_module": "core",
+      "domain": "personas",
+      "columns": ["id", "tenant_id", "persona_profile_id", "version_no", "config_yaml", "created_by", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "persona_profile_id -> persona_profiles.id"]
+    },
+    {
+      "name": "tenant_policy_sets",
+      "owner_module": "core",
+      "domain": "personas",
+      "columns": ["id", "tenant_id", "name", "scope", "is_active", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "tenant_policy_rules",
+      "owner_module": "core",
+      "domain": "personas",
+      "columns": ["id", "tenant_id", "policy_set_id", "rule_key", "rule_value", "priority", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "policy_set_id -> tenant_policy_sets.id"]
+    },
+
+    {
+      "name": "audit_logs",
+      "owner_module": "core",
+      "domain": "metrics",
+      "columns": ["id", "tenant_id", "actor_id", "actor_type", "action", "resource_type", "resource_id", "details_json", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "ai_usage_metrics",
+      "owner_module": "core",
+      "domain": "metrics",
+      "columns": ["id", "tenant_id", "module_id", "provider", "model", "request_count", "token_input", "token_output", "recorded_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "provider_cost_entries",
+      "owner_module": "core",
+      "domain": "metrics",
+      "columns": ["id", "tenant_id", "provider", "service", "module_id", "amount_brl", "amount_usd", "recorded_at", "reference"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "kpi_daily_snapshots",
+      "owner_module": "core",
+      "domain": "metrics",
+      "columns": ["id", "tenant_id", "snapshot_date", "kpi_key", "kpi_value", "kpi_unit", "created_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    }
+  ]
+}

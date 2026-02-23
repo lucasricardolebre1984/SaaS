@@ -1,0 +1,177 @@
+{
+  "version": "1.0.0",
+  "status": "draft",
+  "purpose": "State table and transition test draft for STD-002",
+  "cases": [
+    {
+      "id": "LF-001",
+      "machine": "lead_funnel",
+      "from": "new",
+      "to": "contacted",
+      "expected": "allowed",
+      "trigger": "first_contact_attempt"
+    },
+    {
+      "id": "LF-002",
+      "machine": "lead_funnel",
+      "from": "new",
+      "to": "proposal",
+      "expected": "rejected",
+      "trigger": "invalid_skip"
+    },
+    {
+      "id": "LF-003",
+      "machine": "lead_funnel",
+      "from": "contacted",
+      "to": "qualified",
+      "expected": "allowed",
+      "trigger": "qualification_passed"
+    },
+    {
+      "id": "LF-004",
+      "machine": "lead_funnel",
+      "from": "contacted",
+      "to": "won",
+      "expected": "rejected",
+      "trigger": "invalid_skip"
+    },
+    {
+      "id": "LF-005",
+      "machine": "lead_funnel",
+      "from": "qualified",
+      "to": "proposal",
+      "expected": "allowed",
+      "trigger": "proposal_sent"
+    },
+    {
+      "id": "LF-006",
+      "machine": "lead_funnel",
+      "from": "proposal",
+      "to": "negotiation",
+      "expected": "allowed",
+      "trigger": "objection_or_counteroffer"
+    },
+    {
+      "id": "LF-007",
+      "machine": "lead_funnel",
+      "from": "negotiation",
+      "to": "won",
+      "expected": "allowed",
+      "trigger": "deal_closed"
+    },
+    {
+      "id": "LF-008",
+      "machine": "lead_funnel",
+      "from": "won",
+      "to": "nurturing",
+      "expected": "rejected",
+      "trigger": "terminal_state"
+    },
+    {
+      "id": "LF-009",
+      "machine": "lead_funnel",
+      "from": "lost",
+      "to": "nurturing",
+      "expected": "allowed_with_reason",
+      "trigger": "reopen_requested"
+    },
+    {
+      "id": "LF-010",
+      "machine": "lead_funnel",
+      "from": "disqualified",
+      "to": "nurturing",
+      "expected": "allowed_with_reason",
+      "trigger": "manual_override_reopen"
+    },
+
+    {
+      "id": "CP-001",
+      "machine": "campaign",
+      "from": "draft",
+      "to": "scheduled",
+      "expected": "allowed",
+      "trigger": "schedule_campaign"
+    },
+    {
+      "id": "CP-002",
+      "machine": "campaign",
+      "from": "scheduled",
+      "to": "running",
+      "expected": "allowed",
+      "trigger": "start_window_open"
+    },
+    {
+      "id": "CP-003",
+      "machine": "campaign",
+      "from": "running",
+      "to": "completed",
+      "expected": "allowed",
+      "trigger": "batch_finished"
+    },
+    {
+      "id": "CP-004",
+      "machine": "campaign",
+      "from": "completed",
+      "to": "running",
+      "expected": "rejected",
+      "trigger": "terminal_state"
+    },
+
+    {
+      "id": "CB-001",
+      "machine": "collection_messaging",
+      "from": "requested",
+      "to": "queued",
+      "expected": "allowed",
+      "trigger": "enqueue_message"
+    },
+    {
+      "id": "CB-002",
+      "machine": "collection_messaging",
+      "from": "queued",
+      "to": "sent",
+      "expected": "allowed",
+      "trigger": "provider_send_ok"
+    },
+    {
+      "id": "CB-003",
+      "machine": "collection_messaging",
+      "from": "sent",
+      "to": "failed",
+      "expected": "allowed",
+      "trigger": "provider_send_error"
+    },
+    {
+      "id": "CB-004",
+      "machine": "collection_messaging",
+      "from": "failed",
+      "to": "queued",
+      "expected": "allowed",
+      "trigger": "retry_eligible"
+    },
+    {
+      "id": "CB-005",
+      "machine": "collection_messaging",
+      "from": "read",
+      "to": "promise_to_pay",
+      "expected": "allowed",
+      "trigger": "customer_promised_payment"
+    },
+    {
+      "id": "CB-006",
+      "machine": "collection_messaging",
+      "from": "promise_to_pay",
+      "to": "paid",
+      "expected": "allowed",
+      "trigger": "payment_confirmed_by_module_05"
+    },
+    {
+      "id": "CB-007",
+      "machine": "collection_messaging",
+      "from": "paid",
+      "to": "queued",
+      "expected": "rejected",
+      "trigger": "terminal_state"
+    }
+  ]
+}

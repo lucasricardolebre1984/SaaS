@@ -1,0 +1,17 @@
+schema_version: "1.0.0"
+policy_set_name: "default-tenant-policy"
+scope: "tenant-global"
+enforcement_mode: "blocking"
+rules:
+  - key: "privacy.pii_redaction"
+    value: true
+    priority: 10
+    enabled: true
+  - key: "billing.collection.require_owner_confirmation"
+    value: true
+    priority: 20
+    enabled: true
+  - key: "crm.followup.max_daily_messages"
+    value: 3
+    priority: 30
+    enabled: true

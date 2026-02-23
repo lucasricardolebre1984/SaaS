@@ -1,0 +1,69 @@
+{
+  "version": "1.0.0",
+  "module": "mod-02-whatsapp-crm",
+  "state_machine": "lead_funnel",
+  "states": [
+    "new",
+    "contacted",
+    "qualified",
+    "proposal",
+    "negotiation",
+    "won",
+    "lost",
+    "nurturing",
+    "disqualified"
+  ],
+  "terminal_states": ["won", "disqualified"],
+  "transitions": [
+    { "from": "new", "to": "contacted", "trigger": "first_contact_attempt" },
+    { "from": "new", "to": "lost", "trigger": "explicit_close_lost" },
+    { "from": "new", "to": "disqualified", "trigger": "profile_or_compliance_fail" },
+
+    { "from": "contacted", "to": "qualified", "trigger": "qualification_passed" },
+    { "from": "contacted", "to": "nurturing", "trigger": "not_now_followup_needed" },
+    { "from": "contacted", "to": "lost", "trigger": "explicit_close_lost" },
+    { "from": "contacted", "to": "disqualified", "trigger": "profile_or_compliance_fail" },
+
+    { "from": "qualified", "to": "proposal", "trigger": "proposal_sent" },
+    { "from": "qualified", "to": "lost", "trigger": "explicit_close_lost" },
+    { "from": "qualified", "to": "disqualified", "trigger": "compliance_block" },
+
+    { "from": "proposal", "to": "negotiation", "trigger": "objection_or_counteroffer" },
+    { "from": "proposal", "to": "won", "trigger": "proposal_accepted" },
+    { "from": "proposal", "to": "lost", "trigger": "proposal_rejected" },
+
+    { "from": "negotiation", "to": "won", "trigger": "deal_closed" },
+    { "from": "negotiation", "to": "lost", "trigger": "deal_failed" },
+    { "from": "negotiation", "to": "nurturing", "trigger": "defer_decision" },
+
+    { "from": "nurturing", "to": "contacted", "trigger": "reengaged" },
+    { "from": "nurturing", "to": "lost", "trigger": "nurture_expired" },
+    { "from": "nurturing", "to": "disqualified", "trigger": "new_disqualifier" },
+
+    {
+      "from": "lost",
+      "to": "nurturing",
+      "trigger": "reopen_requested",
+      "requires_reason_code": true
+    },
+    {
+      "from": "disqualified",
+      "to": "nurturing",
+      "trigger": "manual_override_reopen",
+      "requires_reason_code": true
+    }
+  ],
+  "normalization_for_public_events": {
+    "crm.lead.created.stage": {
+      "new": "new",
+      "qualified": "qualified",
+      "proposal": "proposal",
+      "won": "won",
+      "lost": "lost",
+      "contacted": "new",
+      "negotiation": "proposal",
+      "nurturing": "qualified",
+      "disqualified": "lost"
+    }
+  }
+}

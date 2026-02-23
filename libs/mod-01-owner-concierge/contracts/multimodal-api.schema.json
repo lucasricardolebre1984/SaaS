@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-01/multimodal-api.schema.json",
+  "title": "Module 01 Multimodal Interaction API",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "session_id": { "type": "string", "format": "uuid" },
+        "operation": {
+          "type": "string",
+          "enum": ["send_message", "toggle_continuous_mode", "avatar_config_upsert"]
+        },
+        "channel": { "type": "string", "enum": ["ui-chat", "ui-avatar"] },
+        "payload": { "type": "object" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "client_ts": { "type": "string", "format": "date-time" },
+            "locale": { "type": "string", "minLength": 2 },
+            "timezone": { "type": "string", "minLength": 3 }
+          }
+        }
+      },
+      "required": ["request_id", "tenant_id", "session_id", "operation", "channel", "payload"]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "status": { "type": "string", "enum": ["accepted", "rejected"] },
+        "owner_command": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "command_id": { "type": "string", "format": "uuid" },
+            "correlation_id": { "type": "string", "format": "uuid" },
+            "name": { "const": "owner.command.create" }
+          },
+          "required": ["command_id", "correlation_id", "name"]
+        },
+        "session_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "type": "string", "enum": ["one-shot", "continuous"] },
+            "state": {
+              "type": "string",
+              "enum": ["idle", "active_one_shot", "active_continuous", "awaiting_user", "paused"]
+            }
+          },
+          "required": ["mode", "state"]
+        },
+        "avatar_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "state": { "type": "string", "enum": ["disabled", "ready", "speaking", "listening", "error"] },
+            "voice_profile": { "type": "string" }
+          },
+          "required": ["enabled", "state"]
+        },
+        "assistant_output": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text": { "type": "string" },
+            "attachments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "type": "string", "enum": ["audio", "image", "file"] },
+                  "attachment_ref": { "type": "string", "minLength": 1 },
+                  "mime_type": { "type": "string", "minLength": 3 }
+                },
+                "required": ["type", "attachment_ref"]
+              }
+            }
+          },
+          "required": ["text"]
+        },
+        "downstream_tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "target_module": {
+                "type": "string",
+                "enum": [
+                  "mod-02-whatsapp-crm",
+                  "mod-03-clientes",
+                  "mod-04-agenda",
+                  "mod-05-faturamento-cobranca"
+                ]
+              },
+              "task_type": { "type": "string", "minLength": 3 }
+            },
+            "required": ["task_id", "target_module", "task_type"]
+          }
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": { "type": "string", "minLength": 1 },
+              "message": { "type": "string", "minLength": 1 }
+            },
+            "required": ["code", "message"]
+          }
+        }
+      },
+      "required": ["request_id", "status", "session_state", "avatar_state"]
+    }
+  },
+  "required": ["request", "response"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "request": {
+            "properties": {
+              "operation": { "const": "send_message" }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "text": { "type": "string", "minLength": 1 },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "type": "string", "enum": ["audio", "image", "file"] },
+                        "uri": { "type": "string", "minLength": 1 },
+                        "mime_type": { "type": "string", "minLength": 3 },
+                        "filename": { "type": "string", "minLength": 1 }
+                      },
+                      "required": ["type", "uri"]
+                    }
+                  }
+                },
+                "required": ["text"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "request": {
+            "properties": {
+              "operation": { "const": "toggle_continuous_mode" }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "reason": { "type": "string", "minLength": 1 }
+                },
+                "required": ["enabled"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "request": {
+            "properties": {
+              "operation": { "const": "avatar_config_upsert" }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "avatar_asset_path": { "type": "string", "minLength": 1 },
+                  "persona_profile_path": { "type": "string", "minLength": 1 },
+                  "voice_profile": { "type": "string", "minLength": 1 }
+                },
+                "required": ["enabled", "avatar_asset_path", "persona_profile_path"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

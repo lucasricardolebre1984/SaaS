@@ -1,0 +1,187 @@
+{
+  "id": "ccf",
+  "nome": "CONTRATO DE PRESTAÇÃO DE SERVIÇOS – REGULARIZAÇÃO CCF (CHEQUES SEM FUNDOS)",
+  "tipo": "ccf",
+  "categoria": "REGULARIZAÇÃO CCF (CHEQUES SEM FUNDOS)",
+  "subtitulo": "REGULARIZAÇÃO CCF (CHEQUES SEM FUNDOS)",
+  "descricao": "Template institucional para regularização ccf (cheques sem fundos).",
+  "versao": "1.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:\\Users\\Lucas\\Downloads\\CCFMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLÁUSULA PRIMEIRA – DO OBJETO E ESPECIFICAÇÃO DOS CHEQUES",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestação de serviços de assessoria especializada para **regularização do Cadastro de Emitentes de Cheques sem Fundos (CCF)**, mediante localização dos credores, intermediação de pagamento e baixa definitiva dos cheques devolvidos listados abaixo:\n\n**1.2.** O serviço compreende:\n- Investigação e localização dos credores (beneficiários dos cheques);\n- Intermediação para pagamento/acordo das dívidas;\n- Protocolo de baixa no sistema CCF junto aos bancos credores;\n- Acompanhamento até a regularização definitiva do cadastro.\n\n**1.3.** Especificação dos cheques objeto deste contrato:\n\n| Nº | Identificação do Cheque (Número/Folha) | Valor Unitário | Banco/Agência |\n|:---:|:---|:---:|:---:|\n| 1 | [CHEQUE 1] | R$ [VALOR CHEQUE 1] | [BANCO 1] |\n| 2 | [CHEQUE 2] | R$ [VALOR CHEQUE 2] | [BANCO 2] |\n| 3 | [CHEQUE 3] | R$ [VALOR CHEQUE 3] | [BANCO 3] |\n| ... | ... | ... | ... |\n| [QUANTIDADE TOTAL FOLHAS] | [CHEQUE N] | R$ [VALOR CHEQUE N] | [BANCO N] |\n| **TOTAL** | **[QUANTIDADE TOTAL FOLHAS] folhas** | **R$ [VALOR TOTAL CHEQUES]** | - |\n\n**1.4.** A CONTRATADA não se responsabiliza pelo pagamento dos valores dos cheques aos credores, limitando-se à intermediação e assessoria para regularização. Os valores dos cheques serão pagos diretamente pelo CONTRATANTE aos credores ou mediante repasse à CONTRATADA para quitação.\n\n**1.5.** O CONTRATANTE declara que os cheques listados acima são de sua inteira responsabilidade e que possui ciência da origem de cada débito."
+    },
+    {
+      "numero": "CLÁUSULA SEGUNDA – DAS OBRIGAÇÕES DA CONTRATADA",
+      "titulo": "",
+      "conteudo": "**2.1.** A CONTRATADA se compromete a:\n\n**a)** Utilizar tecnologia de investigação para localizar os credores dos cheques;\n**b)** Intermediar o pagamento/acordo com os credores;\n**c)** Protocolar a baixa dos cheques no sistema CCF após acordo/pagamento;\n**d)** Acompanhar o processo até a regularização do cadastro;\n**e)** Informar o CONTRATANTE sobre o andamento da localização e negociação."
+    },
+    {
+      "numero": "CLÁUSULA TERCEIRA – DAS OBRIGAÇÕES DO(A) CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**3.1.** O(A) CONTRATANTE se compromete a:\n\n**a)** Efetuar o pagamento dos honorários nas datas e valores acordados;\n**b)** Disponibilizar toda a documentação relacionada aos cheques (cópias, talões, informações de data/valor);\n**c)** Honrar o pagamento dos valores dos cheques aos credores ou repassar à CONTRATADA para quitação;\n**d)** Não emitir novos cheques sem fundos durante a vigência deste contrato."
+    },
+    {
+      "numero": "CLÁUSULA QUARTA – DO VALOR E DA FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** Pelos serviços de regularização de **[QUANTIDADE TOTAL FOLHAS] folha(s)** de cheque, no valor total de R$ [VALOR TOTAL CHEQUES], o(A) CONTRATANTE pagará à CONTRATADA o valor total de **R$ [VALOR] ([VALOR EXTENSO])**, referente aos honorários de assessoria, da seguinte forma:\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]), no ato da assinatura deste contrato;\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), vencendo a primeira em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e as demais sucessivamente a cada 30 (trinta) dias.\n\n**4.2.** **Antecipação:** Desconto de 1,5% ao mês, máximo 15%, mediante solicitação prévia de 2 dias úteis e PIX aleatório em 24 horas.\n\n**4.3.** Os valores dos cheques (R$ [VALOR TOTAL CHEQUES]) serão pagos pelo CONTRATANTE separadamente dos honorários deste contrato, mediante repasse à CONTRATADA ou diretamente aos credores conforme orientação."
+    },
+    {
+      "numero": "CLÁUSULA QUINTA – DO PRAZO DE EXECUÇÃO",
+      "titulo": "",
+      "conteudo": "**5.1.** A CONTRATADA realizará os serviços de localização, negociação e baixa no prazo de até **20 (vinte) dias úteis**, contados da assinatura do contrato, confirmação do pagamento da entrada e entrega da documentação completa.\n\n**5.2.** O prazo pode ser prorrogado em caso de dificuldade na localização de credores ou indisponibilidade dos mesmos para negociação, com comunicação prévia ao CONTRATANTE."
+    },
+    {
+      "numero": "CLÁUSULA SEXTA – DA NATUREZA DO SERVIÇO E GARANTIA",
+      "titulo": "",
+      "conteudo": "**6.1.** Por se tratar de serviço de **recuperação e intermediação** dependente de terceiros (credores), não há garantia de resultado quanto à localização ou aceitação de acordo pelos credores.\n\n**6.2.** O serviço será considerado concluído quando:\n- Todos os cheques forem localizados e quitados; OU\n- O prazo de 20 dias úteis for esgotado sem localização (caso em que o serviço será dado por concluído sem êxito).\n\n**6.3.** Não haverá devolução dos honorários pagos em caso de impossibilidade de localização dos credores, desde que a CONTRATADA comprove os esforços de investigação realizados."
+    },
+    {
+      "numero": "CLÁUSULA SÉTIMA – DO INADIMPLEMENTO",
+      "titulo": "",
+      "conteudo": "**7.1.** Em caso de atraso no pagamento dos honorários, o valor devido será acrescido de:\n\n**a)** **Multa de 20% (vinte por cento)**;\n\n**b)** Juros de mora de **1% (um por cento)** ao mês, *pro rata die*;\n\n**c)** Correção monetária pelo IPCA/IBGE.\n\n**7.2.** **Suspensão:** Atraso superior a 30 (trinta) dias suspende os serviços até regularização.\n\n**7.3.** **Perda do direito:** Persistindo o atraso por mais 15 (quinze) dias após suspensão, perde-se o direito ao serviço e aos valores pagos."
+    },
+    {
+      "numero": "CLÁUSULA OITAVA – DA RESCISÃO",
+      "titulo": "",
+      "conteudo": "**8.1.** Rescisão pelo(a) CONTRATANTE após início dos serviços: **multa de 20%** do valor total, sem ressarcimento.\n\n**8.2.** Desistência unilateral não gera direito a devolução, salvo inadimplemento da CONTRATADA."
+    },
+    {
+      "numero": "CLÁUSULA NONA – DA PROTEÇÃO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**9.1.** Conforme LGPD (Lei 13.709/2018), dados tratados exclusivamente para execução deste contrato.\n\n**9.2.** O(A) CONTRATANTE pode exercer direitos pelo e-mail: **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA – DA CONFIDENCIALIDADE",
+      "titulo": "",
+      "conteudo": "**10.1.** Sigilo absoluto das informações trocadas entre as partes."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA PRIMEIRA – DO FORO",
+      "titulo": "",
+      "conteudo": "**11.1.** Foro da Comarca de Ribeirão Preto/SP, ressalvado o foro do domicílio do(a) CONTRATANTE conforme CDC.\n\n---\n\nRibeirão Preto, [DATA].\n\n---\n\n**CONTRATANTE:** _________________________________\n[NOME COMPLETO DO CLIENTE]\n\n**CONTRATADA:** _________________________________\nFC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA\n\n---\n\n**Testemunha 1:** _________________________________\nNome: _________________________________ CPF: _________________________________\n\n**Testemunha 2:** _________________________________\nNome: _________________________________ CPF: _________________________________"
+    }
+  ]
+}

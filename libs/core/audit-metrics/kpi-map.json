@@ -1,0 +1,146 @@
+{
+  "version": "1.0.0",
+  "status": "baseline",
+  "modules": [
+    {
+      "module_id": "mod-01-owner-concierge",
+      "kpis": [
+        {
+          "kpi_key": "mod01_owner_command_cycle_time",
+          "definition": "Cycle time from owner command creation to completed/failed final event.",
+          "source_tables": ["owner_commands", "module_tasks", "domain_events"],
+          "metrics_formula_ref": {
+            "id": 5,
+            "name": "Cycle Time (feature)",
+            "formula_text": "done_time - task_start_time"
+          }
+        },
+        {
+          "kpi_key": "mod01_response_p95_latency",
+          "definition": "P95 latency for owner interaction responses.",
+          "source_tables": ["conversation_messages", "audit_logs"],
+          "metrics_formula_ref": {
+            "id": 9,
+            "name": "API p95 Latency",
+            "formula_text": "p95 response time per endpoint"
+          }
+        },
+        {
+          "kpi_key": "mod01_continuous_chat_stability",
+          "definition": "Success ratio of continuous chat sessions without runtime error state.",
+          "source_tables": ["conversations", "audit_logs"],
+          "metrics_formula_ref": {
+            "id": 8,
+            "name": "Availability (SLO)",
+            "formula_text": "uptime_minutes / total_minutes"
+          }
+        }
+      ]
+    },
+    {
+      "module_id": "mod-02-whatsapp-crm",
+      "kpis": [
+        {
+          "kpi_key": "mod02_lead_conversion_rate",
+          "definition": "Share of qualified leads converted to customer.",
+          "source_tables": ["crm_leads", "crm_lead_stage_history", "domain_events"],
+          "metrics_formula_ref": {
+            "id": 18,
+            "name": "Automation Rate",
+            "formula_text": "automated_tasks / total_tasks"
+          }
+        },
+        {
+          "kpi_key": "mod02_whatsapp_delivery_success_rate",
+          "definition": "Delivered outbound messages over total sent.",
+          "source_tables": ["crm_message_dispatches", "domain_events"],
+          "metrics_formula_ref": {
+            "id": 6,
+            "name": "Test Pass Rate",
+            "formula_text": "passed_tests / total_tests"
+          }
+        },
+        {
+          "kpi_key": "mod02_collection_failure_rate",
+          "definition": "Failed collection sends over total collection attempts.",
+          "source_tables": ["crm_message_dispatches", "billing_collection_attempts"],
+          "metrics_formula_ref": {
+            "id": 7,
+            "name": "Escaped Defects",
+            "formula_text": "prod_bugs / release"
+          }
+        }
+      ]
+    },
+    {
+      "module_id": "mod-03-clientes",
+      "kpis": [
+        {
+          "kpi_key": "mod03_customer_merge_rework_rate",
+          "definition": "Merged records requiring subsequent reopen/rollback review.",
+          "source_tables": ["customers", "customer_merge_audit", "audit_logs"],
+          "metrics_formula_ref": {
+            "id": 19,
+            "name": "Rework Rate",
+            "formula_text": "reopened_tasks / closed_tasks"
+          }
+        }
+      ]
+    },
+    {
+      "module_id": "mod-04-agenda",
+      "kpis": [
+        {
+          "kpi_key": "mod04_reminder_on_time_rate",
+          "definition": "Reminders delivered on schedule over total reminders.",
+          "source_tables": ["agenda_reminders", "agenda_delivery_log"],
+          "metrics_formula_ref": {
+            "id": 8,
+            "name": "Availability (SLO)",
+            "formula_text": "uptime_minutes / total_minutes"
+          }
+        }
+      ]
+    },
+    {
+      "module_id": "mod-05-faturamento-cobranca",
+      "kpis": [
+        {
+          "kpi_key": "mod05_collection_success_rate",
+          "definition": "Paid charges after collection workflow over total charges sent for collection.",
+          "source_tables": ["billing_charges", "billing_collection_attempts", "billing_payments"],
+          "metrics_formula_ref": {
+            "id": 15,
+            "name": "Gross Margin Proxy",
+            "formula_text": "(revenue - infra_cost - ai_cost) / revenue"
+          }
+        }
+      ]
+    },
+    {
+      "module_id": "core",
+      "kpis": [
+        {
+          "kpi_key": "core_event_trace_completeness",
+          "definition": "Events containing tenant_id, trace_id, and correlation_id over total events.",
+          "source_tables": ["domain_events"],
+          "metrics_formula_ref": {
+            "id": 6,
+            "name": "Test Pass Rate",
+            "formula_text": "passed_tests / total_tests"
+          }
+        },
+        {
+          "kpi_key": "core_mttr_incidents",
+          "definition": "Mean time to restore after platform incidents.",
+          "source_tables": ["audit_logs", "kpi_daily_snapshots"],
+          "metrics_formula_ref": {
+            "id": 4,
+            "name": "Time to Restore Service (MTTR)",
+            "formula_text": "incident_resolved_at - incident_started_at"
+          }
+        }
+      ]
+    }
+  ]
+}

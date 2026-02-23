@@ -1,0 +1,58 @@
+version: "1.0.0"
+module: "mod-02-whatsapp-crm"
+provider: "evolution-api"
+contract_type: "container-integration"
+
+runtime:
+  service_name: "evolution-api"
+  network_mode: "private-internal"
+  required_health_endpoint: "/health"
+  adapter_base_path: "/provider/evolution"
+  tls_mode: "internal-or-terminated-upstream"
+
+auth:
+  mode: "api-key"
+  required_headers:
+    - "X-API-Key"
+  webhook_signature_required: true
+
+module_env_contract:
+  required:
+    - "EVOLUTION_HTTP_BASE_URL"
+    - "EVOLUTION_API_KEY"
+    - "EVOLUTION_INSTANCE_ID"
+    - "EVOLUTION_WEBHOOK_SECRET"
+  optional:
+    - "EVOLUTION_REQUEST_TIMEOUT_MS"
+    - "EVOLUTION_MAX_RETRIES"
+    - "EVOLUTION_RETRY_BACKOFF_MS"
+
+integration_endpoints:
+  outbound_send:
+    description: "Module 02 sends outbound WhatsApp message requests."
+    method: "POST"
+    path: "/provider/evolution/messages/send"
+  webhook_inbound:
+    description: "Provider posts inbound delivery/message events to module 02."
+    method: "POST"
+    path: "/provider/evolution/webhook"
+  health_probe:
+    description: "Readiness/liveness check for adapter and provider reachability."
+    method: "GET"
+    path: "/provider/evolution/health"
+
+resilience:
+  idempotency_key_required: true
+  retry_policy:
+    max_attempts: 5
+    backoff_strategy: "exponential"
+  dead_letter_queue_required: true
+
+security:
+  secrets_in_plaintext_forbidden: true
+  pii_logging_forbidden: true
+  audit_fields_required:
+    - "tenant_id"
+    - "trace_id"
+    - "correlation_id"
+    - "provider_message_id"

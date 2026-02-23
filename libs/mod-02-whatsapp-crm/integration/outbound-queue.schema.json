@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/outbound-queue.schema.json",
+  "title": "Module 02 Outbound Queue Item",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "queue_item_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "trace_id": { "type": "string", "minLength": 8 },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "idempotency_key": { "type": "string", "minLength": 8 },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["campaign", "followup", "collection", "manual"] },
+        "context_id": { "type": "string", "minLength": 1 },
+        "task_id": { "type": "string", "format": "uuid" },
+        "module_source": {
+          "type": "string",
+          "enum": [
+            "mod-01-owner-concierge",
+            "mod-02-whatsapp-crm",
+            "mod-04-agenda",
+            "mod-05-faturamento-cobranca"
+          ]
+        }
+      },
+      "required": ["type", "context_id", "module_source"]
+    },
+    "recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lead_id": { "type": "string", "format": "uuid" },
+        "customer_id": { "type": "string", "format": "uuid" },
+        "phone_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+        "name": { "type": "string", "minLength": 1 }
+      },
+      "required": ["phone_e164"]
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["text", "audio", "image", "file"] },
+        "text": { "type": "string" },
+        "media_ref": { "type": "string", "minLength": 1 },
+        "mime_type": { "type": "string", "minLength": 3 },
+        "filename": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type"]
+    },
+    "retry_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_attempts": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "backoff_ms": { "type": "integer", "minimum": 100 }
+      },
+      "required": ["max_attempts", "backoff_ms"]
+    },
+    "schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "send_after": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "queue_item_id",
+    "tenant_id",
+    "trace_id",
+    "idempotency_key",
+    "context",
+    "recipient",
+    "message",
+    "retry_policy",
+    "created_at"
+  ],
+  "allOf": [
+    {
+      "if": { "properties": { "message": { "properties": { "type": { "const": "text" } } } } },
+      "then": {
+        "properties": { "message": { "required": ["type", "text"] } }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "message": {
+            "properties": {
+              "type": { "enum": ["audio", "image", "file"] }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": { "message": { "required": ["type", "media_ref"] } }
+      }
+    }
+  ]
+}

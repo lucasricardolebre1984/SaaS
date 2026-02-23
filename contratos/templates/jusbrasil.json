@@ -1,0 +1,172 @@
+{
+  "id": "jusbrasil",
+  "nome": "CONTRATO DE PRESTACAO DE SERVICOS - JUSBRASIL/ESCAVADOR",
+  "tipo": "jusbrasil",
+  "categoria": "JUSBRASIL/ESCAVADOR",
+  "subtitulo": "Jusbrasil/Escavador - Desindexacao",
+  "descricao": "Template institucional para remocao, anonimização e desindexacao de dados em plataformas agregadoras.",
+  "versao": "1.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:\\Users\\Lucas\\Downloads\\JUSBRASILMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLAUSULA PRIMEIRA - DO OBJETO",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestacao de servicos de assessoria administrativa para defesa dos direitos da CONTRATANTE, mediante procedimentos extrajudiciais para remocao, desidentificacao e/ou desindexacao de informacoes e dados pessoais.\n\n**1.2.** A CONTRATADA realizara busca ativa pelo nome e CPF/CNPJ da CONTRATANTE nas plataformas Jusbrasil e Escavador, limitando sua atuacao exclusivamente a estas plataformas.\n\n**1.3.** A CONTRATADA nao se responsabiliza pela remocao de informacoes diretamente dos sites oficiais do Poder Judiciario (fonte primaria), limitando-se as plataformas agregadoras de conteudo.\n\n**1.4.** O exito do servico sera caracterizado por: (a) anonimizacao do nome na URL; (b) desindexacao da URL dos resultados de busca do Google; ou (c) remocao completa da pagina, conforme politica da plataforma notificada.\n\n**1.5.** Os servicos nao garantem a impossibilidade de reaparecimento futuro em outras plataformas ou URLs nao abrangidas por este contrato."
+    },
+    {
+      "numero": "CLAUSULA SEGUNDA - DO VALOR E FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**2.1.** Pelos servicos, a CONTRATANTE pagara a CONTRATADA o valor total de **R$ [VALOR] ([VALOR EXTENSO])**, da seguinte forma:\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]), no ato da assinatura;\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), vencendo a primeira em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e as demais sucessivamente a cada 30 dias.\n\n**2.2.** **Antecipacao:** desconto de 1,5% ao mes, maximo de 15%, mediante solicitacao previa de 2 dias uteis e PIX aleatorio em 24 horas."
+    },
+    {
+      "numero": "CLAUSULA TERCEIRA - DO PRAZO DE EXECUCAO",
+      "titulo": "",
+      "conteudo": "**3.1.** A CONTRATADA estabelece o prazo de **90 (noventa) dias uteis**, contados da confirmacao do pagamento, para execucao integral do servico.\n\n**3.2.** O protocolo dos requerimentos somente sera realizado apos a quitacao do valor pactuado."
+    },
+    {
+      "numero": "CLAUSULA QUARTA - DA GARANTIA DE RESULTADO",
+      "titulo": "",
+      "conteudo": "**4.1.** Caso o servico nao seja executado conforme combinado, a CONTRATADA garante a devolucao integral do valor pago no prazo de **30 (trinta) dias uteis** apos o termino do prazo contratual.\n\n**4.2.** **Garantia de monitoramento:** a CONTRATADA monitora as URLs tratadas pelo prazo de **6 (seis) meses** apos a conclusao. Caso as informacoes voltem a ficar visiveis nas mesmas URLs, sera realizada nova notificacao extrajudicial sem custo adicional."
+    },
+    {
+      "numero": "CLAUSULA QUINTA - DO INADIMPLEMENTO",
+      "titulo": "",
+      "conteudo": "**5.1.** Em caso de atraso no pagamento, o valor devido sera acrescido de: multa de 20%, juros de mora de 1% ao mes e correcao monetaria pelo IPCA/IBGE.\n\n**5.2.** **Suspensao:** atraso superior a 30 dias suspende os servicos ate regularizacao.\n\n**5.3.** **Cancelamento:** no caso de inadimplencia, o servico sera cancelado sem devolucao de valores pagos."
+    },
+    {
+      "numero": "CLAUSULA SEXTA - DA RESCISAO",
+      "titulo": "",
+      "conteudo": "**6.1.** A rescisao solicitada pela CONTRATANTE apos o inicio dos servicos tera multa de 20% do valor total, sem direito a ressarcimento dos valores pagos.\n\n**6.2.** Desistencia unilateral apos inicio dos trabalhos nao gera devolucao, salvo inadimplemento da CONTRATADA (Clausula Quarta)."
+    },
+    {
+      "numero": "CLAUSULA SETIMA - DA PROTECAO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**7.1.** A CONTRATANTE declara consentimento expresso para que a CONTRATADA colete, trate e compartilhe os dados necessarios ao cumprimento deste contrato, nos termos do Art. 7o, incisos II e V da LGPD.\n\n**7.2.** A CONTRATADA mantera sigilo absoluto sobre todas as informacoes, utilizando-as exclusivamente para execucao do objeto contratado.\n\n**7.3.** A CONTRATANTE pode exercer direitos de titular pelo e-mail **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLAUSULA OITAVA - DO FORO",
+      "titulo": "",
+      "conteudo": "**8.1.** As partes elegem o foro da Comarca de Ribeirao Preto/SP, renunciando a qualquer outro, ressalvada a faculdade da CONTRATANTE de propor acao no foro de seu domicilio, conforme CDC."
+    }
+  ]
+}

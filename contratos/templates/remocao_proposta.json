@@ -1,0 +1,192 @@
+{
+  "id": "remocao_proposta",
+  "nome": "CONTRATO DE PRESTAÇÃO DE SERVIÇOS – REMOÇÃO DE PROPOSTAS SERASA",
+  "tipo": "remocao_proposta",
+  "categoria": "REMOÇÃO DE PROPOSTAS SERASA",
+  "subtitulo": "REMOÇÃO DE PROPOSTAS SERASA",
+  "descricao": "Template institucional para remoção de propostas serasa.",
+  "versao": "1.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:\\Users\\Lucas\\Downloads\\REMOCAODEPROPOSTAMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLÁUSULA PRIMEIRA – DO OBJETO",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestação de serviços de assessoria administrativa para a remoção das **propostas de negociação de dívidas** do sistema do **SERASA**, visíveis para o CONTRATANTE até a data de assinatura deste contrato.\n\n**1.2.** A CONTRATADA não se responsabiliza pela aprovação de crédito, aumento de score ou quitação de dívidas, limitando-se à remoção dos apontamentos de propostas de negociação no sistema SERASA.\n\n**1.3.** Novas propostas de negociação que surgirem após a assinatura deste contrato não estarão cobertas por este instrumento.\n\n**1.4.** Os serviços contratados não representam garantia de aprovação de crédito para o CONTRATANTE."
+    },
+    {
+      "numero": "CLÁUSULA SEGUNDA – DAS OBRIGAÇÕES DA CONTRATADA",
+      "titulo": "",
+      "conteudo": "**2.1.** A CONTRATADA se compromete a:\n\n**a)** Realizar a remoção das propostas de negociação no sistema SERASA no prazo estabelecido;\n\n**b)** Acompanhar o processo até a efetiva remoção dos apontamentos;\n\n**c)** Manter o CONTRATANTE informado sobre o andamento."
+    },
+    {
+      "numero": "CLÁUSULA TERCEIRA – DAS OBRIGAÇÕES DO(A) CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**3.1.** O(A) CONTRATANTE se compromete a:\n\n**a)** Efetuar o pagamento dos honorários nas datas e valores acordados;\n\n**b)** Fornecer documentação e acessos necessários para execução do serviço;\n\n**c)** Não efetuar pagamento ou negociação direta com o SERASA sem prévia comunicação à CONTRATADA."
+    },
+    {
+      "numero": "CLÁUSULA QUARTA – DO VALOR E DA FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** Pelos serviços, o(a) CONTRATANTE pagará à CONTRATADA o valor total de **R$ [VALOR] ([VALOR EXTENSO])**, da seguinte forma:\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]), no ato da assinatura deste contrato;\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), vencendo a primeira em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e as demais sucessivamente a cada 30 (trinta) dias.\n\n**4.2.** **Antecipação:** Desconto de 1,5% ao mês, máximo 15%, mediante solicitação prévia de 2 dias úteis e PIX aleatório em 24 horas."
+    },
+    {
+      "numero": "CLÁUSULA QUINTA – DO PRAZO DE EXECUÇÃO",
+      "titulo": "",
+      "conteudo": "**5.1.** A CONTRATADA realizará a remoção das propostas de negociação no prazo de até **15 (quinze) dias úteis**, contados da assinatura do contrato e confirmação do pagamento."
+    },
+    {
+      "numero": "CLÁUSULA SEXTA – DA GARANTIA DE RESULTADO",
+      "titulo": "",
+      "conteudo": "**6.1.** Caso o serviço não seja executado no prazo estabelecido, a CONTRATADA garante a **devolução integral** do valor pago no prazo de até **30 (trinta) dias úteis** após o término do prazo contratual.\n\n**6.2.** O não cumprimento do reembolso no prazo acarretará **multa de 20%** e juros de 1% ao mês."
+    },
+    {
+      "numero": "CLÁUSULA SÉTIMA – DA GARANTIA DE ACOMPANHAMENTO",
+      "titulo": "",
+      "conteudo": "**7.1.** A CONTRATADA oferece **garantia de acompanhamento pelo período de 3 (três) meses** contados da data da remoção das propostas.\n\n**7.2.** Durante este período, caso as propostas de negociação retornem ao sistema SERASA, a CONTRATADA realizará nova remoção sem custo adicional.\n\n**7.3.** A garantia aplica-se exclusivamente às propostas de negociação identificadas neste contrato. Novas propostas não estão cobertas."
+    },
+    {
+      "numero": "CLÁUSULA OITAVA – DO INADIMPLEMENTO",
+      "titulo": "",
+      "conteudo": "**8.1.** Em caso de atraso no pagamento, o valor devido será acrescido de:\n\n**a)** **Multa de 20% (vinte por cento)**;\n\n**b)** Juros de mora de **1% (um por cento)** ao mês, *pro rata die*;\n\n**c)** Correção monetária pelo IPCA/IBGE.\n\n**8.2.** **Suspensão:** Atraso superior a 30 (trinta) dias suspende os serviços até regularização.\n\n**8.3.** **Perda do direito:** Persistindo o atraso por mais 15 (quinze) dias após suspensão, perde-se o direito ao serviço e aos valores pagos, podendo haver protesto das parcelas em aberto."
+    },
+    {
+      "numero": "CLÁUSULA NONA – DA RESCISÃO",
+      "titulo": "",
+      "conteudo": "**9.1.** Rescisão pelo(a) CONTRATANTE após início dos serviços: **multa de 20%** do valor total, sem ressarcimento.\n\n**9.2.** Desistência unilateral não gera direito a devolução, salvo inadimplemento da CONTRATADA (Cláusula Sexta)."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA – DA PROTEÇÃO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**10.1.** Em conformidade com a LGPD (Lei nº 13.709/2018), a CONTRATADA tratará os dados pessoais com finalidade exclusiva de executar este contrato.\n\n**10.2.** O(A) CONTRATANTE pode exercer direitos de titular pelo e-mail: **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA PRIMEIRA – DA CONFIDENCIALIDADE",
+      "titulo": "",
+      "conteudo": "**11.1.** Sigilo absoluto das informações trocadas entre as partes."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA SEGUNDA – DO FORO",
+      "titulo": "",
+      "conteudo": "**12.1.** Foro da Comarca de Ribeirão Preto/SP, ressalvado o foro do domicílio do(a) CONTRATANTE conforme CDC.\n\n---\n\nRibeirão Preto, [DATA].\n\n---\n\n**CONTRATANTE:** _________________________________\n[NOME COMPLETO DO CLIENTE]\n\n**CONTRATADA:** _________________________________\nFC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA\n\n---\n\n**Testemunha 1:** _________________________________\nNome: _________________________________ CPF: _________________________________\n\n**Testemunha 2:** _________________________________\nNome: _________________________________ CPF: _________________________________"
+    }
+  ]
+}

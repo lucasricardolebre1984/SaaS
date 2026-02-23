@@ -1,0 +1,182 @@
+{
+  "id": "rating_convencional",
+  "nome": "CONTRATO DE PRESTAÇÃO DE SERVIÇOS – EXECUÇÃO DE RATING",
+  "tipo": "rating_convencional",
+  "categoria": "EXECUÇÃO DE RATING",
+  "subtitulo": "EXECUÇÃO DE RATING",
+  "descricao": "Template institucional para execução de rating.",
+  "versao": "1.0.0",
+  "ativo": true,
+  "layout": "institucional",
+  "origem_modelo": "C:\\Users\\Lucas\\Downloads\\RATINGCONVENCIONALMODELO.md",
+  "logo_oficial": "contratos/logo2.png",
+  "contratada": {
+    "nome": "FC SERVICOS E SOLUCOES ADMINISTRATIVAS LTDA",
+    "cnpj": "57.815.628/0001-62",
+    "email": "contato@fcsolucoesfinanceiras.com",
+    "telefone": "(16) 99301-7396",
+    "endereco": "Rua Maria das Gracas de Negreiros Bonilha, no 30, sala 3, Jardim Nova Alianca Sul, Ribeirao Preto/SP, CEP 14022-100"
+  },
+  "campos": [
+    {
+      "nome": "contratante_nome",
+      "label": "Nome Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_documento",
+      "label": "CPF/CNPJ",
+      "tipo": "cpf_cnpj",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_email",
+      "label": "E-mail",
+      "tipo": "email",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_telefone",
+      "label": "Telefone",
+      "tipo": "telefone",
+      "obrigatorio": false,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "contratante_endereco",
+      "label": "Endereco Completo",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "dados_contratante"
+    },
+    {
+      "nome": "valor_total",
+      "label": "Valor Total",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_entrada",
+      "label": "Valor da Entrada",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "qtd_parcelas",
+      "label": "Quantidade de Parcelas",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "valor_parcela",
+      "label": "Valor da Parcela",
+      "tipo": "moeda",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_1",
+      "label": "Prazo 1 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "prazo_2",
+      "label": "Prazo 2 (dias)",
+      "tipo": "numero",
+      "obrigatorio": true,
+      "secao": "valores"
+    },
+    {
+      "nome": "local_assinatura",
+      "label": "Local da Assinatura",
+      "tipo": "texto",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    },
+    {
+      "nome": "data_assinatura",
+      "label": "Data da Assinatura",
+      "tipo": "data",
+      "obrigatorio": true,
+      "secao": "assinatura"
+    }
+  ],
+  "secoes": [
+    {
+      "id": "dados_contratante",
+      "titulo": "Dados do Contratante",
+      "ordem": 1
+    },
+    {
+      "id": "valores",
+      "titulo": "Valores e Pagamento",
+      "ordem": 2
+    },
+    {
+      "id": "assinatura",
+      "titulo": "Assinatura",
+      "ordem": 3
+    }
+  ],
+  "clausulas": [
+    {
+      "numero": "CLÁUSULA PRIMEIRA – DO OBJETO E META",
+      "titulo": "",
+      "conteudo": "**1.1.** O presente contrato tem por objeto a prestação de serviços de **execução do plano de ação** apresentado no **Relatório de Diagnóstico 360**, para melhoria do perfil de crédito do(a) CONTRATANTE.\n\n**1.2.** **Meta de Resultado Condicional:** Atingir classificação mínima **\"A\"** na escala de Rating Comercial (E a AAA).\n\n**1.3.** **Aferição:** Serão realizadas duas consultas ao Rating: uma na assinatura (ponto de partida) e outra ao final do prazo de execução.\n\n**1.4.** A obrigação é de **meio com garantia condicional**, conforme Cláusula Oitava."
+    },
+    {
+      "numero": "CLÁUSULA SEGUNDA – DO PRAZO DE EXECUÇÃO",
+      "titulo": "",
+      "conteudo": "**2.1.** A CONTRATADA executará o plano de ação e entregará o Relatório Final no prazo de **60 (sessenta) dias úteis**, contados da assinatura deste contrato."
+    },
+    {
+      "numero": "CLÁUSULA TERCEIRA – DO VALOR E DA FORMA DE PAGAMENTO",
+      "titulo": "",
+      "conteudo": "**3.1.** Pelos serviços, o(a) CONTRATANTE pagará à CONTRATADA o valor total de **R$ [VALOR] ([VALOR EXTENSO])**, da seguinte forma:\n\n**a)** **Entrada:** R$ [VALOR ENTRADA] ([VALOR ENTRADA EXTENSO]), no ato da assinatura;\n\n**b)** **Parcelamento:** [QTD PARCELAS] ([QTD PARCELAS EXTENSO]) parcelas de R$ [VALOR PARCELA] ([VALOR PARCELA EXTENSO]), vencendo a primeira em [PRAZO 1] ([PRAZO 1 EXTENSO]) dias e as demais sucessivamente a cada 30 dias.\n\n**3.2.** **Antecipação:** Desconto de 1,5% ao mês, máximo 15%, mediante solicitação prévia de 2 dias úteis e PIX aleatório em 24 horas.\n\n**3.3.** Os valores pagos são **irrevogáveis e não reembolsáveis**, exceto no exercício do direito de arrependimento em até 7 (sete) dias (Lei nº 8.078/90), ou na hipótese de Garantia de Resultado (Cláusula Oitava)."
+    },
+    {
+      "numero": "CLÁUSULA QUARTA – DAS PENALIDADES POR INADIMPLEMENTO",
+      "titulo": "",
+      "conteudo": "**4.1.** **Multa moratória:** 20% sobre o valor em atraso, juros de 1% a.m. e correção pelo IPCA.\n\n**4.2.** **Suspensão:** Atraso superior a 30 dias na 2ª parcela ou posteriores suspende os serviços.\n\n**4.3.** **Perda do direito:** Persistindo o atraso por mais 15 dias após suspensão, perde-se o direito ao serviço e aos valores pagos, podendo haver protesto das parcelas em aberto."
+    },
+    {
+      "numero": "CLÁUSULA QUINTA – DAS OBRIGAÇÕES DA CONTRATADA",
+      "titulo": "",
+      "conteudo": "**5.1.** Executar o plano de ação com zelo e competência técnica;\n\n**5.2.** Cumprir o prazo de execução estabelecido;\n\n**5.3.** Manter sigilo absoluto sobre as informações do(a) CONTRATANTE."
+    },
+    {
+      "numero": "CLÁUSULA SEXTA – DAS OBRIGAÇÕES DO(A) CONTRATANTE",
+      "titulo": "",
+      "conteudo": "**6.1.** Efetuar pagamentos nas datas e valores acordados;\n\n**6.2.** Fornecer informações e documentos necessários de forma ágil e verídica;\n\n**6.3.** **Cumprir rigorosamente** as diretrizes do **Anexo I - Termo de Ciência e Compromisso** (não realizar consultas ao CPF/CNPJ sem autorização)."
+    },
+    {
+      "numero": "CLÁUSULA SÉTIMA – DA RESCISÃO",
+      "titulo": "",
+      "conteudo": "**7.1.** **Direito de arrependimento:** Até 7 (sete) dias da assinatura, com restituição integral.\n\n**7.2.** **Rescisão por culpa do(a) CONTRATANTE:** Descumprimento de obrigações (incluindo Anexo I) acarreta rescisão, multa de 20% e perda de valores pagos."
+    },
+    {
+      "numero": "CLÁUSULA OITAVA – DA GARANTIA DE RESULTADO CONDICIONAL",
+      "titulo": "",
+      "conteudo": "**8.1.** **Condições:** A garantia só é válida se o(a) CONTRATANTE cumprir integralmente suas obrigações, especialmente as da Cláusula Sexta e Anexo I.\n\n**8.2.** **Execução:** Ao final do prazo, se a meta mínima \"A\" não for alcançada por razões não atribuíveis ao(a) CONTRATANTE, terá direito à **restituição integral** dos valores já pagos por este contrato. O valor do Diagnóstico 360 (R$ 270,00) não é reembolsável.\n\n**8.3.** **Restituição:** Solicitação formal por e-mail, com reembolso em até 30 dias úteis.\n\n**8.4.** **Opção de extensão:** Alternativamente, o(a) CONTRATANTE pode optar por estender o serviço por mais 30 dias úteis, sem custo adicional."
+    },
+    {
+      "numero": "CLÁUSULA NONA – DA PROTEÇÃO DE DADOS (LGPD)",
+      "titulo": "",
+      "conteudo": "**9.1.** Conforme LGPD (Lei 13.709/2018), dados tratados com finalidade exclusiva de executar este contrato.\n\n**9.2.** O(A) CONTRATANTE pode exercer direitos pelo e-mail: **contato@fcsolucoesfinanceiras.com**."
+    },
+    {
+      "numero": "CLÁUSULA DÉCIMA – DO FORO",
+      "titulo": "",
+      "conteudo": "**10.1.** Foro da Comarca de Ribeirão Preto/SP, ressalvado o foro do domicílio do(a) CONTRATANTE conforme CDC.\n\n---\n\nRibeirão Preto, [DATA].\n\n---\n\n**CONTRATANTE:** _________________________________\n[NOME COMPLETO DO CLIENTE]\n\n**CONTRATADA:** _________________________________\nFC SERVIÇOS E SOLUÇÕES ADMINISTRATIVAS LTDA\n\n---\n\n**Testemunha 1:** _________________________________\nNome: _________________________________ CPF: _________________________________\n\n**Testemunha 2:** _________________________________\nNome: _________________________________ CPF: _________________________________"
+    }
+  ]
+}

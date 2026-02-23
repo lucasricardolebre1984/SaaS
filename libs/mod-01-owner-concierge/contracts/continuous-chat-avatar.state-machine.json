@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "module": "mod-01-owner-concierge",
+  "machines": {
+    "continuous_chat_session": {
+      "states": ["idle", "active_one_shot", "active_continuous", "awaiting_user", "paused"],
+      "initial_state": "idle",
+      "transitions": [
+        { "from": "idle", "to": "active_one_shot", "trigger": "send_message_mode_one_shot" },
+        { "from": "idle", "to": "active_continuous", "trigger": "toggle_continuous_on" },
+        { "from": "active_one_shot", "to": "awaiting_user", "trigger": "assistant_reply_sent" },
+        { "from": "awaiting_user", "to": "active_one_shot", "trigger": "send_message_mode_one_shot" },
+        { "from": "active_continuous", "to": "awaiting_user", "trigger": "assistant_reply_sent" },
+        { "from": "awaiting_user", "to": "active_continuous", "trigger": "send_message_mode_continuous" },
+        { "from": "active_continuous", "to": "paused", "trigger": "toggle_continuous_off" },
+        { "from": "paused", "to": "active_continuous", "trigger": "toggle_continuous_on" },
+        { "from": "paused", "to": "idle", "trigger": "session_closed" },
+        { "from": "awaiting_user", "to": "idle", "trigger": "session_timeout" }
+      ]
+    },
+    "avatar_runtime": {
+      "states": ["disabled", "ready", "listening", "speaking", "error"],
+      "initial_state": "disabled",
+      "transitions": [
+        { "from": "disabled", "to": "ready", "trigger": "avatar_enabled_with_valid_config" },
+        { "from": "ready", "to": "listening", "trigger": "continuous_mode_on" },
+        { "from": "listening", "to": "speaking", "trigger": "assistant_tts_start" },
+        { "from": "speaking", "to": "listening", "trigger": "assistant_tts_finished" },
+        { "from": "listening", "to": "ready", "trigger": "continuous_mode_off" },
+        { "from": "ready", "to": "disabled", "trigger": "avatar_disabled" },
+        { "from": "listening", "to": "error", "trigger": "avatar_runtime_failure" },
+        { "from": "speaking", "to": "error", "trigger": "avatar_runtime_failure" },
+        { "from": "error", "to": "ready", "trigger": "recovery_success" },
+        { "from": "error", "to": "disabled", "trigger": "avatar_disabled" }
+      ]
+    }
+  }
+}
