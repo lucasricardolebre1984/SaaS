@@ -1,0 +1,21 @@
+{
+  "name": "app-owner-console",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/owner-console/src",
+  "projectType": "application",
+  "tags": ["scope:app", "domain:owner-console"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo owner-console build skeleton"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo owner-console serve skeleton"
+      }
+    }
+  }
+}

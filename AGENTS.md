@@ -52,7 +52,7 @@ Always update:
 See formulas and targets in .specs/project/METRICS.md.
 
 ## Current Priority
-Execute feature: saas-standard-v1.
-Secondary planning feature: agent-skills-cli-mvp.
-No deployment actions until foundation quality gates are complete.
+Execute feature: foundation-monorepo-bootstrap (runtime skeleton + contract gates).
+Secondary implementation stream: saas-standard-v1 runtime module slices.
+No deployment actions until runtime skeleton and contract-test coverage are stable.
 

@@ -1,0 +1,15 @@
+{
+  "name": "core-data-model",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/core/data-model",
+  "projectType": "library",
+  "tags": ["scope:core", "domain:data-model"],
+  "targets": {
+    "contract-checks": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "powershell -ExecutionPolicy Bypass -File tools/run-contract-checks.ps1 -Scope data-model"
+      }
+    }
+  }
+}

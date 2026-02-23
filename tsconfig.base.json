@@ -1,0 +1,21 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@fabio/mod-01/*": ["libs/mod-01-owner-concierge/*"],
+      "@fabio/mod-02/*": ["libs/mod-02-whatsapp-crm/*"],
+      "@fabio/core-contracts/*": ["libs/core/orchestration-contracts/*"],
+      "@fabio/core-persona/*": ["libs/core/persona-registry/*"],
+      "@fabio/core-metrics/*": ["libs/core/audit-metrics/*"]
+    }
+  },
+  "exclude": ["node_modules", "tmp", "dist"]
+}

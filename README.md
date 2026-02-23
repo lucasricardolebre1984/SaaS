@@ -20,6 +20,13 @@ cd C:\projetos\fabio
 .\tools\start-day.ps1 -Agent codex -ForceSkills
 ```
 
+## Bootstrap runtime skeleton
+```powershell
+npm install
+.\nx show projects
+.\nx run contract-tests:contract-checks
+```
+
 ## Encerramento diário
 ```powershell
 .\tools\end-day.ps1 -ShowPending

@@ -1,0 +1,21 @@
+{
+  "name": "app-crm-console",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/crm-console/src",
+  "projectType": "application",
+  "tags": ["scope:app", "domain:crm-console"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo crm-console build skeleton"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo crm-console serve skeleton"
+      }
+    }
+  }
+}

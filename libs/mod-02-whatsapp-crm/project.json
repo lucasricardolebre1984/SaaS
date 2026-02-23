@@ -1,0 +1,15 @@
+{
+  "name": "mod-02-whatsapp-crm",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/mod-02-whatsapp-crm",
+  "projectType": "library",
+  "tags": ["scope:module", "module:02"],
+  "targets": {
+    "contract-checks": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "powershell -ExecutionPolicy Bypass -File tools/run-contract-checks.ps1 -Scope mod02"
+      }
+    }
+  }
+}

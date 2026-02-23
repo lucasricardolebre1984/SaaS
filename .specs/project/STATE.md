@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement + Validate (contracts foundation)
-Active feature: saas-standard-v1
+Active phase: Implement + Validate (runtime skeleton + contract gates)
+Active feature: foundation-monorepo-bootstrap
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -39,9 +39,13 @@ Active feature: saas-standard-v1
 - STD-005 completed: evolution integration baseline published for module 02 (container, webhook, outbound queue, checklist).
 - STD-006 completed: tenant persona packaging baseline published with schemas, YAML templates, and sample tenant pack validation script.
 - STD-007 completed: observability and finops maps published with explicit formula linkage to METRICS.md.
+- Nx workspace runtime skeleton bootstrapped with project graph and target wiring.
+- Contract checks automated via Nx target `contract-tests:contract-checks`.
+- Executable contract tests available via Nx target `contract-tests:test`.
+- Foundation tasks FND-002..FND-006 finalized with explicit evidence.
 
 ## Next Checkpoint
-SaaS Standard v1 foundation tasks STD-001..STD-007 complete. Next checkpoint: implementation planning for runtime skeletons and contract tests.
+Start runtime module implementation slice (mod-01 + mod-02) with executable contract tests beyond JSON/schema checks.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

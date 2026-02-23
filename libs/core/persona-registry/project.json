@@ -1,0 +1,15 @@
+{
+  "name": "core-persona-registry",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/core/persona-registry",
+  "projectType": "library",
+  "tags": ["scope:core", "domain:persona"],
+  "targets": {
+    "contract-checks": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "powershell -ExecutionPolicy Bypass -File tools/run-contract-checks.ps1 -Scope persona"
+      }
+    }
+  }
+}

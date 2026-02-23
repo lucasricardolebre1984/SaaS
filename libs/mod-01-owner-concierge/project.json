@@ -1,0 +1,15 @@
+{
+  "name": "mod-01-owner-concierge",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/mod-01-owner-concierge",
+  "projectType": "library",
+  "tags": ["scope:module", "module:01"],
+  "targets": {
+    "contract-checks": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "powershell -ExecutionPolicy Bypass -File tools/run-contract-checks.ps1 -Scope mod01"
+      }
+    }
+  }
+}

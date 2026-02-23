@@ -1,6 +1,6 @@
 # Tasks - foundation-monorepo-bootstrap
 
-Status: Planned
+Status: Completed
 Date: 2026-02-22
 
 ## Task List
@@ -15,7 +15,7 @@ Date: 2026-02-22
   - Files exist and contain current context
 
 ### FND-002 - Bootstrap Nx in fabio
-- Status: pending
+- Status: done
 - Steps:
   1. run nx init
   2. validate nx workspace commands
@@ -23,9 +23,14 @@ Date: 2026-02-22
 - Verification:
   - nx report works
   - workspace has valid nx.json
+- Evidence:
+  - package.json
+  - tsconfig.base.json
+  - nx.json
+  - `nx show projects` recognizes app/core/module/tool projects
 
 ### FND-003 - Define module boundaries
-- Status: pending
+- Status: done
 - Steps:
   1. create initial apps/libs skeleton
   2. define naming convention
@@ -33,9 +38,13 @@ Date: 2026-02-22
 - Verification:
   - architecture doc updated
   - boundaries documented
+- Evidence:
+  - apps/*/project.json (owner-console, crm-console, platform-api)
+  - libs/*/project.json (mod/core projects)
+  - .specs/project/BOUNDARIES.md
 
 ### FND-004 - Add quality gates
-- Status: pending
+- Status: done
 - Steps:
   1. define lint/test/typecheck tasks
   2. define minimal CI flow
@@ -43,22 +52,34 @@ Date: 2026-02-22
 - Verification:
   - local runbook documented
   - CI draft documented
+- Evidence:
+  - tools/run-contract-checks.ps1
+  - tools/validate-sample-tenant-pack.ps1
+  - tools/validate-sample-tenant-pack.mjs
+  - tools/contract-tests/executable-contract.test.mjs
+  - tools/contract-tests/project.json
+  - .specs/project/QUALITY_GATES.md
 
 ### FND-005 - Prepare first domain migration plan
-- Status: pending
+- Status: done
 - Steps:
   1. choose first domain pair (approved: mod-01 + mod-02)
   2. create feature spec/design/tasks
   3. set rollback checklist
 - Verification:
   - first domain feature docs approved
+- Evidence:
+  - .specs/features/dual-concierge-core-standard/spec.md
+  - .specs/features/dual-concierge-core-standard/design.md
+  - .specs/features/dual-concierge-core-standard/tasks.md
+  - .specs/features/dual-concierge-core-standard/ROLLBACK.md
 
 ## Phase Exit Criteria
 - FND-002 to FND-005 complete.
 - Decision gate logged in STATE.md before starting domain migration implementation.
 
 ### FND-006 - Legacy quarantine and rewrite policy
-- Status: pending
+- Status: done
 - Steps:
   1. create explicit list of legacy anti-patterns (routes/persona/context)
   2. define rewrite standards and forbidden shortcuts
@@ -66,6 +87,9 @@ Date: 2026-02-22
 - Verification:
   - policy documented in .specs
   - all future migration features reference this policy
+- Evidence:
+  - .specs/project/LEGACY_QUARANTINE.md
+  - .specs/project/STATE.md (legacy policy and quarantine notes)
 
 ### FND-001A - Import approved legacy assets only
 - Status: done

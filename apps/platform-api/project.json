@@ -1,0 +1,21 @@
+{
+  "name": "app-platform-api",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/platform-api/src",
+  "projectType": "application",
+  "tags": ["scope:app", "domain:api"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo platform-api build skeleton"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo platform-api serve skeleton"
+      }
+    }
+  }
+}

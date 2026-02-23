@@ -1,0 +1,21 @@
+{
+  "name": "contract-tests",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "tools",
+  "projectType": "library",
+  "tags": ["scope:tools", "quality:contracts"],
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --test tools/contract-tests/*.test.mjs"
+      }
+    },
+    "contract-checks": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "powershell -ExecutionPolicy Bypass -File tools/run-contract-checks.ps1 -Scope all"
+      }
+    }
+  }
+}

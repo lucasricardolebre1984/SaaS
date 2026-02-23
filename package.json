@@ -1,0 +1,18 @@
+{
+  "name": "fabio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Automania AI institutional SaaS base",
+  "scripts": {
+    "nx": "nx",
+    "contracts:check": "powershell -ExecutionPolicy Bypass -File ./tools/run-contract-checks.ps1",
+    "tenant:validate": "powershell -ExecutionPolicy Bypass -File ./tools/validate-sample-tenant-pack.ps1",
+    "start:day": "powershell -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -SkipInstall",
+    "end:day": "powershell -ExecutionPolicy Bypass -File ./tools/end-day.ps1 -ShowPending"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "nx": "22.5.2"
+  }
+}

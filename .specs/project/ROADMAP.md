@@ -1,8 +1,8 @@
 # ROADMAP
 
-Last update: 2026-02-22
+Last update: 2026-02-23
 
-## Milestone 0 - Institutional Foundation (current)
+## Milestone 0 - Institutional Foundation (completed)
 Objective: Create governance, architecture baseline, and metrics operating system.
 
 Features:
@@ -18,7 +18,11 @@ Exit criteria:
 - Nx workspace baseline running locally
 - Quality gates documented
 
-## Milestone 1 - Core Platform Migration
+Status update:
+- Exit criteria achieved (contracts + runtime skeleton + contract-check gate).
+- Ready to execute Milestone 1 implementation slices.
+
+## Milestone 1 - Core Platform Migration (current)
 Objective: Bring core domains from fabio2 into modular architecture.
 
 Target domains:

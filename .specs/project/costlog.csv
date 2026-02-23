@@ -8,3 +8,6 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-005 evolution integration baseline
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-006 tenant persona packaging baseline
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,STD-007 observability and finops maps
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,FND-002..004 nx runtime skeleton and contract gates
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,FND-005..006 migration rollback and quarantine policy closure
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,FND-004 executable contract test target
