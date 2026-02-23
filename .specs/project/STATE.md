@@ -52,9 +52,10 @@ Active feature: runtime-dual-concierge-slice
 - Runtime Postgres checkpoint validated with real local DB via `npm run smoke:postgres` and persisted row assertions.
 - Postgres smoke stack is explicitly isolated in Docker project `fabio-postgres-smoke` (no shared container/volume with `fabio2`).
 - Backend switch operational runbook finalized with explicit rollback path (`file` backend toggle).
+- Runtime CI workflow published with two-stage gate: contracts/runtime tests + Postgres smoke.
 
 ## Next Checkpoint
-Promote Postgres smoke to CI-ready gate and start first domain migration slice on top of stable dual-concierge runtime.
+Start first domain migration slice (Module 03 - Clientes) on top of stable dual-concierge runtime gates.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

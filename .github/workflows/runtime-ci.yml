@@ -1,0 +1,54 @@
+name: Runtime CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  contracts-and-tests:
+    name: Contracts And Runtime Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Contract checks
+        run: npx nx run contract-tests:contract-checks
+
+      - name: Runtime tests
+        run: npx nx run app-platform-api:test
+
+  postgres-smoke:
+    name: Postgres Smoke
+    runs-on: ubuntu-latest
+    needs: contracts-and-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run postgres smoke
+        shell: pwsh
+        run: ./tools/smoke-postgres-orchestration.ps1

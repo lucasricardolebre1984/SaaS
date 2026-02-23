@@ -115,3 +115,15 @@ Date: 2026-02-23
   - tools/postgres-smoke/docker-compose.yml
   - package.json
   - apps/platform-api/RUNBOOK-backend-switch.md
+
+## RDS-010 - Promote runtime checks to CI workflow (contracts + smoke)
+- Status: done
+- Output:
+  - GitHub Actions workflow created with contract checks, runtime tests, and Postgres smoke gate
+  - smoke gate runs after base checks to keep signal deterministic
+- Verification:
+  - local parity checks still passing:
+    - `npx nx run contract-tests:contract-checks`
+    - `npx nx run app-platform-api:test`
+- Evidence:
+  - .github/workflows/runtime-ci.yml
