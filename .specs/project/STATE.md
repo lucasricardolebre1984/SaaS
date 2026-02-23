@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 01 rag vector-ready slice)
-Active feature: mod-01-rag-vector-ready-slice
+Active phase: Implement (module 01 rag provider embeddings slice)
+Active feature: mod-01-rag-provider-embeddings-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -166,9 +166,24 @@ Active feature: mod-01-rag-vector-ready-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-01-rag-provider-embeddings-slice` with provider-backed embedding resolution and local deterministic fallback.
+- Added runtime embedding provider modes:
+  - `auto` (OpenAI when available, fallback local)
+  - `openai` (strict provider mode)
+  - `local`
+  - `off`
+- Owner memory create flow now resolves embeddings before persistence and returns deterministic `embedding_error` on strict provider failures.
+- Owner memory storage upgraded with internal vector persistence:
+  - file adapter stores `embedding_vector` in entry records
+  - postgres adapter stores `embedding_vector_json` in `owner_memory_entries`
+- Retrieval pipeline now reuses shared semantic utility and consumes persisted vectors when present.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 01 vector-ready retrieval closure.
+Open next prioritized migration slice after module 01 provider embeddings closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

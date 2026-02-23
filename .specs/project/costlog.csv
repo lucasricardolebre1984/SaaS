@@ -62,3 +62,7 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01V-002 deterministic hybrid lexical vector scorer implementation
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01V-003 runtime tests for vector-ready retrieval and invalid embedding
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01V-004 governance closure for mod 01 vector-ready slice
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01E-001 embedding provider modes and local semantic utility
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01E-002 owner memory create embedding integration and strict error path
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01E-003 owner memory vector persistence for file and postgres adapters
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01E-004 governance and validation closure for provider embeddings slice

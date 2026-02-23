@@ -12,7 +12,7 @@ function tableName(schema, table) {
   return `"${schema}"."${table}"`;
 }
 
-function asEntry(row) {
+function asEntryPublic(row) {
   return {
     memory_id: row.memory_id,
     tenant_id: row.tenant_id,
@@ -30,6 +30,13 @@ function asEntry(row) {
   };
 }
 
+function asEntryForRetrieval(row) {
+  return {
+    ...asEntryPublic(row),
+    embedding_vector: row.embedding_vector_json ?? null
+  };
+}
+
 function normalizeEntryInput(input) {
   return {
     memory_id: input.memory_id,
@@ -41,6 +48,7 @@ function normalizeEntryInput(input) {
     tags: Array.isArray(input.tags) ? input.tags : [],
     salience_score: Number(input.salience_score ?? 0.5),
     embedding_ref: input.embedding_ref ?? null,
+    embedding_vector: Array.isArray(input.embedding_vector) ? input.embedding_vector : null,
     status: 'candidate',
     metadata: input.metadata ?? {}
   };
@@ -81,11 +89,16 @@ export function createPostgresOwnerMemoryStore(options = {}) {
         tags_json JSONB NOT NULL DEFAULT '[]'::jsonb,
         salience_score NUMERIC(4, 3) NOT NULL,
         embedding_ref TEXT NULL,
+        embedding_vector_json JSONB NULL,
         status TEXT NOT NULL,
         metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL
       )
+    `);
+    await client.query(`
+      ALTER TABLE ${entriesTable}
+      ADD COLUMN IF NOT EXISTS embedding_vector_json JSONB NULL
     `);
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS owner_memory_entries_tenant_external_key_ux
@@ -142,7 +155,7 @@ export function createPostgresOwnerMemoryStore(options = {}) {
           [normalized.tenant_id, normalized.external_key]
         );
         if (byExternalKey.rowCount > 0) {
-          return { action: 'idempotent', entry: asEntry(byExternalKey.rows[0]) };
+          return { action: 'idempotent', entry: asEntryPublic(byExternalKey.rows[0]) };
         }
       }
 
@@ -154,13 +167,13 @@ export function createPostgresOwnerMemoryStore(options = {}) {
         [normalized.tenant_id, normalized.memory_id]
       );
       if (byMemoryId.rowCount > 0) {
-        return { action: 'idempotent', entry: asEntry(byMemoryId.rows[0]) };
+        return { action: 'idempotent', entry: asEntryPublic(byMemoryId.rows[0]) };
       }
 
       const inserted = await query(
         `INSERT INTO ${entriesTable}
-          (memory_id, tenant_id, session_id, external_key, source, content, tags_json, salience_score, embedding_ref, status, metadata_json, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11::jsonb, $12, $12)
+          (memory_id, tenant_id, session_id, external_key, source, content, tags_json, salience_score, embedding_ref, embedding_vector_json, status, metadata_json, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10::jsonb, $11, $12::jsonb, $13, $13)
          RETURNING *`,
         [
           normalized.memory_id,
@@ -172,12 +185,13 @@ export function createPostgresOwnerMemoryStore(options = {}) {
           JSON.stringify(normalized.tags),
           normalized.salience_score,
           normalized.embedding_ref,
+          normalized.embedding_vector ? JSON.stringify(normalized.embedding_vector) : null,
           normalized.status,
           JSON.stringify(normalized.metadata),
           nowIso
         ]
       );
-      return { action: 'created', entry: asEntry(inserted.rows[0]) };
+      return { action: 'created', entry: asEntryPublic(inserted.rows[0]) };
     },
     async getEntryById(tenantId, memoryId) {
       const result = await query(
@@ -188,7 +202,7 @@ export function createPostgresOwnerMemoryStore(options = {}) {
         [tenantId, memoryId]
       );
       if (result.rowCount === 0) return null;
-      return asEntry(result.rows[0]);
+      return asEntryPublic(result.rows[0]);
     },
     async listEntries(tenantId, options = {}) {
       const params = [tenantId];
@@ -206,10 +220,10 @@ export function createPostgresOwnerMemoryStore(options = {}) {
         `SELECT *
          FROM ${entriesTable}
          WHERE ${where}
-         ORDER BY created_at ASC`,
+        ORDER BY created_at ASC`,
         params
       );
-      return result.rows.map(asEntry);
+      return result.rows.map(asEntryPublic);
     },
     async applyPromotion(tenantId, memoryId, action, reasonCode, metadata) {
       const current = await query(
@@ -266,7 +280,7 @@ export function createPostgresOwnerMemoryStore(options = {}) {
         ]
       );
 
-      return { ok: true, entry: asEntry(updated.rows[0]), promotion: promotionRecord };
+      return { ok: true, entry: asEntryPublic(updated.rows[0]), promotion: promotionRecord };
     },
     async getSummary(tenantId) {
       const countsResult = await query(
@@ -308,7 +322,7 @@ export function createPostgresOwnerMemoryStore(options = {}) {
          LIMIT 500`,
         params
       );
-      const entries = result.rows.map(asEntry);
+      const entries = result.rows.map(asEntryForRetrieval);
       return retrieveContextByScoring(entries, queryOptions);
     },
     async close() {

@@ -232,6 +232,7 @@ CREATE TABLE IF NOT EXISTS public.owner_memory_entries (
   tags_json JSONB NOT NULL DEFAULT '[]'::jsonb,
   salience_score NUMERIC(4, 3) NOT NULL,
   embedding_ref TEXT NULL,
+  embedding_vector_json JSONB NULL,
   status TEXT NOT NULL,
   metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL,

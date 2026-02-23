@@ -1,17 +1,15 @@
+import {
+  cosineSimilarity01,
+  localSemanticEmbeddingFromText,
+  tokenizeText
+} from './semantic-embedding.mjs';
+
 function clamp01(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 0;
   if (number < 0) return 0;
   if (number > 1) return 1;
   return number;
-}
-
-const VECTOR_DIM = 24;
-
-function tokenize(text) {
-  return String(text ?? '')
-    .toLowerCase()
-    .match(/[a-z0-9\u00c0-\u024f]+/g) ?? [];
 }
 
 function unique(values) {
@@ -29,65 +27,9 @@ function parseTopK(value) {
   return Math.max(1, Math.min(Math.floor(n), 20));
 }
 
-function hashToken(token) {
-  let hash = 2166136261;
-  for (let i = 0; i < token.length; i += 1) {
-    hash ^= token.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
-function normalizeVector(vector) {
-  const source = Array.isArray(vector) ? vector : [];
-  const values = source
-    .map((value) => Number(value))
-    .filter((value) => Number.isFinite(value));
-  if (values.length === 0) {
-    return [];
-  }
-
-  const norm = Math.sqrt(values.reduce((acc, value) => acc + (value * value), 0));
-  if (!Number.isFinite(norm) || norm <= 0) {
-    return values.map(() => 0);
-  }
-  return values.map((value) => value / norm);
-}
-
-function semanticVectorFromText(text, tags = []) {
-  const vector = new Array(VECTOR_DIM).fill(0);
-  const tokens = [...tokenize(text), ...tags.map((item) => String(item).toLowerCase())];
-  if (tokens.length === 0) {
-    return vector;
-  }
-
-  for (const token of tokens) {
-    const h = hashToken(token);
-    const idx = h % VECTOR_DIM;
-    const sign = (h & 1) === 0 ? 1 : -1;
-    vector[idx] += sign;
-  }
-  return normalizeVector(vector);
-}
-
-function cosineSimilarity(a, b) {
-  const left = normalizeVector(a);
-  const right = normalizeVector(b);
-  if (left.length === 0 || right.length === 0) {
-    return 0;
-  }
-
-  const length = Math.min(left.length, right.length);
-  let dot = 0;
-  for (let i = 0; i < length; i += 1) {
-    dot += (left[i] * right[i]);
-  }
-  return clamp01((dot + 1) / 2);
-}
-
 export function scoreMemoryEntry(entry, query = {}, strategy = 'lexical-salience-v1') {
-  const queryTokens = unique(tokenize(query.text));
-  const entryTokens = unique(tokenize(entry.content));
+  const queryTokens = unique(tokenizeText(query.text));
+  const entryTokens = unique(tokenizeText(entry.content));
   const matchedTerms = queryTokens.length > 0
     ? intersect(queryTokens, entryTokens)
     : [];
@@ -110,11 +52,11 @@ export function scoreMemoryEntry(entry, query = {}, strategy = 'lexical-salience
   const wantsHybrid = strategy === 'hybrid-lexical-vector-v1';
   const queryVector = Array.isArray(query.query_embedding)
     ? query.query_embedding
-    : semanticVectorFromText(query.text, query.tags ?? []);
+    : localSemanticEmbeddingFromText(query.text, query.tags ?? []);
   const entryVector = Array.isArray(entry.embedding_vector)
     ? entry.embedding_vector
-    : semanticVectorFromText(entry.content, entry.tags ?? []);
-  const vectorScore = wantsHybrid ? cosineSimilarity(queryVector, entryVector) : 0;
+    : localSemanticEmbeddingFromText(entry.content, entry.tags ?? []);
+  const vectorScore = wantsHybrid ? cosineSimilarity01(queryVector, entryVector) : 0;
 
   const score = wantsHybrid
     ? clamp01((lexicalScore * 0.75) + (vectorScore * 0.25))

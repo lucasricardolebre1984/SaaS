@@ -42,6 +42,7 @@ import { createBillingStore } from './billing-store.mjs';
 import { createLeadStore } from './lead-store.mjs';
 import { createCrmAutomationStore } from './crm-automation-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
+import { createEmbeddingProvider } from './embedding-provider.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
   mapCustomerCreateRequestToStoreRecord
@@ -797,17 +798,19 @@ function crmAutomationInfo(store) {
   };
 }
 
-function ownerMemoryInfo(store) {
+function ownerMemoryInfo(store, embeddingProvider) {
   if (store.backend === 'postgres') {
     return {
       backend: 'postgres',
-      storage_dir: null
+      storage_dir: null,
+      embedding_mode: embeddingProvider.mode
     };
   }
 
   return {
     backend: 'file',
-    storage_dir: store.storageDir
+    storage_dir: store.storageDir,
+    embedding_mode: embeddingProvider.mode
   };
 }
 
@@ -867,6 +870,12 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const ownerEmbeddingProvider = createEmbeddingProvider({
+    mode: options.ownerEmbeddingMode,
+    openaiApiKey: options.openaiApiKey,
+    openaiModel: options.ownerEmbeddingModel,
+    openaiBaseUrl: options.openaiBaseUrl
+  });
   const taskPlanner = createTaskPlanner({
     policyPath: options.taskRoutingPolicyPath
   });
@@ -887,7 +896,7 @@ export function createApp(options = {}) {
           billing: billingInfo(billingStore),
           crm_leads: leadInfo(leadStore),
           crm_automation: crmAutomationInfo(crmAutomationStore),
-          owner_memory: ownerMemoryInfo(ownerMemoryStore)
+          owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider)
         });
       }
 
@@ -2565,6 +2574,32 @@ export function createApp(options = {}) {
         }
 
         const request = body.request;
+        let embeddingResult;
+        try {
+          embeddingResult = await ownerEmbeddingProvider.resolveMemoryEmbedding({
+            tenant_id: request.tenant_id,
+            session_id: request.session_id,
+            memory_id: request.memory.memory_id ?? null,
+            content: request.memory.content,
+            tags: request.memory.tags ?? [],
+            embedding_ref: request.memory.embedding_ref ?? null
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'embedding_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const metadata = {
+          ...(request.memory.metadata ?? {}),
+          embedding: {
+            provider: embeddingResult.provider,
+            model: embeddingResult.model,
+            strategy: embeddingResult.strategy
+          }
+        };
+
         let createResult;
         try {
           createResult = await ownerMemoryStore.createEntry({
@@ -2576,8 +2611,9 @@ export function createApp(options = {}) {
             content: request.memory.content,
             tags: request.memory.tags ?? [],
             salience_score: request.memory.salience_score ?? 0.5,
-            embedding_ref: request.memory.embedding_ref ?? null,
-            metadata: request.memory.metadata ?? {}
+            embedding_ref: embeddingResult.embedding_ref,
+            embedding_vector: embeddingResult.embedding_vector,
+            metadata
           });
         } catch (error) {
           return json(res, 500, {

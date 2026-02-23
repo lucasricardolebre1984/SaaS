@@ -66,3 +66,7 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-23,23:59,23:59,0.35,Implement,mod-01-rag-vector-ready-slice,M01V-002,pair,done,Implemented deterministic hybrid lexical vector scorer in context retrieval service
 2026-02-23,23:59,23:59,0.25,Implement,mod-01-rag-vector-ready-slice,M01V-003,pair,done,Added vector-ready runtime tests and malformed embedding validation coverage
 2026-02-23,23:59,23:59,0.10,Implement,mod-01-rag-vector-ready-slice,M01V-004,pair,done,Validated gates and closed governance metrics checkpoint for mod 01 vector-ready slice
+2026-02-23,23:59,23:59,0.25,Implement,mod-01-rag-provider-embeddings-slice,M01E-001,pair,done,Implemented embedding provider service with openai local auto off modes
+2026-02-23,23:59,23:59,0.30,Implement,mod-01-rag-provider-embeddings-slice,M01E-002,pair,done,Integrated embedding resolution in owner memory create flow with strict error semantics
+2026-02-23,23:59,23:59,0.30,Implement,mod-01-rag-provider-embeddings-slice,M01E-003,pair,done,Persisted internal embedding vectors in file and postgres owner memory stores
+2026-02-23,23:59,23:59,0.15,Implement,mod-01-rag-provider-embeddings-slice,M01E-004,pair,done,Validated runtime contract smoke gates and closed governance checkpoint

@@ -367,6 +367,7 @@ test('GET /health returns runtime metadata', async () => {
   assert.ok(typeof body.crm_automation.storage_dir === 'string');
   assert.equal(body.owner_memory.backend, 'file');
   assert.ok(typeof body.owner_memory.storage_dir === 'string');
+  assert.ok(typeof body.owner_memory.embedding_mode === 'string');
 });
 
 test('owner memory endpoints create/list/promote and emit promotion trace event', async () => {
@@ -379,6 +380,10 @@ test('owner memory endpoints create/list/promote and emit promotion trace event'
   const createBody = await createRes.json();
   assert.equal(createBody.response.status, 'created');
   assert.equal(createBody.response.entry.status, 'candidate');
+  assert.ok(
+    createBody.response.entry.embedding_ref === null ||
+    String(createBody.response.entry.embedding_ref).startsWith('local:')
+  );
 
   const sessionId = createBody.response.entry.session_id;
   const listRes = await fetch(
@@ -439,6 +444,45 @@ test('owner memory endpoints create/list/promote and emit promotion trace event'
   assert.equal(traceRes.status, 200);
   const traceBody = await traceRes.json();
   assert.ok(traceBody.events.some((item) => item.name === 'owner.context.promoted'));
+});
+
+test('owner memory create returns embedding_error in strict openai mode without key', async () => {
+  const strictStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-embed-strict-'));
+  const strictOwnerMemoryStorageDir = path.join(strictStorageDir, 'owner-memory');
+  const strictServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: strictStorageDir,
+      ownerMemoryStorageDir: strictOwnerMemoryStorageDir,
+      ownerEmbeddingMode: 'openai',
+      openaiApiKey: ''
+    })
+  );
+  await new Promise((resolve) => strictServer.listen(0, '127.0.0.1', resolve));
+  const strictAddress = strictServer.address();
+  const strictBaseUrl = `http://127.0.0.1:${strictAddress.port}`;
+
+  try {
+    const res = await fetch(`${strictBaseUrl}/v1/owner-concierge/memory/entries`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerMemoryCreateRequest({
+        request_id: '60471f2b-4925-416d-bf6c-b63335bb8b2e',
+        memory: {
+          memory_id: 'a13f72b9-619b-4b6a-b4dd-d63ea0b4f30d',
+          external_key: 'strict-openai-no-key',
+          source: 'user_message',
+          content: 'teste strict openai sem chave',
+          salience_score: 0.5
+        }
+      }))
+    });
+    assert.equal(res.status, 500);
+    const body = await res.json();
+    assert.equal(body.error, 'embedding_error');
+  } finally {
+    await new Promise((resolve, reject) => strictServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(strictStorageDir, { recursive: true, force: true });
+  }
 });
 
 test('owner context retrieval validates malformed request', async () => {

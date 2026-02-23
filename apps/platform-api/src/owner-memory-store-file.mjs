@@ -49,8 +49,27 @@ function normalizeEntryInput(input) {
     tags: Array.isArray(input.tags) ? input.tags : [],
     salience_score: Number(input.salience_score ?? 0.5),
     embedding_ref: input.embedding_ref ?? null,
+    embedding_vector: Array.isArray(input.embedding_vector) ? input.embedding_vector : null,
     status: 'candidate',
     metadata: input.metadata ?? {}
+  };
+}
+
+function asPublicEntry(item) {
+  return {
+    memory_id: item.memory_id,
+    tenant_id: item.tenant_id,
+    session_id: item.session_id,
+    external_key: item.external_key ?? null,
+    source: item.source,
+    content: item.content,
+    tags: item.tags ?? [],
+    salience_score: item.salience_score,
+    embedding_ref: item.embedding_ref ?? null,
+    status: item.status,
+    metadata: item.metadata ?? {},
+    created_at: item.created_at,
+    updated_at: item.updated_at
   };
 }
 
@@ -94,14 +113,14 @@ export function createFileOwnerMemoryStore(options = {}) {
         normalized.external_key
       );
       if (byExternalKey) {
-        return { action: 'idempotent', entry: clone(byExternalKey) };
+        return { action: 'idempotent', entry: clone(asPublicEntry(byExternalKey)) };
       }
 
       const byMemoryId = entriesState.items.find(
         (item) => item.tenant_id === normalized.tenant_id && item.memory_id === normalized.memory_id
       );
       if (byMemoryId) {
-        return { action: 'idempotent', entry: clone(byMemoryId) };
+        return { action: 'idempotent', entry: clone(asPublicEntry(byMemoryId)) };
       }
 
       const created = {
@@ -111,13 +130,13 @@ export function createFileOwnerMemoryStore(options = {}) {
       };
       entriesState.items.push(created);
       persistEntries();
-      return { action: 'created', entry: clone(created) };
+      return { action: 'created', entry: clone(asPublicEntry(created)) };
     },
     async getEntryById(tenantId, memoryId) {
       const found = entriesState.items.find(
         (item) => item.tenant_id === tenantId && item.memory_id === memoryId
       );
-      return found ? clone(found) : null;
+      return found ? clone(asPublicEntry(found)) : null;
     },
     async listEntries(tenantId, options = {}) {
       const sessionId = options.sessionId ?? null;
@@ -127,7 +146,7 @@ export function createFileOwnerMemoryStore(options = {}) {
         .filter((item) => (sessionId ? item.session_id === sessionId : true))
         .filter((item) => (status ? item.status === status : true))
         .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
-        .map(clone);
+        .map((item) => clone(asPublicEntry(item)));
     },
     async applyPromotion(tenantId, memoryId, action, reasonCode, metadata) {
       const entry = entriesState.items.find(
@@ -161,7 +180,7 @@ export function createFileOwnerMemoryStore(options = {}) {
       };
       promotionsState.items.push(promotionRecord);
       persistPromotions();
-      return { ok: true, entry: clone(entry), promotion: clone(promotionRecord) };
+      return { ok: true, entry: clone(asPublicEntry(entry)), promotion: clone(promotionRecord) };
     },
     async getSummary(tenantId) {
       const entries = entriesState.items.filter((item) => item.tenant_id === tenantId);
