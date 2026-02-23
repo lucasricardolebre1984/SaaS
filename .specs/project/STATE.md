@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (milestone 2 ui shell slice)
-Active feature: milestone-2-ui-shell-slice
+Active phase: Specify (milestone 2 template generator slice)
+Active feature: milestone-2-template-generator-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -251,9 +251,16 @@ Active feature: milestone-2-ui-shell-slice
   - `npx nx run app-crm-console:build`
   - `npx nx run app-owner-console:serve` (HTTP `200` on `127.0.0.1:4401`)
   - `npx nx run app-crm-console:serve` (HTTP `200` on `127.0.0.1:4402`)
+- Milestone 2 UI shell slice checkpoint committed and pushed:
+  - commit `865e283`
+  - branch `main` synchronized with `origin/main`
+- Opened new feature docs for template generator/playbook:
+  - `.specs/features/milestone-2-template-generator-slice/spec.md`
+  - `.specs/features/milestone-2-template-generator-slice/design.md`
+  - `.specs/features/milestone-2-template-generator-slice/tasks.md`
 
 ## Next Checkpoint
-Open next Milestone 2 slice for SaaS template generator/playbook after UI shell baseline closure.
+Complete draft-to-approved cycle for `milestone-2-template-generator-slice` and start implementation task `M2T-001`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

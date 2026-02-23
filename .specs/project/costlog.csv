@@ -77,3 +77,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,governance,M1X-001..003 milestone 1 exit checklist closure and transition governance
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M2U-001..002 M2U-005 visual shell dual layout and palette tokenization for owner/crm consoles
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M2U-003..004 static build serve toolchain wiring and validation for owner/crm consoles
+2026-02-23,internal,engineering-time,local,0.00,0.00,specification,M2T-PLAN draft kickoff for milestone-2 template generator slice
