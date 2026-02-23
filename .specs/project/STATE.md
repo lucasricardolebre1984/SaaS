@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Governance Closure (milestone 1 exit checklist slice)
-Active feature: milestone-1-exit-checklist-slice
+Active phase: Implement (milestone 2 ui shell slice)
+Active feature: milestone-2-ui-shell-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -238,9 +238,22 @@ Active feature: milestone-1-exit-checklist-slice
 - Roadmap transitioned:
   - Milestone 1 marked completed
   - Milestone 2 marked current
+- Opened `milestone-2-ui-shell-slice` to replace console placeholders with runnable visual shell for Module 01 and Module 02.
+- Milestone 2 UI shell now includes dual layout system for both consoles:
+  - `fabio2` parity mode (legacy visual baseline)
+  - `studio` premium mode (modern AI-first visual direction)
+- Visual tokenization added for clone-ready branding with palette presets (`ocean`, `forest`, `sunset`) and tenant theme hooks in console runtime.
+- M2U-003 completed: real static toolchain wired for UI apps:
+  - `tools/build-static-app.mjs` added
+  - `app-owner-console` and `app-crm-console` `build/serve` Nx targets now run real commands
+- M2U-004 completed with validation evidence:
+  - `npx nx run app-owner-console:build`
+  - `npx nx run app-crm-console:build`
+  - `npx nx run app-owner-console:serve` (HTTP `200` on `127.0.0.1:4401`)
+  - `npx nx run app-crm-console:serve` (HTTP `200` on `127.0.0.1:4402`)
 
 ## Next Checkpoint
-Start Milestone 2 shared SaaS UI template shell (owner-console + crm-console real runtime UI).
+Open next Milestone 2 slice for SaaS template generator/playbook after UI shell baseline closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

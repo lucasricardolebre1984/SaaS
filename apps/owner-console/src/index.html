@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="fabio2" data-palette="ocean">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Owner Console | Fabio SaaS</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell-bg"></div>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <h1>FC Solucoes</h1>
+          <p>Owner Concierge</p>
+        </div>
+
+        <nav class="module-nav">
+          <button class="module-nav__item is-active" type="button">01 Chat IA</button>
+          <button class="module-nav__item" type="button">02 CRM WhatsApp</button>
+          <button class="module-nav__item" type="button">03 Clientes</button>
+          <button class="module-nav__item" type="button">04 Agenda</button>
+          <button class="module-nav__item" type="button">05 Cobranca</button>
+        </nav>
+
+        <p class="sidebar-note">
+          Padrao visual institucional para clonar em novos SaaS.
+          Layout e paleta podem ser trocados por tenant sem alterar o core.
+        </p>
+      </aside>
+
+      <div class="content">
+        <header class="topbar">
+          <div class="topbar__left">
+            <button id="mobileMenuBtn" class="menu-btn" type="button" aria-label="Abrir menu">Menu</button>
+            <div>
+              <p class="brand-caption">FC Solucoes</p>
+              <h2>Chat IA VIVA</h2>
+            </div>
+          </div>
+
+          <div class="topbar__right">
+            <label>
+              API
+              <input id="apiBase" value="http://127.0.0.1:4300" />
+            </label>
+            <label>
+              Tenant
+              <input id="tenantId" value="tenant_automania" />
+            </label>
+            <label>
+              Session
+              <input id="sessionId" />
+            </label>
+            <label>
+              Layout
+              <select id="layoutSelect">
+                <option value="fabio2">Fabio2</option>
+                <option value="studio">Studio</option>
+              </select>
+            </label>
+            <label>
+              Paleta
+              <select id="paletteSelect">
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+                <option value="sunset">Sunset</option>
+              </select>
+            </label>
+            <button id="applyTenantThemeBtn" class="btn btn--ghost" type="button">Tema Tenant</button>
+            <button id="healthBtn" class="btn btn--ghost" type="button">Health</button>
+            <span id="healthStatus" class="status-pill">idle</span>
+          </div>
+        </header>
+
+        <main class="workspace">
+          <section class="chat-panel card">
+            <header class="card__header">
+              <h3>Chat do Proprietario</h3>
+              <div class="card__actions">
+                <button id="continuousBtn" class="btn btn--ghost" type="button">Ativar Continuo</button>
+                <span id="continuousState" class="status-pill">one-shot</span>
+              </div>
+            </header>
+
+            <div id="messages" class="messages">
+              <article class="msg msg--assistant">
+                Console iniciado. Envie uma instrucao para orquestrar os modulos 2-5.
+              </article>
+            </div>
+
+            <form id="chatForm" class="composer">
+              <input id="messageInput" placeholder="Ex.: criar cobranca e avisar no WhatsApp" autocomplete="off" />
+              <button class="btn" type="submit">Enviar</button>
+            </form>
+          </section>
+
+          <aside class="voice-panel card">
+            <header class="card__header">
+              <h3>Avatar Continuo</h3>
+              <button id="simulateVoiceBtn" class="btn btn--ghost" type="button">Simular Voz</button>
+            </header>
+
+            <div class="avatar" id="avatar" data-state="idle">
+              <video
+                class="avatar__video avatar__video--idle"
+                src="./avatar/assets/brain-idle.webm"
+                autoplay
+                loop
+                muted
+                playsinline
+              ></video>
+              <video
+                class="avatar__video avatar__video--speaking"
+                src="./avatar/assets/brain-speaking.webm"
+                autoplay
+                loop
+                muted
+                playsinline
+              ></video>
+            </div>
+
+            <div class="voice-panel__meta">
+              <p id="lastRun">Sem interacao ainda.</p>
+              <p class="muted">Modo continuo ligado ao avatar para experiencia de voz assistida.</p>
+            </div>
+          </aside>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

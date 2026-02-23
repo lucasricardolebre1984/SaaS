@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="fabio2" data-palette="ocean">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM Console | Fabio SaaS</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell-bg"></div>
+
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <h1>FC Solucoes</h1>
+          <p>CRM WhatsApp</p>
+        </div>
+
+        <nav class="module-nav">
+          <button class="module-nav__item" type="button">01 Chat IA</button>
+          <button class="module-nav__item is-active" type="button">02 CRM WhatsApp</button>
+          <button class="module-nav__item" type="button">03 Clientes</button>
+          <button class="module-nav__item" type="button">04 Agenda</button>
+          <button class="module-nav__item" type="button">05 Cobranca</button>
+        </nav>
+
+        <p class="sidebar-note">
+          Operacao de funil, follow-up e handoff para WhatsApp concierge.
+        </p>
+      </aside>
+
+      <div class="content">
+        <header class="topbar">
+          <div class="topbar__left">
+            <button id="mobileMenuBtn" class="menu-btn" type="button" aria-label="Abrir menu">Menu</button>
+            <div>
+              <p class="brand-caption">Modulo 02</p>
+              <h2>CRM WhatsApp</h2>
+            </div>
+          </div>
+
+          <div class="topbar__right">
+            <label>API<input id="apiBase" value="http://127.0.0.1:4300" /></label>
+            <label>Tenant<input id="tenantId" value="tenant_automania" /></label>
+            <label>
+              Layout
+              <select id="layoutSelect">
+                <option value="fabio2">Fabio2</option>
+                <option value="studio">Studio</option>
+              </select>
+            </label>
+            <label>
+              Paleta
+              <select id="paletteSelect">
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+                <option value="sunset">Sunset</option>
+              </select>
+            </label>
+            <button id="applyTenantThemeBtn" class="btn btn--ghost" type="button">Tema Tenant</button>
+            <button id="reloadBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </header>
+
+        <main class="workspace">
+          <section class="main-grid">
+            <section class="kpis">
+              <article class="kpi card"><h3>New</h3><strong id="kpi-new">0</strong></article>
+              <article class="kpi card"><h3>Qualified</h3><strong id="kpi-qualified">0</strong></article>
+              <article class="kpi card"><h3>Proposal</h3><strong id="kpi-proposal">0</strong></article>
+              <article class="kpi card"><h3>Won</h3><strong id="kpi-won">0</strong></article>
+              <article class="kpi card"><h3>Lost</h3><strong id="kpi-lost">0</strong></article>
+            </section>
+
+            <section class="card leads-card">
+              <header class="card__header">
+                <h3>Leads</h3>
+                <span id="leadCount" class="status-pill">0 items</span>
+              </header>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Telefone</th>
+                      <th>Canal</th>
+                      <th>Stage</th>
+                    </tr>
+                  </thead>
+                  <tbody id="leadRows">
+                    <tr><td colspan="4" class="empty">Sem dados carregados.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <aside class="side-stack">
+            <section class="card">
+              <header class="card__header">
+                <h3>Novo Lead</h3>
+              </header>
+
+              <form id="leadForm" class="form">
+                <label>Nome<input id="displayName" required placeholder="Lead Exemplo" /></label>
+                <label>Telefone E.164<input id="phone" required value="+5511999999999" /></label>
+                <label>Canal
+                  <select id="sourceChannel">
+                    <option value="whatsapp">whatsapp</option>
+                    <option value="web">web</option>
+                    <option value="manual">manual</option>
+                  </select>
+                </label>
+                <label>Stage
+                  <select id="stage">
+                    <option value="new">new</option>
+                    <option value="qualified">qualified</option>
+                    <option value="proposal">proposal</option>
+                    <option value="won">won</option>
+                    <option value="lost">lost</option>
+                  </select>
+                </label>
+                <button class="btn" type="submit">Criar Lead</button>
+                <p id="formStatus" class="status">Aguardando acao.</p>
+              </form>
+            </section>
+
+            <section class="card insights-card">
+              <header class="card__header">
+                <h3>Orquestracao IA</h3>
+              </header>
+              <div class="insights">
+                <p><strong>Handoff:</strong> Owner concierge despacha follow-up para persona WhatsApp.</p>
+                <p><strong>Automacao:</strong> Cobranca e lembrete por etapa do funil.</p>
+                <p><strong>Saida:</strong> Eventos auditaveis em contratos padrao do modulo.</p>
+              </div>
+            </section>
+          </aside>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -7,14 +7,15 @@
   "targets": {
     "build": {
       "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/owner-console"],
       "options": {
-        "command": "echo owner-console build skeleton"
+        "command": "node tools/build-static-app.mjs --src apps/owner-console/src --out dist/apps/owner-console"
       }
     },
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "echo owner-console serve skeleton"
+        "command": "node tools/serve-static-app.mjs --root apps/owner-console/src --host 127.0.0.1 --port 4401"
       }
     }
   }
