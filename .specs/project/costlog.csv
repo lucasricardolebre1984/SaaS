@@ -26,3 +26,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-004 module 02 lead conversion mapper
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-005 customer lifecycle event emission and trace validation
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M03-006 governance and checkpoint closure for module 03 slice
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M04-000 module 04 agenda slice specs kickoff

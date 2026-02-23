@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement + Validate (module 03 clientes slice)
-Active feature: mod-03-clientes-slice
+Active phase: Specify (module 04 agenda slice)
+Active feature: mod-04-agenda-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -62,9 +62,10 @@ Active feature: mod-03-clientes-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened `mod-04-agenda-slice` with draft `spec/design/tasks` for contract-first agenda migration.
 
 ## Next Checkpoint
-Open module 04 (Agenda) migration slice specs and apply the same contract-first execution pattern.
+Approve `mod-04-agenda-slice` artifacts and start `M04-001`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

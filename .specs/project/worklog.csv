@@ -30,3 +30,4 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-23,23:59,23:59,0.25,Implement,mod-03-clientes-slice,M03-004,pair,done,Added deterministic lead conversion mapper from module 02 to module 03 contracts
 2026-02-23,23:59,23:59,0.25,Implement,mod-03-clientes-slice,M03-005,pair,done,Added customer lifecycle orchestration events with correlation trace coverage
 2026-02-23,23:59,23:59,0.15,Implement,mod-03-clientes-slice,M03-006,pair,done,Updated state/worklog/costlog and validated runtime+contract+postgres smoke gates
+2026-02-23,23:59,23:59,0.25,Specify,mod-04-agenda-slice,M04-000,pair,done,Opened draft spec/design/tasks for module 04 agenda migration slice
