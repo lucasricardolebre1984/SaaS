@@ -62,3 +62,7 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-23,23:59,23:59,0.65,Implement,mod-02-campaign-followup-slice,M02A-003,pair,done,Implemented campaign and followup runtime endpoints plus followup worker
 2026-02-23,23:59,23:59,0.25,Implement,mod-02-campaign-followup-slice,M02A-004,pair,done,Expanded orchestration events and executable contract coverage
 2026-02-23,23:59,23:59,0.20,Implement,mod-02-campaign-followup-slice,M02A-005,pair,done,Validated gates and closed governance checkpoint for mod 02 advanced slice
+2026-02-23,23:59,23:59,0.20,Implement,mod-01-rag-vector-ready-slice,M01V-001,pair,done,Updated retrieval contracts for vector-ready query and hybrid response scores
+2026-02-23,23:59,23:59,0.35,Implement,mod-01-rag-vector-ready-slice,M01V-002,pair,done,Implemented deterministic hybrid lexical vector scorer in context retrieval service
+2026-02-23,23:59,23:59,0.25,Implement,mod-01-rag-vector-ready-slice,M01V-003,pair,done,Added vector-ready runtime tests and malformed embedding validation coverage
+2026-02-23,23:59,23:59,0.10,Implement,mod-01-rag-vector-ready-slice,M01V-004,pair,done,Validated gates and closed governance metrics checkpoint for mod 01 vector-ready slice

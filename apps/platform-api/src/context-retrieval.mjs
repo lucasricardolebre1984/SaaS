@@ -6,6 +6,8 @@ function clamp01(value) {
   return number;
 }
 
+const VECTOR_DIM = 24;
+
 function tokenize(text) {
   return String(text ?? '')
     .toLowerCase()
@@ -27,7 +29,63 @@ function parseTopK(value) {
   return Math.max(1, Math.min(Math.floor(n), 20));
 }
 
-export function scoreMemoryEntry(entry, query = {}) {
+function hashToken(token) {
+  let hash = 2166136261;
+  for (let i = 0; i < token.length; i += 1) {
+    hash ^= token.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function normalizeVector(vector) {
+  const source = Array.isArray(vector) ? vector : [];
+  const values = source
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+  if (values.length === 0) {
+    return [];
+  }
+
+  const norm = Math.sqrt(values.reduce((acc, value) => acc + (value * value), 0));
+  if (!Number.isFinite(norm) || norm <= 0) {
+    return values.map(() => 0);
+  }
+  return values.map((value) => value / norm);
+}
+
+function semanticVectorFromText(text, tags = []) {
+  const vector = new Array(VECTOR_DIM).fill(0);
+  const tokens = [...tokenize(text), ...tags.map((item) => String(item).toLowerCase())];
+  if (tokens.length === 0) {
+    return vector;
+  }
+
+  for (const token of tokens) {
+    const h = hashToken(token);
+    const idx = h % VECTOR_DIM;
+    const sign = (h & 1) === 0 ? 1 : -1;
+    vector[idx] += sign;
+  }
+  return normalizeVector(vector);
+}
+
+function cosineSimilarity(a, b) {
+  const left = normalizeVector(a);
+  const right = normalizeVector(b);
+  if (left.length === 0 || right.length === 0) {
+    return 0;
+  }
+
+  const length = Math.min(left.length, right.length);
+  let dot = 0;
+  for (let i = 0; i < length; i += 1) {
+    dot += (left[i] * right[i]);
+  }
+  return clamp01((dot + 1) / 2);
+}
+
+export function scoreMemoryEntry(entry, query = {}, strategy = 'lexical-salience-v1') {
   const queryTokens = unique(tokenize(query.text));
   const entryTokens = unique(tokenize(entry.content));
   const matchedTerms = queryTokens.length > 0
@@ -43,14 +101,29 @@ export function scoreMemoryEntry(entry, query = {}) {
   const tagOverlap = queryTags.length > 0 ? matchedTags.length / queryTags.length : 0;
 
   const salience = clamp01(entry.salience_score);
-  let score = (termOverlap * 0.55) + (tagOverlap * 0.25) + (salience * 0.2);
+  let lexicalScore = (termOverlap * 0.55) + (tagOverlap * 0.25) + (salience * 0.2);
   if (entry.status === 'promoted') {
-    score += 0.05;
+    lexicalScore += 0.05;
   }
-  score = clamp01(score);
+  lexicalScore = clamp01(lexicalScore);
+
+  const wantsHybrid = strategy === 'hybrid-lexical-vector-v1';
+  const queryVector = Array.isArray(query.query_embedding)
+    ? query.query_embedding
+    : semanticVectorFromText(query.text, query.tags ?? []);
+  const entryVector = Array.isArray(entry.embedding_vector)
+    ? entry.embedding_vector
+    : semanticVectorFromText(entry.content, entry.tags ?? []);
+  const vectorScore = wantsHybrid ? cosineSimilarity(queryVector, entryVector) : 0;
+
+  const score = wantsHybrid
+    ? clamp01((lexicalScore * 0.75) + (vectorScore * 0.25))
+    : lexicalScore;
 
   return {
     score,
+    lexical_score: lexicalScore,
+    vector_score: vectorScore,
     matched_terms: matchedTerms,
     matched_tags: matchedTags,
     term_overlap: termOverlap,
@@ -59,7 +132,10 @@ export function scoreMemoryEntry(entry, query = {}) {
 }
 
 export function retrieveContextByScoring(entries, query = {}) {
-  const strategy = 'lexical-salience-v1';
+  const requestedStrategy = String(query.strategy ?? 'lexical-salience-v1');
+  const strategy = requestedStrategy === 'vector-ready' || requestedStrategy === 'hybrid-lexical-vector-v1'
+    ? 'hybrid-lexical-vector-v1'
+    : 'lexical-salience-v1';
   const topK = parseTopK(query.top_k);
   const minScore = clamp01(query.min_score ?? 0);
   const includeCandidates = query.include_candidates === true;
@@ -74,7 +150,7 @@ export function retrieveContextByScoring(entries, query = {}) {
         : entry.status === 'promoted'
     ))
     .map((entry) => {
-      const score = scoreMemoryEntry(entry, query);
+      const score = scoreMemoryEntry(entry, query, strategy);
       return {
         entry,
         ...score
@@ -98,6 +174,8 @@ export function retrieveContextByScoring(entries, query = {}) {
       source: item.entry.source,
       status: item.entry.status,
       salience_score: item.entry.salience_score,
+      lexical_score: item.lexical_score,
+      vector_score: item.vector_score,
       score: item.score,
       matched_terms: item.matched_terms,
       matched_tags: item.matched_tags,

@@ -458,6 +458,82 @@ test('owner context retrieval validates malformed request', async () => {
   assert.equal(body.error, 'validation_error');
 });
 
+test('owner context retrieval supports vector-ready hybrid strategy', async () => {
+  const createRes = await fetch(`${baseUrl}/v1/owner-concierge/memory/entries`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validOwnerMemoryCreateRequest({
+      request_id: '31a88cf0-eb45-4dcb-9ad5-b4388de6b489',
+      memory: {
+        memory_id: 'a5bb1964-dbf5-4e4e-af4f-be87696f500e',
+        external_key: 'memory-ext-vector-001',
+        source: 'user_message',
+        content: 'Cliente premium pediu proposta detalhada',
+        tags: ['premium', 'proposta'],
+        salience_score: 0.9
+      }
+    }))
+  });
+  assert.equal(createRes.status, 200);
+  const createBody = await createRes.json();
+
+  const promoteRes = await fetch(`${baseUrl}/v1/owner-concierge/context/promotions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: '704d1ed6-43a4-45a0-9115-f97a6e4f0de5',
+        tenant_id: 'tenant_automania',
+        memory_id: createBody.response.entry.memory_id,
+        action: 'promote'
+      }
+    })
+  });
+  assert.equal(promoteRes.status, 200);
+
+  const retrievalRes = await fetch(`${baseUrl}/v1/owner-concierge/context/retrieve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: '32056d11-579a-4fdd-9d94-0d1f8f085dcf',
+        tenant_id: 'tenant_automania',
+        query: {
+          text: 'proposta cliente vip',
+          strategy: 'vector-ready',
+          top_k: 3
+        }
+      }
+    })
+  });
+  assert.equal(retrievalRes.status, 200);
+  const retrievalBody = await retrievalRes.json();
+  assert.equal(retrievalBody.retrieval.strategy, 'hybrid-lexical-vector-v1');
+  assert.ok(retrievalBody.retrieval.items.length >= 1);
+  assert.ok(typeof retrievalBody.retrieval.items[0].lexical_score === 'number');
+  assert.ok(typeof retrievalBody.retrieval.items[0].vector_score === 'number');
+});
+
+test('owner context retrieval rejects invalid query_embedding vector', async () => {
+  const res = await fetch(`${baseUrl}/v1/owner-concierge/context/retrieve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: '6316c69b-5da9-4f93-b6d2-977fdbec3888',
+        tenant_id: 'tenant_automania',
+        query: {
+          text: 'teste embedding curto',
+          query_embedding: [0.1, 0.2]
+        }
+      }
+    })
+  });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.error, 'validation_error');
+});
+
 test('owner memory promotion rejects invalid transition', async () => {
   const createRes = await fetch(`${baseUrl}/v1/owner-concierge/memory/entries`, {
     method: 'POST',

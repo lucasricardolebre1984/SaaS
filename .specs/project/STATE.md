@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 02 campaign followup slice)
-Active feature: mod-02-campaign-followup-slice
+Active phase: Implement (module 01 rag vector-ready slice)
+Active feature: mod-01-rag-vector-ready-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -154,9 +154,21 @@ Active feature: mod-02-campaign-followup-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-01-rag-vector-ready-slice` with deterministic hybrid lexical+vector retrieval strategy.
+- Module 01 retrieval contracts updated to support vector-ready query hints and hybrid response scoring fields (`lexical_score`, `vector_score`).
+- Retrieval strategy now supports:
+  - `lexical-salience-v1` (compatibility path)
+  - `hybrid-lexical-vector-v1` (requested by `vector-ready`/hybrid strategy flag)
+- Runtime retrieval tests expanded with:
+  - vector-ready hybrid retrieval path
+  - malformed query embedding validation path
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 02 campaign/follow-up closure.
+Open next prioritized migration slice after module 01 vector-ready retrieval closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
