@@ -23,7 +23,7 @@ Status update:
 - Exit criteria achieved (contracts + runtime skeleton + contract-check gate).
 - Ready to execute Milestone 1 implementation slices.
 
-## Milestone 1 - Core Platform Migration (current)
+## Milestone 1 - Core Platform Migration (completed)
 Objective: Bring core domains from fabio2 into modular architecture.
 
 Target domains:
@@ -39,7 +39,11 @@ Exit criteria:
 - CI quality gates stable
 - No regression in key user flows
 
-## Milestone 2 - Shared SaaS Template
+Status update:
+- Exit checklist closed in `.specs/project/MILESTONE-1-EXIT-CHECKLIST.md`.
+- Ready to start Milestone 2 implementation stream.
+
+## Milestone 2 - Shared SaaS Template (current)
 Objective: Make this repository reusable as SaaS starter kit.
 
 Deliverables:

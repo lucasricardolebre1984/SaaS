@@ -3,9 +3,10 @@
 SaaS base institucional da Automania AI (Nx monorepo em construção).
 
 ## Status
-- Fase atual: `Implement + Validate (contracts foundation)`
-- Feature ativa: `saas-standard-v1`
-- Foundation `STD-001..STD-007`: concluída
+- Fase atual: `Governance Closure (Milestone 1 exit checklist)`
+- Feature ativa: `milestone-1-exit-checklist-slice`
+- Milestone 1: concluído (ver `.specs/project/MILESTONE-1-EXIT-CHECKLIST.md`)
+- Próximo marco: `Milestone 2 - Shared SaaS Template`
 
 ## Estrutura principal
 - `apps/`: aplicações do workspace

@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 01 owner memory reembed hardening slice)
-Active feature: mod-01-owner-memory-reembed-hardening-slice
+Active phase: Governance Closure (milestone 1 exit checklist slice)
+Active feature: milestone-1-exit-checklist-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -233,9 +233,14 @@ Active feature: mod-01-owner-memory-reembed-hardening-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Milestone 1 exit checklist closed with explicit GO decision:
+  - `.specs/project/MILESTONE-1-EXIT-CHECKLIST.md`
+- Roadmap transitioned:
+  - Milestone 1 marked completed
+  - Milestone 2 marked current
 
 ## Next Checkpoint
-Close final Milestone 1 hardening checklist and start Milestone 2 shared SaaS UI template shell.
+Start Milestone 2 shared SaaS UI template shell (owner-console + crm-console real runtime UI).
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
