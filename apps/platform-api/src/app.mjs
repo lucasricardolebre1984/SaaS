@@ -42,6 +42,7 @@ import { createBillingStore } from './billing-store.mjs';
 import { createLeadStore } from './lead-store.mjs';
 import { createCrmAutomationStore } from './crm-automation-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
+import { createOwnerMemoryMaintenanceStore } from './owner-memory-maintenance-store.mjs';
 import { createEmbeddingProvider } from './embedding-provider.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
@@ -814,6 +815,14 @@ function ownerMemoryInfo(store, embeddingProvider) {
   };
 }
 
+function ownerMemoryMaintenanceInfo(store) {
+  return {
+    backend: 'file',
+    storage_dir: store?.storageDir ?? null,
+    schedules_path: store?.schedulesFilePath ?? null
+  };
+}
+
 function parseMaintenanceEmbeddingMode(value) {
   if (value == null) return null;
   const mode = String(value).toLowerCase();
@@ -821,6 +830,14 @@ function parseMaintenanceEmbeddingMode(value) {
     return mode;
   }
   return null;
+}
+
+function parseMaintenanceLimit(value, fallback = 50) {
+  const requested = Number(value ?? fallback);
+  if (Number.isFinite(requested) && requested > 0) {
+    return Math.min(Math.floor(requested), 500);
+  }
+  return fallback;
 }
 
 export function createApp(options = {}) {
@@ -879,6 +896,9 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const ownerMemoryMaintenanceStore = createOwnerMemoryMaintenanceStore({
+    storageDir: options.ownerMemoryMaintenanceStorageDir
+  });
   const ownerEmbeddingProviderConfig = {
     mode: options.ownerEmbeddingMode,
     openaiApiKey: options.openaiApiKey,
@@ -899,6 +919,115 @@ export function createApp(options = {}) {
     policyPath: options.taskRoutingPolicyPath
   });
 
+  async function runOwnerMemoryReembedBatch(input = {}) {
+    const tenantId = String(input.tenant_id ?? '').trim();
+    if (!tenantId) {
+      return { ok: false, code: 'missing_tenant_id' };
+    }
+
+    const mode = parseMaintenanceEmbeddingMode(input.mode);
+    if (input.mode != null && !mode) {
+      return { ok: false, code: 'invalid_mode' };
+    }
+
+    const dryRun = input.dry_run === true;
+    const maxItems = parseMaintenanceLimit(input.limit, 50);
+    const candidates = await ownerMemoryStore.listEntriesMissingEmbedding(tenantId, maxItems);
+    const provider = getOwnerEmbeddingProvider(mode);
+
+    const processed = [];
+    let updated = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    for (const entry of candidates) {
+      if (dryRun) {
+        processed.push({
+          memory_id: entry.memory_id,
+          status: 'dry_run'
+        });
+        continue;
+      }
+
+      let embedding;
+      try {
+        embedding = await provider.resolveMemoryEmbedding({
+          tenant_id: entry.tenant_id,
+          session_id: entry.session_id,
+          memory_id: entry.memory_id,
+          content: entry.content,
+          tags: entry.tags ?? [],
+          embedding_ref: entry.embedding_ref ?? null
+        });
+      } catch (error) {
+        failed += 1;
+        processed.push({
+          memory_id: entry.memory_id,
+          status: 'failed',
+          reason: String(error.message ?? error)
+        });
+        continue;
+      }
+
+      if (!Array.isArray(embedding.embedding_vector) || embedding.embedding_vector.length === 0) {
+        skipped += 1;
+        processed.push({
+          memory_id: entry.memory_id,
+          status: 'skipped',
+          reason: 'embedding_vector_missing'
+        });
+        continue;
+      }
+
+      const updateResult = await ownerMemoryStore.updateEntryEmbedding(
+        entry.tenant_id,
+        entry.memory_id,
+        {
+          embedding_ref: embedding.embedding_ref,
+          embedding_vector: embedding.embedding_vector,
+          metadata_patch: {
+            embedding_backfill: {
+              provider: embedding.provider,
+              model: embedding.model,
+              strategy: embedding.strategy,
+              updated_at: new Date().toISOString()
+            }
+          }
+        }
+      );
+      if (!updateResult.ok) {
+        failed += 1;
+        processed.push({
+          memory_id: entry.memory_id,
+          status: 'failed',
+          reason: updateResult.code
+        });
+        continue;
+      }
+
+      updated += 1;
+      processed.push({
+        memory_id: entry.memory_id,
+        status: 'updated',
+        embedding_ref: updateResult.entry.embedding_ref ?? null
+      });
+    }
+
+    return {
+      ok: true,
+      result: {
+        tenant_id: tenantId,
+        mode: mode ?? ownerEmbeddingProvider.mode,
+        dry_run: dryRun,
+        scanned_count: candidates.length,
+        updated_count: updated,
+        failed_count: failed,
+        skipped_count: skipped,
+        processed
+      }
+    };
+  }
+
   const handler = async function app(req, res) {
     const { method, url } = req;
     const parsedUrl = new URL(url ?? '/', 'http://localhost');
@@ -915,7 +1044,8 @@ export function createApp(options = {}) {
           billing: billingInfo(billingStore),
           crm_leads: leadInfo(leadStore),
           crm_automation: crmAutomationInfo(crmAutomationStore),
-          owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider)
+          owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider),
+          owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore)
         });
       }
 
@@ -1340,111 +1470,125 @@ export function createApp(options = {}) {
           return json(res, 400, { error: 'invalid_json' });
         }
 
+        const batchResult = await runOwnerMemoryReembedBatch(body);
+        if (!batchResult.ok) {
+          return json(res, 400, { error: batchResult.code });
+        }
+        return json(res, 200, batchResult.result);
+      }
+
+      if (method === 'POST' && path === '/internal/maintenance/owner-memory/reembed/schedules') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
         const tenantId = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : '';
         if (!tenantId) {
           return json(res, 400, { error: 'missing_tenant_id' });
         }
 
-        const requestedLimit = Number(body.limit ?? 50);
-        const maxItems = Number.isFinite(requestedLimit) && requestedLimit > 0
-          ? Math.min(Math.floor(requestedLimit), 500)
-          : 50;
-        const dryRun = body.dry_run === true;
         const mode = parseMaintenanceEmbeddingMode(body.mode);
         if (body.mode != null && !mode) {
           return json(res, 400, { error: 'invalid_mode' });
         }
 
-        const candidates = await ownerMemoryStore.listEntriesMissingEmbedding(tenantId, maxItems);
-        const provider = getOwnerEmbeddingProvider(mode);
+        try {
+          const schedule = await ownerMemoryMaintenanceStore.upsertSchedule({
+            tenant_id: tenantId,
+            interval_minutes: body.interval_minutes,
+            limit: body.limit,
+            enabled: body.enabled,
+            mode,
+            run_now: body.run_now === true
+          });
+          return json(res, 200, { schedule });
+        } catch (error) {
+          return json(res, 400, {
+            error: String(error.message ?? error)
+          });
+        }
+      }
 
-        const processed = [];
-        let updated = 0;
+      if (method === 'GET' && path === '/internal/maintenance/owner-memory/reembed/schedules') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        const items = await ownerMemoryMaintenanceStore.listSchedules(tenantId);
+        return json(res, 200, {
+          count: items.length,
+          items
+        });
+      }
+
+      if (method === 'POST' && path === '/internal/maintenance/owner-memory/reembed/schedules/run-due') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const tenantId = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : null;
+        if (body.tenant_id != null && !tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const dryRun = body.dry_run === true;
+        const force = body.force === true;
+        const schedules = await ownerMemoryMaintenanceStore.listRunnableSchedules({
+          tenant_id: tenantId,
+          now_iso: new Date().toISOString(),
+          force
+        });
+
+        let executed = 0;
         let failed = 0;
-        let skipped = 0;
+        const runs = [];
 
-        for (const entry of candidates) {
-          if (dryRun) {
-            processed.push({
-              memory_id: entry.memory_id,
-              status: 'dry_run'
-            });
-            continue;
-          }
-
-          let embedding;
+        for (const schedule of schedules) {
           try {
-            embedding = await provider.resolveMemoryEmbedding({
-              tenant_id: entry.tenant_id,
-              session_id: entry.session_id,
-              memory_id: entry.memory_id,
-              content: entry.content,
-              tags: entry.tags ?? [],
-              embedding_ref: entry.embedding_ref ?? null
+            const run = await runOwnerMemoryReembedBatch({
+              tenant_id: schedule.tenant_id,
+              limit: schedule.limit,
+              mode: schedule.mode,
+              dry_run: dryRun
             });
+            if (!run.ok) {
+              failed += 1;
+              runs.push({
+                tenant_id: schedule.tenant_id,
+                status: 'failed',
+                reason: run.code
+              });
+              continue;
+            }
+
+            executed += 1;
+            runs.push({
+              tenant_id: schedule.tenant_id,
+              status: 'completed',
+              ...run.result
+            });
+            if (!dryRun) {
+              await ownerMemoryMaintenanceStore.markScheduleRun(
+                schedule.tenant_id,
+                run.result
+              );
+            }
           } catch (error) {
             failed += 1;
-            processed.push({
-              memory_id: entry.memory_id,
+            runs.push({
+              tenant_id: schedule.tenant_id,
               status: 'failed',
               reason: String(error.message ?? error)
             });
-            continue;
           }
-
-          if (!Array.isArray(embedding.embedding_vector) || embedding.embedding_vector.length === 0) {
-            skipped += 1;
-            processed.push({
-              memory_id: entry.memory_id,
-              status: 'skipped',
-              reason: 'embedding_vector_missing'
-            });
-            continue;
-          }
-
-          const updateResult = await ownerMemoryStore.updateEntryEmbedding(
-            entry.tenant_id,
-            entry.memory_id,
-            {
-              embedding_ref: embedding.embedding_ref,
-              embedding_vector: embedding.embedding_vector,
-              metadata_patch: {
-                embedding_backfill: {
-                  provider: embedding.provider,
-                  model: embedding.model,
-                  strategy: embedding.strategy,
-                  updated_at: new Date().toISOString()
-                }
-              }
-            }
-          );
-          if (!updateResult.ok) {
-            failed += 1;
-            processed.push({
-              memory_id: entry.memory_id,
-              status: 'failed',
-              reason: updateResult.code
-            });
-            continue;
-          }
-
-          updated += 1;
-          processed.push({
-            memory_id: entry.memory_id,
-            status: 'updated',
-            embedding_ref: updateResult.entry.embedding_ref ?? null
-          });
         }
 
         return json(res, 200, {
-          tenant_id: tenantId,
-          mode: mode ?? ownerEmbeddingProvider.mode,
           dry_run: dryRun,
-          scanned_count: candidates.length,
-          updated_count: updated,
+          force,
+          due_count: schedules.length,
+          executed_count: executed,
           failed_count: failed,
-          skipped_count: skipped,
-          processed
+          runs
         });
       }
 
@@ -3102,5 +3246,6 @@ export function createApp(options = {}) {
   handler.leadStore = leadStore;
   handler.crmAutomationStore = crmAutomationStore;
   handler.ownerMemoryStore = ownerMemoryStore;
+  handler.ownerMemoryMaintenanceStore = ownerMemoryMaintenanceStore;
   return handler;
 }

@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 01 owner memory reembedding backfill slice)
-Active feature: mod-01-owner-memory-reembedding-backfill-slice
+Active phase: Implement (module 01 owner memory reembed scheduler slice)
+Active feature: mod-01-owner-memory-reembed-scheduler-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -201,9 +201,22 @@ Active feature: mod-01-owner-memory-reembedding-backfill-slice
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
+- Opened and implemented `mod-01-owner-memory-reembed-scheduler-slice` for controlled tenant schedule execution of maintenance backfill.
+- Owner memory maintenance scheduler endpoints implemented:
+  - `POST /internal/maintenance/owner-memory/reembed/schedules`
+  - `GET /internal/maintenance/owner-memory/reembed/schedules`
+  - `POST /internal/maintenance/owner-memory/reembed/schedules/run-due`
+- Scheduler persistence published in new store:
+  - `apps/platform-api/src/owner-memory-maintenance-store.mjs`
+  - tracks `last_run_at`, `next_run_at`, and `last_result` per tenant
+- Runtime tests expanded with scheduler lifecycle coverage (upsert/list/run-due dry-run and execute).
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 01 re-embedding backfill closure.
+Open next prioritized migration slice after module 01 re-embed scheduler closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

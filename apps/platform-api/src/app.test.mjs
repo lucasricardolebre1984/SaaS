@@ -645,6 +645,183 @@ test('owner memory maintenance reembed supports dry-run and execute by tenant', 
   }
 });
 
+test('owner memory reembed scheduler supports upsert, list, and run-due', async () => {
+  const schedulerStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-embed-scheduler-'));
+  const schedulerOwnerMemoryStorageDir = path.join(schedulerStorageDir, 'owner-memory');
+  const schedulerMaintenanceStorageDir = path.join(schedulerStorageDir, 'owner-memory-maintenance');
+  const schedulerServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: schedulerStorageDir,
+      ownerMemoryStorageDir: schedulerOwnerMemoryStorageDir,
+      ownerMemoryMaintenanceStorageDir: schedulerMaintenanceStorageDir,
+      ownerEmbeddingMode: 'off'
+    })
+  );
+  await new Promise((resolve) => schedulerServer.listen(0, '127.0.0.1', resolve));
+  const schedulerAddress = schedulerServer.address();
+  const schedulerBaseUrl = `http://127.0.0.1:${schedulerAddress.port}`;
+
+  try {
+    const createRes = await fetch(`${schedulerBaseUrl}/v1/owner-concierge/memory/entries`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerMemoryCreateRequest({
+        request_id: '0f37ee0a-6af7-4d4e-8a6d-4b03e6799baf',
+        memory: {
+          memory_id: '434e08a0-9d11-4064-a9e7-5f19f3809f30',
+          external_key: 'scheduler-target-001',
+          source: 'user_message',
+          content: 'entrada antiga para scheduler',
+          tags: ['scheduler'],
+          salience_score: 0.55
+        }
+      }))
+    });
+    assert.equal(createRes.status, 200);
+
+    const upsertRes = await fetch(`${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        tenant_id: 'tenant_automania',
+        interval_minutes: 60,
+        limit: 10,
+        mode: 'local',
+        enabled: true,
+        run_now: true
+      })
+    });
+    assert.equal(upsertRes.status, 200);
+    const upsertBody = await upsertRes.json();
+    assert.equal(upsertBody.schedule.tenant_id, 'tenant_automania');
+    assert.equal(upsertBody.schedule.interval_minutes, 60);
+    assert.equal(upsertBody.schedule.mode, 'local');
+    assert.equal(upsertBody.schedule.enabled, true);
+    assert.ok(upsertBody.schedule.next_run_at);
+
+    const listRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules?tenant_id=tenant_automania`
+    );
+    assert.equal(listRes.status, 200);
+    const listBody = await listRes.json();
+    assert.equal(listBody.count, 1);
+
+    const dryRunRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules/run-due`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'tenant_automania',
+          force: true,
+          dry_run: true
+        })
+      }
+    );
+    assert.equal(dryRunRes.status, 200);
+    const dryRunBody = await dryRunRes.json();
+    assert.equal(dryRunBody.executed_count, 1);
+    assert.equal(dryRunBody.failed_count, 0);
+    assert.equal(dryRunBody.runs[0].updated_count, 0);
+    assert.equal(dryRunBody.runs[0].processed[0].status, 'dry_run');
+
+    const executeRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules/run-due`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'tenant_automania',
+          force: true
+        })
+      }
+    );
+    assert.equal(executeRes.status, 200);
+    const executeBody = await executeRes.json();
+    assert.equal(executeBody.executed_count, 1);
+    assert.equal(executeBody.failed_count, 0);
+    assert.equal(executeBody.runs[0].updated_count, 1);
+    assert.ok(String(executeBody.runs[0].processed[0].embedding_ref).startsWith('local:'));
+
+    const scheduleAfterRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules?tenant_id=tenant_automania`
+    );
+    assert.equal(scheduleAfterRes.status, 200);
+    const scheduleAfterBody = await scheduleAfterRes.json();
+    assert.equal(scheduleAfterBody.items[0].last_result.updated_count, 1);
+    assert.ok(scheduleAfterBody.items[0].last_run_at);
+    assert.ok(scheduleAfterBody.items[0].next_run_at);
+  } finally {
+    await new Promise((resolve, reject) => schedulerServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(schedulerStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('owner memory reembed scheduler validates upsert payload', async () => {
+  const schedulerStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-embed-scheduler-val-'));
+  const schedulerServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: schedulerStorageDir,
+      ownerMemoryStorageDir: path.join(schedulerStorageDir, 'owner-memory'),
+      ownerMemoryMaintenanceStorageDir: path.join(schedulerStorageDir, 'owner-memory-maintenance'),
+      ownerEmbeddingMode: 'off'
+    })
+  );
+  await new Promise((resolve) => schedulerServer.listen(0, '127.0.0.1', resolve));
+  const schedulerAddress = schedulerServer.address();
+  const schedulerBaseUrl = `http://127.0.0.1:${schedulerAddress.port}`;
+
+  try {
+    const missingTenantRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          interval_minutes: 60
+        })
+      }
+    );
+    assert.equal(missingTenantRes.status, 400);
+    const missingTenantBody = await missingTenantRes.json();
+    assert.equal(missingTenantBody.error, 'missing_tenant_id');
+
+    const invalidIntervalRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'tenant_automania',
+          interval_minutes: 0
+        })
+      }
+    );
+    assert.equal(invalidIntervalRes.status, 400);
+    const invalidIntervalBody = await invalidIntervalRes.json();
+    assert.equal(invalidIntervalBody.error, 'invalid_interval_minutes');
+
+    const invalidModeRes = await fetch(
+      `${schedulerBaseUrl}/internal/maintenance/owner-memory/reembed/schedules`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'tenant_automania',
+          interval_minutes: 60,
+          mode: 'bad-mode'
+        })
+      }
+    );
+    assert.equal(invalidModeRes.status, 400);
+    const invalidModeBody = await invalidModeRes.json();
+    assert.equal(invalidModeBody.error, 'invalid_mode');
+  } finally {
+    await new Promise((resolve, reject) => schedulerServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(schedulerStorageDir, { recursive: true, force: true });
+  }
+});
+
 test('owner context retrieval validates malformed request', async () => {
   const res = await fetch(`${baseUrl}/v1/owner-concierge/context/retrieve`, {
     method: 'POST',
