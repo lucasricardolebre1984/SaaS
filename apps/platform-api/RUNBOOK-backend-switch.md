@@ -29,6 +29,7 @@ What this does:
    - `POST /v1/owner-concierge/interaction`
    - `POST /v1/owner-concierge/memory/entries`
    - `POST /v1/owner-concierge/context/promotions`
+   - `POST /v1/owner-concierge/context/retrieve`
    - `POST /v1/billing/charges`
    - `POST /v1/billing/charges/:id/collection-request`
    - `POST /v1/billing/payments`

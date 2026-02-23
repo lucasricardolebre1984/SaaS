@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-23
-Active phase: Implement (module 01 owner memory slice)
-Active feature: mod-01-owner-memory-slice
+Active phase: Implement (module 01 rag retrieval slice)
+Active feature: mod-01-rag-retrieval-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -58,6 +58,19 @@ Active feature: mod-01-owner-memory-slice
 - Module 03 runtime implemented with customer store abstraction (file + postgres) and endpoints `POST/GET /v1/customers`.
 - Lead conversion mapper (`mod-02 -> mod-03`) implemented with origin/source validation guards.
 - Orchestration events expanded with `customer.created` and `customer.updated`, preserving correlation trace flow.
+- Runtime and contract gates validated:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
+- Opened and implemented `mod-01-rag-retrieval-slice` with contract-first context retrieval over promoted owner memory.
+- Module 01 retrieval contracts published (`context-retrieval-request`, `context-retrieval-response`) and integrated into contract checks.
+- Runtime retrieval endpoint implemented:
+  - `POST /v1/owner-concierge/context/retrieve`
+- Retrieval strategy baseline added as vector-ready lexical scorer:
+  - strategy `lexical-salience-v1`
+  - combines term overlap, tag overlap, and salience score
+  - returns `embedding_ref` and ranking evidence (`matched_terms`, `matched_tags`, `score`)
+- Postgres smoke flow expanded to cover retrieval checkpoint after memory promotion.
 - Runtime and contract gates validated:
   - `npx nx run app-platform-api:test`
   - `npx nx run contract-tests:contract-checks`
@@ -123,7 +136,7 @@ Active feature: mod-01-owner-memory-slice
   - `npm run smoke:postgres`
 
 ## Next Checkpoint
-Open next prioritized migration slice after module 01 memory closure.
+Open next prioritized migration slice after module 01 retrieval closure.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

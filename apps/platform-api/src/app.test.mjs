@@ -357,12 +357,50 @@ test('owner memory endpoints create/list/promote and emit promotion trace event'
   const summaryBody = await summaryRes.json();
   assert.ok(summaryBody.promoted_count >= 1);
 
+  const retrievalRes = await fetch(`${baseUrl}/v1/owner-concierge/context/retrieve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: 'f5743fb6-7c99-44cf-a4ef-6da105f7b89e',
+        tenant_id: 'tenant_automania',
+        query: {
+          text: 'ligar cliente premium',
+          session_id: sessionId,
+          top_k: 5
+        }
+      }
+    })
+  });
+  assert.equal(retrievalRes.status, 200);
+  const retrievalBody = await retrievalRes.json();
+  assert.equal(retrievalBody.status, 'ok');
+  assert.ok(retrievalBody.retrieval.retrieved_count >= 1);
+  assert.ok(retrievalBody.retrieval.items.some((item) => item.memory_id === createBody.response.entry.memory_id));
+
   const traceRes = await fetch(
     `${baseUrl}/internal/orchestration/trace?correlation_id=${promoteBody.response.orchestration.correlation_id}`
   );
   assert.equal(traceRes.status, 200);
   const traceBody = await traceRes.json();
   assert.ok(traceBody.events.some((item) => item.name === 'owner.context.promoted'));
+});
+
+test('owner context retrieval validates malformed request', async () => {
+  const res = await fetch(`${baseUrl}/v1/owner-concierge/context/retrieve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: '4a946824-32ba-41db-a2f7-a451bbeb5462',
+        tenant_id: 'tenant_automania',
+        query: {}
+      }
+    })
+  });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.error, 'validation_error');
 });
 
 test('owner memory promotion rejects invalid transition', async () => {

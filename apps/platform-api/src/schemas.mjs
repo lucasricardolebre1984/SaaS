@@ -25,6 +25,8 @@ const memoryEntryCreateSchema = readJson('libs/mod-01-owner-concierge/contracts/
 const memoryEntryListSchema = readJson('libs/mod-01-owner-concierge/contracts/memory-entry-list.schema.json');
 const contextPromotionSchema = readJson('libs/mod-01-owner-concierge/contracts/context-promotion.schema.json');
 const contextSummarySchema = readJson('libs/mod-01-owner-concierge/contracts/context-summary.schema.json');
+const contextRetrievalRequestSchema = readJson('libs/mod-01-owner-concierge/contracts/context-retrieval-request.schema.json');
+const contextRetrievalResponseSchema = readJson('libs/mod-01-owner-concierge/contracts/context-retrieval-response.schema.json');
 const evolutionWebhookSchema = readJson('libs/mod-02-whatsapp-crm/integration/evolution-webhook.schema.json');
 const outboundQueueSchema = readJson('libs/mod-02-whatsapp-crm/integration/outbound-queue.schema.json');
 const leadCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-create.schema.json');
@@ -53,6 +55,8 @@ const validateMemoryEntryCreateRequest = ajv.compile(memoryEntryCreateSchema.pro
 const validateMemoryEntryListResponse = ajv.compile(memoryEntryListSchema);
 const validateContextPromotionRequest = ajv.compile(contextPromotionSchema.properties.request);
 const validateContextSummaryResponse = ajv.compile(contextSummarySchema);
+const validateContextRetrievalRequest = ajv.compile(contextRetrievalRequestSchema.properties.request);
+const validateContextRetrievalResponse = ajv.compile(contextRetrievalResponseSchema);
 const validateEvolutionWebhook = ajv.compile(evolutionWebhookSchema);
 const validateOutboundQueue = ajv.compile(outboundQueueSchema);
 const validateLeadCreateRequest = ajv.compile(leadCreateSchema.properties.request);
@@ -148,6 +152,17 @@ export function contextPromotionValid(body) {
 export function contextSummaryValid(body) {
   const ok = validateContextSummaryResponse(body);
   return { ok: Boolean(ok), errors: validateContextSummaryResponse.errors ?? [] };
+}
+
+export function contextRetrievalRequestValid(body) {
+  const ok = validateContextRetrievalRequest(body?.request);
+  const errors = [...(validateContextRetrievalRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function contextRetrievalResponseValid(body) {
+  const ok = validateContextRetrievalResponse(body);
+  return { ok: Boolean(ok), errors: validateContextRetrievalResponse.errors ?? [] };
 }
 
 export function evolutionWebhookValid(body) {

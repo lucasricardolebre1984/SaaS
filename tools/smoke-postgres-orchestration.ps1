@@ -139,6 +139,27 @@ try {
     throw 'Expected promoted status after context promotion.'
   }
 
+  $retrievalPayload = @{
+    request = @{
+      request_id = [guid]::NewGuid().ToString()
+      tenant_id = 'tenant_automania'
+      query = @{
+        text = 'promocao de contexto memoria teste'
+        session_id = $sessionId
+        top_k = 5
+      }
+    }
+  }
+  Write-Host 'Retrieving owner context...'
+  $retrieval = Invoke-RestMethod -Uri "$apiBaseUrl/v1/owner-concierge/context/retrieve" `
+    -Method Post -ContentType 'application/json' -Body ($retrievalPayload | ConvertTo-Json -Depth 8)
+  if ($retrieval.status -ne 'ok') {
+    throw 'Owner context retrieval did not return ok status.'
+  }
+  if ($retrieval.retrieval.retrieved_count -lt 1) {
+    throw 'Expected at least one retrieved context item.'
+  }
+
   $leadPayload = @{
     request = @{
       request_id = [guid]::NewGuid().ToString()

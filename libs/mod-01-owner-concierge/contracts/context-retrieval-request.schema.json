@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-01/context-retrieval-request.schema.json",
+  "title": "Module 01 Context Retrieval Request Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "query": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text": { "type": "string", "minLength": 1 },
+            "session_id": { "type": "string", "format": "uuid" },
+            "tags": { "type": "array", "items": { "type": "string", "minLength": 1 }, "maxItems": 20 },
+            "top_k": { "type": "integer", "minimum": 1, "maximum": 20 },
+            "min_score": { "type": "number", "minimum": 0, "maximum": 1 },
+            "include_candidates": { "type": "boolean" },
+            "include_archived": { "type": "boolean" },
+            "strategy": { "type": "string", "enum": ["lexical-salience-v1", "vector-ready"] }
+          },
+          "required": ["text"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "query"]
+    }
+  },
+  "required": ["request"]
+}

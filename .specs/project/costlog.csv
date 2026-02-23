@@ -48,3 +48,8 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01-003 owner memory runtime endpoints
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01-004 owner context promoted orchestration signal
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01-005 governance and checkpoint closure for module 01 memory slice
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01R-001 module 01 retrieval contracts publication
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01R-002 retrieval scoring service and store wiring
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01R-003 owner context retrieval runtime endpoint
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01R-004 postgres smoke retrieval checkpoint
+2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M01R-005 governance and checkpoint closure for module 01 retrieval slice

@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { randomUUID } from 'node:crypto';
+import { retrieveContextByScoring } from './context-retrieval.mjs';
 
 function assertValidIdentifier(value, fieldName) {
   if (typeof value !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
@@ -290,6 +291,25 @@ export function createPostgresOwnerMemoryStore(options = {}) {
         sessions_count: Number(row.sessions_count ?? 0),
         last_promoted_at: row.last_promoted_at?.toISOString?.() ?? row.last_promoted_at ?? null
       };
+    },
+    async retrieveContext(tenantId, queryOptions = {}) {
+      const params = [tenantId];
+      let where = 'tenant_id = $1';
+      if (queryOptions.session_id) {
+        params.push(queryOptions.session_id);
+        where += ` AND session_id = $${params.length}`;
+      }
+
+      const result = await query(
+        `SELECT *
+         FROM ${entriesTable}
+         WHERE ${where}
+         ORDER BY updated_at DESC
+         LIMIT 500`,
+        params
+      );
+      const entries = result.rows.map(asEntry);
+      return retrieveContextByScoring(entries, queryOptions);
     },
     async close() {
       await ready;

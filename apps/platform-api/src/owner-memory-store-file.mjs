@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { retrieveContextByScoring } from './context-retrieval.mjs';
 
 const ENTRY_STATUSES = new Set(['candidate', 'promoted', 'archived']);
 
@@ -182,6 +183,10 @@ export function createFileOwnerMemoryStore(options = {}) {
         sessions_count: sessions.size,
         last_promoted_at: lastPromotedAt
       };
+    },
+    async retrieveContext(tenantId, query = {}) {
+      const entries = entriesState.items.filter((item) => item.tenant_id === tenantId);
+      return retrieveContextByScoring(entries, query);
     },
     async close() {}
   };

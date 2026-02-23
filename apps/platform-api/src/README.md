@@ -12,6 +12,7 @@ Runtime skeleton placeholder for API orchestration surface.
 - `GET /v1/owner-concierge/memory/entries?tenant_id=...&session_id=...`
 - `POST /v1/owner-concierge/context/promotions`
 - `GET /v1/owner-concierge/context/summary?tenant_id=...`
+- `POST /v1/owner-concierge/context/retrieve`
 - `POST /v1/billing/charges`
 - `PATCH /v1/billing/charges/:id`
 - `POST /v1/billing/charges/:id/collection-request`

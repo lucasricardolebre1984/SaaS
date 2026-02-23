@@ -7,6 +7,8 @@ import {
   chargeListValid,
   chargeUpdateValid,
   contextPromotionValid,
+  contextRetrievalRequestValid,
+  contextRetrievalResponseValid,
   contextSummaryValid,
   customerCreateValid,
   customerLifecycleEventPayloadValid,
@@ -2143,6 +2145,42 @@ export function createApp(options = {}) {
         }
 
         return json(res, 200, summary);
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/context/retrieve') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = contextRetrievalRequestValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const retrieval = await ownerMemoryStore.retrieveContext(request.tenant_id, {
+          ...request.query
+        });
+
+        const response = {
+          request_id: request.request_id,
+          tenant_id: request.tenant_id,
+          status: 'ok',
+          retrieval
+        };
+        const responseValidation = contextRetrievalResponseValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: responseValidation.errors
+          });
+        }
+
+        return json(res, 200, response);
       }
 
       if (method === 'POST' && path === '/v1/owner-concierge/interaction') {

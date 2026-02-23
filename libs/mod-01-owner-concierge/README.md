@@ -9,4 +9,6 @@ Contract artifacts:
 - `contracts/memory-entry-list.schema.json`
 - `contracts/context-promotion.schema.json`
 - `contracts/context-summary.schema.json`
+- `contracts/context-retrieval-request.schema.json`
+- `contracts/context-retrieval-response.schema.json`
 - `contracts/request-response-examples.md`
