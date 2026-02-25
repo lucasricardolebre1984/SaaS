@@ -19,6 +19,10 @@ Definir critério institucional mínimo para decisão `GO/NO-GO` antes de qualqu
    - entrada somente com decisão formal `GO`
 
 ## Mandatory Gates (GO/NO-GO)
+Gate orchestrator (preferred):
+- comando: `npm run preprod:validate`
+- evidência: `tools/reports/preprod-validate-<timestamp>.log`
+
 1. Contract integrity:
    - comando: `npx nx run contract-tests:contract-checks`
    - owner: Engineering

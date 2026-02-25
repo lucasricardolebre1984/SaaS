@@ -82,6 +82,9 @@ Status update:
   - `apps/platform-api/RUNBOOK-production-readiness.md`
   - `.specs/project/OBSERVABILITY-BASELINE-M3.md`
   - `.specs/project/SECRETS-HARDENING-PLAN-M3.md`
+- First execution slice completed:
+  - `milestone-3-operational-hardening-slice`
+  - executable gate command: `npm run preprod:validate`
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

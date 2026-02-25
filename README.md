@@ -3,8 +3,8 @@
 SaaS base institucional da Automania AI (Nx monorepo).
 
 ## Status Atual
-- Milestone atual: `Milestone 3 - Production Readiness (planning)`
-- Slice ativo: `milestone-3-production-readiness-planning` (planning concluído; pronto para execução)
+- Milestone atual: `Milestone 3 - Production Readiness (execution)`
+- Slice ativo: `milestone-3-operational-hardening-slice` (concluído)
 - Checkpoints recentes:
   - `feat(m2): owner settings persona prompts and contract propagation` (`5b2b7ce`)
   - `chore(governance): log postgres smoke validation and isolation evidence` (`0d72fb6`)
@@ -43,6 +43,11 @@ npx nx run app-owner-console:build
 Smoke completo com Postgres:
 ```powershell
 npm run smoke:postgres
+```
+
+Gate único de pré-produção (orquestra todos os checks):
+```powershell
+npm run preprod:validate
 ```
 
 Nota de isolamento: o smoke deste repositório usa stack Docker `fabio-postgres-smoke` e porta host `55432`, sem conflito com `fabio2` (`5432`).

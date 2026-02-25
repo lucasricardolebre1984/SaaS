@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Planning checkpoint closed (Milestone 3)
-Active feature: milestone-3-production-readiness-planning (completed)
+Active phase: Implement checkpoint closed (Milestone 3 operational hardening slice)
+Active feature: milestone-3-operational-hardening-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -310,13 +310,18 @@ Active feature: milestone-3-production-readiness-planning (completed)
 - M3P-005 completed:
   - governance planning checkpoint closed for Milestone 3 readiness planning
   - outputs updated in `STATE`, `worklog`, `costlog`
+- Opened and completed `milestone-3-operational-hardening-slice`:
+  - created gate orchestrator `npm run preprod:validate` (`tools/preprod-validate.ps1`)
+  - aligned runbook/checklist to executable preprod gate
+  - executed full validation with success and generated report:
+    - `tools/reports/preprod-validate-20260225-004810.log`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
 
 ## Next Checkpoint
-Open Milestone 3 implementation slice (operational hardening execution) with new spec/design/tasks.
+Open next Milestone 3 execution slice for CI integration of `preprod:validate`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

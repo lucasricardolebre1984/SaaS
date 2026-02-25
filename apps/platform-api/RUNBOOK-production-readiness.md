@@ -10,15 +10,18 @@ Scope: `app-platform-api` + módulos SaaS padrão
 Execute in `C:\projetos\fabio`:
 
 ```powershell
-npx nx run app-platform-api:test
-npx nx run contract-tests:contract-checks
-npm run tenant:validate
-npx nx run app-owner-console:build
-npx nx run app-crm-console:build
-npm run smoke:postgres
+npm run preprod:validate
 ```
 
 Any failure = block deploy.
+
+Report artifact:
+- `tools/reports/preprod-validate-<timestamp>.log`
+
+Optional local fast mode (without docker smoke):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\preprod-validate.ps1 -SkipSmokePostgres
+```
 
 ### 1.2 Release window checklist
 1. Confirm latest `main` commit hash.

@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-3-production-readiness-planning` (completed)
-- Active phase: `Planning checkpoint closed`
-- Immediate checkpoint: open Milestone 3 implementation slice for operational hardening execution.
+- Active feature: `milestone-3-operational-hardening-slice` (completed)
+- Active phase: `Implement checkpoint closed`
+- Immediate checkpoint: open CI integration slice for `preprod:validate`.
