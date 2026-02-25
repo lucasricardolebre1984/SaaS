@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 3 release rollback drill slice)
-Active feature: milestone-3-release-rollback-drill-slice (completed)
+Active phase: Implement checkpoint closed (Milestone 3 owner modules UI slice)
+Active feature: milestone-3-owner-modules-ui-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -338,9 +338,15 @@ Active feature: milestone-3-release-rollback-drill-slice (completed)
     - `npm run rollback:drill -- -SkipPostgresSmoke`
     - `npm run preprod:validate -- -SkipSmokePostgres`
 - `tools/start-day.ps1` now sanitizes active feature names with trailing status suffix (example: ` (completed)`), preventing false missing-doc loads.
+- Opened and completed `milestone-3-owner-modules-ui-slice`:
+  - owner console modules 03/04/05 now have real UI views with forms, list panels, and inline operation status
+  - module 03 wired to `/v1/customers` (`create`, `list`, and detail load from list)
+  - module 04 wired to `/v1/agenda/appointments` and `/v1/agenda/reminders` (`create`, `update`, `list`)
+  - module 05 wired to `/v1/billing/charges`, `/v1/billing/collection-requests`, and `/v1/billing/payments`
+  - preprod gate revalidated (`npm run preprod:validate -- -SkipSmokePostgres`) with pass report at `tools/reports/preprod-validate-20260225-030003.log`
 
 ## Next Checkpoint
-Open Milestone 3 exit/go-no-go closure slice with explicit readiness decision artifact.
+Open Milestone 3 exit/go-no-go closure slice with explicit readiness decision artifact and include Owner Console module 03/04/05 evidence in readiness pack.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

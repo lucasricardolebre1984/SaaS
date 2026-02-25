@@ -232,6 +232,73 @@ body {
   padding: var(--space-4);
 }
 
+.module-workspace {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.module-view {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.module-form {
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.module-form--compact {
+  background: color-mix(in srgb, var(--color-bg-soft) 65%, transparent);
+}
+
+.module-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.module-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.module-status {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  color: var(--color-muted);
+  font-size: 0.86rem;
+}
+
+.module-status.status-error {
+  color: #b91c1c;
+}
+
+.module-inline {
+  padding: var(--space-4);
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.module-inline input {
+  flex: 1;
+  min-width: 240px;
+}
+
+.module-code {
+  margin: 0;
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  max-height: 240px;
+  overflow: auto;
+  background: color-mix(in srgb, var(--color-bg-soft) 72%, transparent);
+  font-size: 0.8rem;
+}
+
 .card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -599,6 +666,15 @@ html[data-layout='studio'] .workspace {
   gap: var(--space-5);
 }
 
+html[data-layout='studio'] .module-form--compact,
+html[data-layout='studio'] .module-code {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+html[data-layout='studio'] .module-status.status-error {
+  color: #fca5a5;
+}
+
 html[data-layout='studio'] .card {
   background: linear-gradient(165deg, rgba(15, 23, 42, 0.62), rgba(15, 23, 42, 0.5));
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -674,6 +750,10 @@ html[data-layout='studio'] .avatar[data-state='speaking'] {
   .settings-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -718,6 +798,10 @@ html[data-layout='studio'] .avatar[data-state='speaking'] {
   }
 
   .settings-grid--wide {
+    grid-template-columns: 1fr;
+  }
+
+  .module-grid {
     grid-template-columns: 1fr;
   }
 }

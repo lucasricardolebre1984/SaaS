@@ -40,7 +40,14 @@ const state = {
   mediaRecorder: null,
   mediaStream: null,
   config: null,
-  settingsUnlocked: false
+  settingsUnlocked: false,
+  moduleData: {
+    customers: [],
+    customerDetail: null,
+    reminders: [],
+    charges: [],
+    appointments: []
+  }
 };
 
 const rootEl = document.documentElement;
@@ -54,10 +61,79 @@ const openSettingsBtn = document.getElementById('openSettingsBtn');
 const settingsLockStatusEl = document.getElementById('settingsLockStatus');
 
 const chatWorkspaceEl = document.getElementById('chatWorkspace');
+const moduleWorkspaceEl = document.getElementById('moduleWorkspace');
 const modulePlaceholderWorkspaceEl = document.getElementById('modulePlaceholderWorkspace');
 const settingsWorkspaceEl = document.getElementById('settingsWorkspace');
 const placeholderTitleEl = document.getElementById('placeholderTitle');
 const placeholderTextEl = document.getElementById('placeholderText');
+
+const moduleClientesViewEl = document.getElementById('moduleClientesView');
+const moduleAgendaViewEl = document.getElementById('moduleAgendaView');
+const moduleBillingViewEl = document.getElementById('moduleBillingView');
+
+const customerCreateForm = document.getElementById('customerCreateForm');
+const customerNameInput = document.getElementById('customerName');
+const customerPhoneInput = document.getElementById('customerPhone');
+const customerEmailInput = document.getElementById('customerEmail');
+const customerOriginSelect = document.getElementById('customerOrigin');
+const customerLeadIdInput = document.getElementById('customerLeadId');
+const customersStatusEl = document.getElementById('customersStatus');
+const customersRefreshBtn = document.getElementById('customersRefreshBtn');
+const customersRowsEl = document.getElementById('customersRows');
+const customerDetailIdInput = document.getElementById('customerDetailId');
+const customerDetailBtn = document.getElementById('customerDetailBtn');
+const customerDetailOutputEl = document.getElementById('customerDetailOutput');
+const customerIdOptionsEl = document.getElementById('customerIdOptions');
+
+const appointmentCreateForm = document.getElementById('appointmentCreateForm');
+const appointmentTitleInput = document.getElementById('appointmentTitle');
+const appointmentDescriptionInput = document.getElementById('appointmentDescription');
+const appointmentStartInput = document.getElementById('appointmentStart');
+const appointmentEndInput = document.getElementById('appointmentEnd');
+const appointmentTimezoneInput = document.getElementById('appointmentTimezone');
+const appointmentStatusInput = document.getElementById('appointmentStatus');
+const appointmentUpdateForm = document.getElementById('appointmentUpdateForm');
+const appointmentUpdateIdInput = document.getElementById('appointmentUpdateId');
+const appointmentUpdateTitleInput = document.getElementById('appointmentUpdateTitle');
+const appointmentUpdateStatusInput = document.getElementById('appointmentUpdateStatus');
+const appointmentUpdateStartInput = document.getElementById('appointmentUpdateStart');
+const appointmentUpdateEndInput = document.getElementById('appointmentUpdateEnd');
+const appointmentsRowsEl = document.getElementById('appointmentsRows');
+const appointmentIdOptionsEl = document.getElementById('appointmentIdOptions');
+const reminderCreateForm = document.getElementById('reminderCreateForm');
+const reminderAppointmentIdInput = document.getElementById('reminderAppointmentId');
+const reminderScheduleInput = document.getElementById('reminderSchedule');
+const reminderChannelInput = document.getElementById('reminderChannel');
+const reminderMessageInput = document.getElementById('reminderMessage');
+const reminderRecipientInput = document.getElementById('reminderRecipient');
+const remindersRefreshBtn = document.getElementById('remindersRefreshBtn');
+const remindersRowsEl = document.getElementById('remindersRows');
+const agendaStatusEl = document.getElementById('agendaStatus');
+
+const chargeCreateForm = document.getElementById('chargeCreateForm');
+const chargeCustomerIdInput = document.getElementById('chargeCustomerId');
+const chargeAmountInput = document.getElementById('chargeAmount');
+const chargeCurrencyInput = document.getElementById('chargeCurrency');
+const chargeDueDateInput = document.getElementById('chargeDueDate');
+const chargeStatusInput = document.getElementById('chargeStatus');
+const chargeUpdateForm = document.getElementById('chargeUpdateForm');
+const chargeUpdateIdInput = document.getElementById('chargeUpdateId');
+const chargeUpdateAmountInput = document.getElementById('chargeUpdateAmount');
+const chargeUpdateDueDateInput = document.getElementById('chargeUpdateDueDate');
+const chargeUpdateStatusInput = document.getElementById('chargeUpdateStatus');
+const collectionRequestForm = document.getElementById('collectionRequestForm');
+const collectionChargeIdInput = document.getElementById('collectionChargeId');
+const collectionPhoneInput = document.getElementById('collectionPhone');
+const collectionMessageInput = document.getElementById('collectionMessage');
+const paymentCreateForm = document.getElementById('paymentCreateForm');
+const paymentChargeIdInput = document.getElementById('paymentChargeId');
+const paymentAmountInput = document.getElementById('paymentAmount');
+const paymentCurrencyInput = document.getElementById('paymentCurrency');
+const paymentStatusInput = document.getElementById('paymentStatus');
+const chargesRefreshBtn = document.getElementById('chargesRefreshBtn');
+const chargesRowsEl = document.getElementById('chargesRows');
+const chargeIdOptionsEl = document.getElementById('chargeIdOptions');
+const billingStatusEl = document.getElementById('billingStatus');
 
 const healthStatusEl = document.getElementById('healthStatus');
 const messagesEl = document.getElementById('messages');
@@ -269,6 +345,18 @@ function moduleMeta(moduleId) {
   return getNavModules().find((item) => item.id === moduleId) ?? SETTINGS_MODULE;
 }
 
+const MODULE_WORKSPACE_IDS = new Set([
+  'mod-03-clientes',
+  'mod-04-agenda',
+  'mod-05-faturamento-cobranca'
+]);
+
+const MODULE_VIEW_BY_ID = {
+  'mod-03-clientes': moduleClientesViewEl,
+  'mod-04-agenda': moduleAgendaViewEl,
+  'mod-05-faturamento-cobranca': moduleBillingViewEl
+};
+
 function renderModuleNav() {
   const items = getNavModules();
   moduleNavEl.innerHTML = items
@@ -283,6 +371,710 @@ function setTopbarLabels() {
   const meta = moduleMeta(state.activeModuleId);
   topModuleTitleEl.textContent = meta.title;
   topTenantLabelEl.textContent = state.config.runtime.tenant_id;
+}
+
+function setModuleStatus(element, text, isError = false) {
+  if (!element) return;
+  element.textContent = text;
+  element.classList.toggle('status-error', Boolean(isError));
+}
+
+function toIsoFromLocal(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return date.toISOString();
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  return date.toLocaleString('pt-BR');
+}
+
+function toCurrency(amount, currency = 'BRL') {
+  const normalized = Number.isFinite(Number(amount)) ? Number(amount) : 0;
+  if (currency === 'BRL') {
+    return normalized.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+  return `${currency} ${normalized.toFixed(2)}`;
+}
+
+function updateDatalist(element, values) {
+  if (!element) return;
+  const uniq = [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))];
+  element.innerHTML = uniq.map((value) => `<option value="${value}"></option>`).join('');
+}
+
+function mergeAppointmentInSession(appointment) {
+  if (!appointment?.appointment_id) return;
+  const index = state.moduleData.appointments.findIndex(
+    (item) => item.appointment_id === appointment.appointment_id
+  );
+  if (index >= 0) {
+    state.moduleData.appointments[index] = appointment;
+  } else {
+    state.moduleData.appointments.unshift(appointment);
+  }
+  state.moduleData.appointments = state.moduleData.appointments.slice(0, 20);
+}
+
+function mergeChargeInSession(charge) {
+  if (!charge?.charge_id) return;
+  const index = state.moduleData.charges.findIndex((item) => item.charge_id === charge.charge_id);
+  if (index >= 0) {
+    state.moduleData.charges[index] = charge;
+  } else {
+    state.moduleData.charges.unshift(charge);
+  }
+  state.moduleData.charges = state.moduleData.charges.slice(0, 30);
+}
+
+function renderCustomersTable() {
+  if (!customersRowsEl) return;
+  if (state.moduleData.customers.length === 0) {
+    customersRowsEl.innerHTML = '<tr><td colspan="5">Sem clientes para este tenant.</td></tr>';
+    updateDatalist(customerIdOptionsEl, []);
+    return;
+  }
+
+  customersRowsEl.innerHTML = state.moduleData.customers
+    .map(
+      (item) => `
+      <tr>
+        <td>${item.display_name ?? '-'}</td>
+        <td>${item.primary_phone ?? '-'}</td>
+        <td>${item.primary_email ?? '-'}</td>
+        <td>${item.status ?? '-'}</td>
+        <td><code>${item.customer_id}</code></td>
+      </tr>
+    `
+    )
+    .join('');
+
+  updateDatalist(
+    customerIdOptionsEl,
+    state.moduleData.customers.map((item) => item.customer_id)
+  );
+}
+
+function renderAppointmentsTable() {
+  if (!appointmentsRowsEl) return;
+  if (state.moduleData.appointments.length === 0) {
+    appointmentsRowsEl.innerHTML = '<tr><td colspan="5">Sem appointments nesta sessao.</td></tr>';
+    updateDatalist(appointmentIdOptionsEl, []);
+    return;
+  }
+
+  appointmentsRowsEl.innerHTML = state.moduleData.appointments
+    .map(
+      (item) => `
+      <tr>
+        <td>${item.title ?? '-'}</td>
+        <td>${formatDateTime(item.start_at)}</td>
+        <td>${item.status ?? '-'}</td>
+        <td>${item.timezone ?? '-'}</td>
+        <td><code>${item.appointment_id}</code></td>
+      </tr>
+    `
+    )
+    .join('');
+
+  updateDatalist(
+    appointmentIdOptionsEl,
+    state.moduleData.appointments.map((item) => item.appointment_id)
+  );
+}
+
+function renderRemindersTable() {
+  if (!remindersRowsEl) return;
+  if (state.moduleData.reminders.length === 0) {
+    remindersRowsEl.innerHTML = '<tr><td colspan="6">Sem reminders para este tenant.</td></tr>';
+    return;
+  }
+
+  remindersRowsEl.innerHTML = state.moduleData.reminders
+    .map(
+      (item) => `
+      <tr>
+        <td><code>${item.reminder_id}</code></td>
+        <td><code>${item.appointment_id}</code></td>
+        <td>${item.channel ?? '-'}</td>
+        <td>${item.status ?? '-'}</td>
+        <td>${formatDateTime(item.schedule_at)}</td>
+        <td>${item.recipient?.phone_e164 ?? '-'}</td>
+      </tr>
+    `
+    )
+    .join('');
+}
+
+function renderChargesTable() {
+  if (!chargesRowsEl) return;
+  if (state.moduleData.charges.length === 0) {
+    chargesRowsEl.innerHTML = '<tr><td colspan="6">Sem cobrancas para este tenant.</td></tr>';
+    updateDatalist(chargeIdOptionsEl, []);
+    return;
+  }
+
+  chargesRowsEl.innerHTML = state.moduleData.charges
+    .map(
+      (item) => `
+      <tr>
+        <td><code>${item.charge_id}</code></td>
+        <td><code>${item.customer_id}</code></td>
+        <td>${toCurrency(item.amount, item.currency)}</td>
+        <td>${item.status ?? '-'}</td>
+        <td>${item.due_date ?? '-'}</td>
+        <td>${item.currency ?? '-'}</td>
+      </tr>
+    `
+    )
+    .join('');
+
+  updateDatalist(
+    chargeIdOptionsEl,
+    state.moduleData.charges.map((item) => item.charge_id)
+  );
+}
+
+function renderModuleWorkspace(moduleId) {
+  Object.values(MODULE_VIEW_BY_ID).forEach((view) => view?.classList.add('hidden'));
+  const activeView = MODULE_VIEW_BY_ID[moduleId];
+  activeView?.classList.remove('hidden');
+}
+
+async function fetchJsonOrThrow(path, options = {}) {
+  const response = await fetch(`${apiBase()}${path}`, options);
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {
+    // no-op
+  }
+
+  if (!response.ok) {
+    const details = Array.isArray(body?.details)
+      ? body.details.map((item) => item.message ?? item.instancePath ?? JSON.stringify(item)).join('; ')
+      : body?.details
+        ? String(body.details)
+        : '';
+    const messageBase = body?.error ?? `HTTP ${response.status}`;
+    const message = details.length > 0 ? `${messageBase}: ${details}` : messageBase;
+    throw new Error(message);
+  }
+
+  return body;
+}
+
+async function refreshCustomers() {
+  try {
+    const body = await fetchJsonOrThrow(`/v1/customers?tenant_id=${encodeURIComponent(tenantId())}`);
+    state.moduleData.customers = Array.isArray(body.items) ? body.items : [];
+    renderCustomersTable();
+    trackModuleSpend('mod-03-clientes', 0.001, 1);
+    setModuleStatus(customersStatusEl, `Clientes carregados: ${state.moduleData.customers.length}`);
+  } catch (error) {
+    setModuleStatus(customersStatusEl, `Erro ao carregar clientes: ${error.message}`, true);
+  }
+}
+
+async function createCustomer(event) {
+  event.preventDefault();
+
+  const origin = customerOriginSelect.value;
+  const sourceModule = origin === 'lead_conversion' ? 'mod-02-whatsapp-crm' : 'mod-01-owner-concierge';
+  const leadId = customerLeadIdInput.value.trim();
+
+  if (origin === 'lead_conversion' && leadId.length === 0) {
+    setModuleStatus(customersStatusEl, 'Lead ID obrigatorio para origem lead_conversion.', true);
+    return;
+  }
+
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      source_module: sourceModule,
+      origin,
+      correlation_id: crypto.randomUUID(),
+      customer: {
+        external_key: `owner-ui-customer-${Date.now()}`,
+        display_name: customerNameInput.value.trim(),
+        primary_phone: customerPhoneInput.value.trim() || undefined,
+        primary_email: customerEmailInput.value.trim() || undefined,
+        status: 'active'
+      }
+    }
+  };
+
+  if (!payload.request.customer.display_name) {
+    setModuleStatus(customersStatusEl, 'Nome do cliente e obrigatorio.', true);
+    return;
+  }
+
+  if (origin === 'lead_conversion') {
+    payload.request.lead = {
+      lead_id: leadId,
+      stage: 'qualified'
+    };
+  }
+
+  try {
+    const body = await fetchJsonOrThrow('/v1/customers', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const customerId = body?.response?.customer?.customer_id;
+    if (customerId) {
+      customerDetailIdInput.value = customerId;
+      chargeCustomerIdInput.value = customerId;
+    }
+    await refreshCustomers();
+    trackModuleSpend('mod-03-clientes', 0.004, 1);
+    setModuleStatus(customersStatusEl, `Cliente ${body?.response?.status ?? 'ok'}: ${customerId ?? '-'}`);
+    customerCreateForm.reset();
+    customerOriginSelect.value = 'manual_owner';
+  } catch (error) {
+    setModuleStatus(customersStatusEl, `Erro ao criar cliente: ${error.message}`, true);
+  }
+}
+
+async function loadCustomerDetail() {
+  const customerId = customerDetailIdInput.value.trim();
+  if (!customerId) {
+    setModuleStatus(customersStatusEl, 'Informe customer_id para consultar detalhe.', true);
+    return;
+  }
+
+  try {
+    const body = await fetchJsonOrThrow(
+      `/v1/customers/${encodeURIComponent(customerId)}?tenant_id=${encodeURIComponent(tenantId())}`
+    );
+    state.moduleData.customerDetail = body.customer ?? null;
+    customerDetailOutputEl.textContent = JSON.stringify(state.moduleData.customerDetail, null, 2);
+    trackModuleSpend('mod-03-clientes', 0.001, 1);
+    setModuleStatus(customersStatusEl, `Detalhe carregado para ${customerId}.`);
+  } catch (error) {
+    setModuleStatus(customersStatusEl, `Erro no detalhe do cliente: ${error.message}`, true);
+  }
+}
+
+async function createAppointment(event) {
+  event.preventDefault();
+
+  const startIso = toIsoFromLocal(appointmentStartInput.value);
+  if (!startIso) {
+    setModuleStatus(agendaStatusEl, 'Data/hora inicial invalida.', true);
+    return;
+  }
+
+  const endIso = toIsoFromLocal(appointmentEndInput.value);
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      source_module: 'mod-01-owner-concierge',
+      correlation_id: crypto.randomUUID(),
+      appointment: {
+        external_key: `owner-ui-appointment-${Date.now()}`,
+        title: appointmentTitleInput.value.trim(),
+        description: appointmentDescriptionInput.value.trim(),
+        start_at: startIso,
+        end_at: endIso ?? undefined,
+        timezone: appointmentTimezoneInput.value.trim() || 'America/Sao_Paulo',
+        status: appointmentStatusInput.value
+      }
+    }
+  };
+
+  if (!payload.request.appointment.title) {
+    setModuleStatus(agendaStatusEl, 'Titulo do appointment e obrigatorio.', true);
+    return;
+  }
+
+  try {
+    const body = await fetchJsonOrThrow('/v1/agenda/appointments', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const appointment = body?.response?.appointment;
+    mergeAppointmentInSession(appointment);
+    renderAppointmentsTable();
+    if (appointment?.appointment_id) {
+      appointmentUpdateIdInput.value = appointment.appointment_id;
+      reminderAppointmentIdInput.value = appointment.appointment_id;
+    }
+    trackModuleSpend('mod-04-agenda', 0.004, 1);
+    setModuleStatus(agendaStatusEl, `Appointment ${body?.response?.status ?? 'ok'}: ${appointment?.appointment_id ?? '-'}`);
+    appointmentCreateForm.reset();
+    appointmentTimezoneInput.value = 'America/Sao_Paulo';
+    appointmentStatusInput.value = 'scheduled';
+  } catch (error) {
+    setModuleStatus(agendaStatusEl, `Erro ao criar appointment: ${error.message}`, true);
+  }
+}
+
+async function updateAppointment(event) {
+  event.preventDefault();
+  const appointmentId = appointmentUpdateIdInput.value.trim();
+  if (!appointmentId) {
+    setModuleStatus(agendaStatusEl, 'Informe appointment_id para atualizar.', true);
+    return;
+  }
+
+  const changes = {};
+  const title = appointmentUpdateTitleInput.value.trim();
+  if (title) changes.title = title;
+  if (appointmentUpdateStatusInput.value) changes.status = appointmentUpdateStatusInput.value;
+  const startIso = toIsoFromLocal(appointmentUpdateStartInput.value);
+  if (startIso) changes.start_at = startIso;
+  const endIso = toIsoFromLocal(appointmentUpdateEndInput.value);
+  if (endIso) changes.end_at = endIso;
+
+  if (Object.keys(changes).length === 0) {
+    setModuleStatus(agendaStatusEl, 'Informe ao menos um campo para atualizar.', true);
+    return;
+  }
+
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      source_module: 'mod-01-owner-concierge',
+      correlation_id: crypto.randomUUID(),
+      changes
+    }
+  };
+
+  try {
+    const body = await fetchJsonOrThrow(`/v1/agenda/appointments/${encodeURIComponent(appointmentId)}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    mergeAppointmentInSession(body?.response?.appointment);
+    renderAppointmentsTable();
+    trackModuleSpend('mod-04-agenda', 0.003, 1);
+    setModuleStatus(agendaStatusEl, `Appointment atualizado: ${appointmentId}`);
+  } catch (error) {
+    setModuleStatus(agendaStatusEl, `Erro ao atualizar appointment: ${error.message}`, true);
+  }
+}
+
+async function createReminder(event) {
+  event.preventDefault();
+  const appointmentId = reminderAppointmentIdInput.value.trim();
+  if (!appointmentId) {
+    setModuleStatus(agendaStatusEl, 'Informe appointment_id para reminder.', true);
+    return;
+  }
+
+  const scheduleIso = toIsoFromLocal(reminderScheduleInput.value);
+  if (!scheduleIso) {
+    setModuleStatus(agendaStatusEl, 'Data/hora do reminder invalida.', true);
+    return;
+  }
+
+  const channel = reminderChannelInput.value;
+  const recipientPhone = reminderRecipientInput.value.trim();
+  if (channel === 'whatsapp' && !/^\+[1-9][0-9]{7,14}$/.test(recipientPhone)) {
+    setModuleStatus(agendaStatusEl, 'Telefone E164 obrigatorio para canal whatsapp.', true);
+    return;
+  }
+
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      source_module: 'mod-04-agenda',
+      correlation_id: crypto.randomUUID(),
+      reminder: {
+        external_key: `owner-ui-reminder-${Date.now()}`,
+        appointment_id: appointmentId,
+        schedule_at: scheduleIso,
+        channel,
+        message: reminderMessageInput.value.trim(),
+        recipient: channel === 'whatsapp' ? { phone_e164: recipientPhone } : {}
+      }
+    }
+  };
+
+  if (!payload.request.reminder.message) {
+    setModuleStatus(agendaStatusEl, 'Mensagem do reminder e obrigatoria.', true);
+    return;
+  }
+
+  try {
+    const body = await fetchJsonOrThrow('/v1/agenda/reminders', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    await refreshReminders();
+    trackModuleSpend('mod-04-agenda', 0.003, 1);
+    setModuleStatus(
+      agendaStatusEl,
+      `Reminder ${body?.response?.status ?? 'ok'}: ${body?.response?.reminder?.reminder_id ?? '-'}`
+    );
+    reminderCreateForm.reset();
+    reminderChannelInput.value = 'whatsapp';
+  } catch (error) {
+    setModuleStatus(agendaStatusEl, `Erro ao criar reminder: ${error.message}`, true);
+  }
+}
+
+async function refreshReminders() {
+  try {
+    const body = await fetchJsonOrThrow(`/v1/agenda/reminders?tenant_id=${encodeURIComponent(tenantId())}`);
+    state.moduleData.reminders = Array.isArray(body.items) ? body.items : [];
+    renderRemindersTable();
+    trackModuleSpend('mod-04-agenda', 0.001, 1);
+    setModuleStatus(agendaStatusEl, `Reminders carregados: ${state.moduleData.reminders.length}`);
+  } catch (error) {
+    setModuleStatus(agendaStatusEl, `Erro ao listar reminders: ${error.message}`, true);
+  }
+}
+
+async function refreshCharges() {
+  try {
+    const body = await fetchJsonOrThrow(`/v1/billing/charges?tenant_id=${encodeURIComponent(tenantId())}`);
+    state.moduleData.charges = Array.isArray(body.items) ? body.items : [];
+    renderChargesTable();
+    trackModuleSpend('mod-05-faturamento-cobranca', 0.001, 1);
+    setModuleStatus(billingStatusEl, `Cobrancas carregadas: ${state.moduleData.charges.length}`);
+  } catch (error) {
+    setModuleStatus(billingStatusEl, `Erro ao listar cobrancas: ${error.message}`, true);
+  }
+}
+
+async function createCharge(event) {
+  event.preventDefault();
+  const customerId = chargeCustomerIdInput.value.trim();
+  if (!customerId) {
+    setModuleStatus(billingStatusEl, 'customer_id e obrigatorio para criar cobranca.', true);
+    return;
+  }
+
+  const amount = Number(chargeAmountInput.value);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    setModuleStatus(billingStatusEl, 'Valor da cobranca deve ser maior que zero.', true);
+    return;
+  }
+
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      source_module: 'mod-05-faturamento-cobranca',
+      correlation_id: crypto.randomUUID(),
+      charge: {
+        external_key: `owner-ui-charge-${Date.now()}`,
+        customer_id: customerId,
+        amount,
+        currency: (chargeCurrencyInput.value || 'BRL').toUpperCase(),
+        due_date: chargeDueDateInput.value || undefined,
+        status: chargeStatusInput.value
+      }
+    }
+  };
+
+  try {
+    const body = await fetchJsonOrThrow('/v1/billing/charges', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const charge = body?.response?.charge;
+    mergeChargeInSession(charge);
+    renderChargesTable();
+    if (charge?.charge_id) {
+      chargeUpdateIdInput.value = charge.charge_id;
+      collectionChargeIdInput.value = charge.charge_id;
+      paymentChargeIdInput.value = charge.charge_id;
+    }
+    trackModuleSpend('mod-05-faturamento-cobranca', 0.004, 1);
+    setModuleStatus(billingStatusEl, `Cobranca ${body?.response?.status ?? 'ok'}: ${charge?.charge_id ?? '-'}`);
+    chargeCreateForm.reset();
+    chargeCurrencyInput.value = 'BRL';
+    chargeStatusInput.value = 'open';
+  } catch (error) {
+    setModuleStatus(billingStatusEl, `Erro ao criar cobranca: ${error.message}`, true);
+  }
+}
+
+async function updateCharge(event) {
+  event.preventDefault();
+  const chargeId = chargeUpdateIdInput.value.trim();
+  if (!chargeId) {
+    setModuleStatus(billingStatusEl, 'Informe charge_id para atualizar.', true);
+    return;
+  }
+
+  const changes = {};
+  const amount = Number(chargeUpdateAmountInput.value);
+  if (Number.isFinite(amount) && amount > 0) {
+    changes.amount = amount;
+  }
+  if (chargeUpdateDueDateInput.value) {
+    changes.due_date = chargeUpdateDueDateInput.value;
+  }
+  if (chargeUpdateStatusInput.value) {
+    changes.status = chargeUpdateStatusInput.value;
+  }
+
+  if (Object.keys(changes).length === 0) {
+    setModuleStatus(billingStatusEl, 'Informe ao menos um campo para update da cobranca.', true);
+    return;
+  }
+
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      source_module: 'mod-05-faturamento-cobranca',
+      correlation_id: crypto.randomUUID(),
+      changes
+    }
+  };
+
+  try {
+    const body = await fetchJsonOrThrow(`/v1/billing/charges/${encodeURIComponent(chargeId)}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    mergeChargeInSession(body?.response?.charge);
+    renderChargesTable();
+    trackModuleSpend('mod-05-faturamento-cobranca', 0.003, 1);
+    setModuleStatus(billingStatusEl, `Cobranca atualizada: ${chargeId}`);
+  } catch (error) {
+    setModuleStatus(billingStatusEl, `Erro ao atualizar cobranca: ${error.message}`, true);
+  }
+}
+
+async function requestChargeCollection(event) {
+  event.preventDefault();
+  const chargeId = collectionChargeIdInput.value.trim();
+  if (!chargeId) {
+    setModuleStatus(billingStatusEl, 'Informe charge_id para solicitar cobranca.', true);
+    return;
+  }
+  const phone = collectionPhoneInput.value.trim();
+  if (!/^\+[1-9][0-9]{7,14}$/.test(phone)) {
+    setModuleStatus(billingStatusEl, 'Telefone E164 invalido para cobranca.', true);
+    return;
+  }
+
+  const message = collectionMessageInput.value.trim();
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      correlation_id: crypto.randomUUID(),
+      collection: {
+        recipient: { phone_e164: phone },
+        message
+      }
+    }
+  };
+
+  try {
+    const body = await fetchJsonOrThrow(
+      `/v1/billing/charges/${encodeURIComponent(chargeId)}/collection-request`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload)
+      }
+    );
+    mergeChargeInSession(body?.response?.charge);
+    renderChargesTable();
+    trackModuleSpend('mod-05-faturamento-cobranca', 0.003, 1);
+    setModuleStatus(billingStatusEl, `Collection solicitada para ${chargeId}.`);
+  } catch (error) {
+    setModuleStatus(billingStatusEl, `Erro ao solicitar collection: ${error.message}`, true);
+  }
+}
+
+async function createPayment(event) {
+  event.preventDefault();
+  const chargeId = paymentChargeIdInput.value.trim();
+  if (!chargeId) {
+    setModuleStatus(billingStatusEl, 'Informe charge_id para registrar pagamento.', true);
+    return;
+  }
+
+  const amount = Number(paymentAmountInput.value);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    setModuleStatus(billingStatusEl, 'Valor de pagamento invalido.', true);
+    return;
+  }
+
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      source_module: 'mod-05-faturamento-cobranca',
+      correlation_id: crypto.randomUUID(),
+      payment: {
+        external_key: `owner-ui-payment-${Date.now()}`,
+        charge_id: chargeId,
+        amount,
+        currency: (paymentCurrencyInput.value || 'BRL').toUpperCase(),
+        paid_at: new Date().toISOString(),
+        status: paymentStatusInput.value
+      }
+    }
+  };
+
+  try {
+    const body = await fetchJsonOrThrow('/v1/billing/payments', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    mergeChargeInSession(body?.response?.charge);
+    renderChargesTable();
+    trackModuleSpend('mod-05-faturamento-cobranca', 0.004, 1);
+    setModuleStatus(
+      billingStatusEl,
+      `Pagamento ${body?.response?.status ?? 'ok'} em ${chargeId} (${paymentStatusInput.value}).`
+    );
+  } catch (error) {
+    setModuleStatus(billingStatusEl, `Erro ao registrar pagamento: ${error.message}`, true);
+  }
+}
+
+async function loadModuleWorkspace(moduleId) {
+  renderModuleWorkspace(moduleId);
+
+  if (moduleId === 'mod-03-clientes') {
+    renderCustomersTable();
+    if (state.moduleData.customers.length === 0) {
+      await refreshCustomers();
+    }
+    return;
+  }
+
+  if (moduleId === 'mod-04-agenda') {
+    renderAppointmentsTable();
+    renderRemindersTable();
+    if (state.moduleData.reminders.length === 0) {
+      await refreshReminders();
+    }
+    return;
+  }
+
+  if (moduleId === 'mod-05-faturamento-cobranca') {
+    renderChargesTable();
+    if (state.moduleData.charges.length === 0) {
+      await refreshCharges();
+    }
+  }
 }
 
 function setSpeaking(value) {
@@ -324,6 +1116,7 @@ function setActiveModule(moduleId) {
 
   if (moduleId === 'mod-01-owner-concierge') {
     chatWorkspaceEl.classList.remove('hidden');
+    moduleWorkspaceEl.classList.add('hidden');
     settingsWorkspaceEl.classList.add('hidden');
     modulePlaceholderWorkspaceEl.classList.add('hidden');
     return;
@@ -331,9 +1124,19 @@ function setActiveModule(moduleId) {
 
   if (moduleId === 'mod-06-configuracoes') {
     chatWorkspaceEl.classList.add('hidden');
+    moduleWorkspaceEl.classList.add('hidden');
     settingsWorkspaceEl.classList.remove('hidden');
     modulePlaceholderWorkspaceEl.classList.add('hidden');
     renderMetricsTable();
+    return;
+  }
+
+  if (MODULE_WORKSPACE_IDS.has(moduleId)) {
+    chatWorkspaceEl.classList.add('hidden');
+    moduleWorkspaceEl.classList.remove('hidden');
+    settingsWorkspaceEl.classList.add('hidden');
+    modulePlaceholderWorkspaceEl.classList.add('hidden');
+    loadModuleWorkspace(moduleId);
     return;
   }
 
@@ -341,6 +1144,7 @@ function setActiveModule(moduleId) {
   placeholderTitleEl.textContent = `${meta.label} - Em evolucao`;
   placeholderTextEl.textContent = 'Fluxo principal ja mapeado em contratos. UI detalhada deste modulo entra no proximo ciclo.';
   chatWorkspaceEl.classList.add('hidden');
+  moduleWorkspaceEl.classList.add('hidden');
   settingsWorkspaceEl.classList.add('hidden');
   modulePlaceholderWorkspaceEl.classList.remove('hidden');
 }
@@ -827,6 +1631,21 @@ function setupEvents() {
     if (!target) return;
     removePendingAttachment(target.dataset.removeAttachment);
   });
+
+  customerCreateForm.addEventListener('submit', createCustomer);
+  customersRefreshBtn.addEventListener('click', refreshCustomers);
+  customerDetailBtn.addEventListener('click', loadCustomerDetail);
+
+  appointmentCreateForm.addEventListener('submit', createAppointment);
+  appointmentUpdateForm.addEventListener('submit', updateAppointment);
+  reminderCreateForm.addEventListener('submit', createReminder);
+  remindersRefreshBtn.addEventListener('click', refreshReminders);
+
+  chargeCreateForm.addEventListener('submit', createCharge);
+  chargeUpdateForm.addEventListener('submit', updateCharge);
+  collectionRequestForm.addEventListener('submit', requestChargeCollection);
+  paymentCreateForm.addEventListener('submit', createPayment);
+  chargesRefreshBtn.addEventListener('click', refreshCharges);
 
   chatForm.addEventListener('submit', (event) => {
     event.preventDefault();
