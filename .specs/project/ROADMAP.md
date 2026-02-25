@@ -146,6 +146,16 @@ Status update:
       - `POST /v1/owner-concierge/interaction-confirmations`
     - chat flow auto-refreshes queue when `confirm_required` returns pending confirmation
     - gates passed (`app-owner-console:build`, `app-platform-api:test`, `preprod:validate -- -SkipSmokePostgres`)
+  - feature implemented and validated:
+    - `milestone-4-runtime-config-coupling-slice`
+    - module 06 settings now sync tenant OpenAI/persona runtime config to backend via:
+      - `POST /v1/owner-concierge/runtime-config`
+      - `GET /v1/owner-concierge/runtime-config`
+    - owner interaction now applies tenant runtime config:
+      - tenant-scoped OpenAI key/model
+      - tenant persona fallback
+      - optional confirmation disable (`confirm_required` -> `allow`)
+    - gates passed (`app-platform-api:test`, `contract-checks`, `app-owner-console:build`, `app-crm-console:build`)
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

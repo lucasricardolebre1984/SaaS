@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 4 owner console approval queue ui slice)
-Active feature: milestone-4-owner-console-approval-queue-ui-slice (completed)
+Active phase: Implement checkpoint closed (Milestone 4 runtime config coupling slice)
+Active feature: milestone-4-runtime-config-coupling-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -453,9 +453,23 @@ Active feature: milestone-4-owner-console-approval-queue-ui-slice (completed)
     - `npx nx run app-owner-console:build`
     - `npx nx run app-crm-console:build`
     - smoke check (`/health`, `/api/health`, `/owner/`, `/crm/`, CORS preflight) passed with `200/204`.
+- Opened and completed `milestone-4-runtime-config-coupling-slice`:
+  - module 06 settings now sync tenant runtime config into backend via:
+    - `POST /v1/owner-concierge/runtime-config`
+    - `GET /v1/owner-concierge/runtime-config`
+  - owner interaction now applies tenant runtime config for:
+    - OpenAI provider selection (`openai` when tenant key is configured)
+    - persona fallback (tenant prompts when request has no explicit overrides)
+    - execution override (`confirm_required` converted to `allow` when tenant disables confirmations)
+  - owner console now reports backend sync status instead of local-only note.
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`
 
 ## Next Checkpoint
-Definir proximo slice de Milestone 4 para operacao de fila no Owner Console com bulk actions e politica de auto-refresh controlada em fase `Specify`.
+Definir proximo slice de Milestone 4 para integrar execucao real da persona 2 (WhatsApp) com Evolution outbound em fluxo tenant-config-first.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

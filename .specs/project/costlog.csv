@@ -121,3 +121,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4UQ-001..002 module 01 approvals queue UI list filter action wiring and auto-refresh behavior
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4UQ-003 owner console approvals queue slice validation and governance closure
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,OPS-HOTFIX-4001-CORS unified runtime endpoint on 4001 with /api mapping CORS preflight and owner crm API base auto migration
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4RC-001..004 runtime config backend coupling for module 06 with tenant OpenAI apply persona fallback and execution policy override

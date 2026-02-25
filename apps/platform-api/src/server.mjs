@@ -212,6 +212,9 @@ async function gracefulShutdown(signal) {
       if (typeof app.ownerMemoryMaintenanceStore?.close === 'function') {
         await app.ownerMemoryMaintenanceStore.close();
       }
+      if (typeof app.tenantRuntimeConfigStore?.close === 'function') {
+        await app.tenantRuntimeConfigStore.close();
+      }
     } finally {
       console.log(`app-platform-api stopped (${signal})`);
       process.exit(0);

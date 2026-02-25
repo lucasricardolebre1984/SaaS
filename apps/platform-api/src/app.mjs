@@ -47,6 +47,7 @@ import { createLeadStore } from './lead-store.mjs';
 import { createCrmAutomationStore } from './crm-automation-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
 import { createOwnerMemoryMaintenanceStore } from './owner-memory-maintenance-store.mjs';
+import { createTenantRuntimeConfigStore } from './tenant-runtime-config-store.mjs';
 import { createEmbeddingProvider } from './embedding-provider.mjs';
 import { createOwnerResponseProvider } from './owner-response-provider.mjs';
 import {
@@ -161,7 +162,129 @@ function sanitizePersonaOverrides(raw) {
   return Object.keys(sanitized).length > 0 ? sanitized : undefined;
 }
 
-function createOwnerCommandEnvelope(request, correlationId, traceId) {
+function mergePersonaOverrides(requestOverrides, tenantRuntimeConfig) {
+  const fromRequest = sanitizePersonaOverrides(requestOverrides);
+  if (fromRequest) return fromRequest;
+
+  const tenantPersonas = tenantRuntimeConfig?.personas;
+  if (!tenantPersonas || typeof tenantPersonas !== 'object') {
+    return undefined;
+  }
+  return sanitizePersonaOverrides({
+    owner_concierge_prompt: tenantPersonas.owner_concierge_prompt,
+    whatsapp_agent_prompt: tenantPersonas.whatsapp_agent_prompt
+  });
+}
+
+function sanitizeTenantRuntimeConfigInput(rawConfig) {
+  const raw = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
+  const openaiRaw = raw.openai && typeof raw.openai === 'object' ? raw.openai : {};
+  const personasRaw = raw.personas && typeof raw.personas === 'object' ? raw.personas : {};
+  const executionRaw = raw.execution && typeof raw.execution === 'object' ? raw.execution : {};
+
+  const config = {
+    openai: {
+      api_key: typeof openaiRaw.api_key === 'string' ? openaiRaw.api_key.trim() : '',
+      model: typeof openaiRaw.model === 'string' && openaiRaw.model.trim().length > 0
+        ? openaiRaw.model.trim()
+        : 'gpt-5.1-mini',
+      vision_enabled: openaiRaw.vision_enabled !== false,
+      voice_enabled: openaiRaw.voice_enabled !== false,
+      image_generation_enabled: openaiRaw.image_generation_enabled !== false,
+      image_read_enabled: openaiRaw.image_read_enabled !== false
+    },
+    personas: {
+      owner_concierge_prompt: typeof personasRaw.owner_concierge_prompt === 'string'
+        ? personasRaw.owner_concierge_prompt.trim()
+        : '',
+      whatsapp_agent_prompt: typeof personasRaw.whatsapp_agent_prompt === 'string'
+        ? personasRaw.whatsapp_agent_prompt.trim()
+        : ''
+    },
+    execution: {
+      confirmations_enabled: executionRaw.confirmations_enabled === true
+    }
+  };
+
+  return config;
+}
+
+function validateTenantRuntimeConfigRequest(body) {
+  const request = body?.request;
+  const errors = [];
+
+  if (!request || typeof request !== 'object') {
+    errors.push({ instancePath: '/request', message: 'must be an object' });
+    return { ok: false, errors };
+  }
+
+  if (typeof request.request_id !== 'string' || request.request_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/request_id', message: 'must be a non-empty string' });
+  }
+
+  if (typeof request.tenant_id !== 'string' || request.tenant_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/tenant_id', message: 'must be a non-empty string' });
+  }
+
+  if (!request.config || typeof request.config !== 'object' || Array.isArray(request.config)) {
+    errors.push({ instancePath: '/request/config', message: 'must be an object' });
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+function createRuntimeConfigSummary(tenantId, configRecord) {
+  const normalized = sanitizeTenantRuntimeConfigInput(configRecord ?? {});
+  const apiKey = normalized.openai.api_key;
+  return {
+    tenant_id: tenantId,
+    status: 'ok',
+    runtime: {
+      owner_response_mode: apiKey.length > 0 ? 'openai' : 'auto',
+      openai_configured: apiKey.length > 0,
+      model: normalized.openai.model
+    },
+    openai: {
+      api_key_configured: apiKey.length > 0,
+      vision_enabled: normalized.openai.vision_enabled,
+      voice_enabled: normalized.openai.voice_enabled,
+      image_generation_enabled: normalized.openai.image_generation_enabled,
+      image_read_enabled: normalized.openai.image_read_enabled
+    },
+    personas: {
+      owner_concierge_prompt: normalized.personas.owner_concierge_prompt,
+      whatsapp_agent_prompt: normalized.personas.whatsapp_agent_prompt
+    },
+    execution: {
+      confirmations_enabled: normalized.execution.confirmations_enabled
+    },
+    updated_at: typeof configRecord?.updated_at === 'string' ? configRecord.updated_at : null
+  };
+}
+
+function resolveTenantExecutionPlan(taskPlan, tenantRuntimeConfig) {
+  if (!taskPlan) return taskPlan;
+
+  const hasExecutionOverride = (
+    tenantRuntimeConfig &&
+    tenantRuntimeConfig.execution &&
+    typeof tenantRuntimeConfig.execution.confirmations_enabled === 'boolean'
+  );
+  const confirmationsEnabled = hasExecutionOverride &&
+    tenantRuntimeConfig.execution.confirmations_enabled === true;
+  if (!hasExecutionOverride || confirmationsEnabled || taskPlan.execution_decision !== 'confirm_required') {
+    return taskPlan;
+  }
+
+  return {
+    ...taskPlan,
+    execution_decision: 'allow',
+    requires_confirmation: false,
+    policy_reason_code: 'tenant_runtime_confirmations_disabled'
+  };
+}
+
+function createOwnerCommandEnvelope(request, correlationId, traceId, personaOverridesInput = undefined) {
   const mode = modeFromRequest(request);
   const text =
     request.operation === 'send_message'
@@ -173,7 +296,7 @@ function createOwnerCommandEnvelope(request, correlationId, traceId) {
       uri: item.uri
     }))
     : undefined;
-  const personaOverrides = sanitizePersonaOverrides(request.payload?.persona_overrides);
+  const personaOverrides = personaOverridesInput ?? sanitizePersonaOverrides(request.payload?.persona_overrides);
 
   const payload = {
     owner_command_id: request.request_id,
@@ -1052,6 +1175,14 @@ function ownerMemoryMaintenanceInfo(store) {
   };
 }
 
+function tenantRuntimeConfigInfo(store) {
+  return {
+    backend: store?.backend ?? 'file',
+    storage_dir: store?.storageDir ?? null,
+    config_path: store?.configFilePath ?? null
+  };
+}
+
 function ownerResponseInfo(provider) {
   return {
     mode: provider?.mode ?? 'auto',
@@ -1214,6 +1345,9 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const tenantRuntimeConfigStore = createTenantRuntimeConfigStore({
+    storageDir: options.tenantRuntimeConfigStorageDir
+  });
   const ownerEmbeddingProviderConfig = {
     mode: options.ownerEmbeddingMode,
     openaiApiKey: options.openaiApiKey,
@@ -1221,12 +1355,38 @@ export function createApp(options = {}) {
     openaiBaseUrl: options.openaiBaseUrl
   };
   const ownerEmbeddingProvider = createEmbeddingProvider(ownerEmbeddingProviderConfig);
-  const ownerResponseProvider = createOwnerResponseProvider({
+  const ownerResponseProviderConfig = {
     mode: options.ownerResponseMode,
     openaiApiKey: options.openaiApiKey,
     openaiModel: options.ownerResponseModel,
     openaiBaseUrl: options.openaiBaseUrl
-  });
+  };
+  const ownerResponseProvider = createOwnerResponseProvider(ownerResponseProviderConfig);
+  async function resolveTenantRuntimeConfig(tenantId) {
+    const normalizedTenantId = String(tenantId ?? '').trim();
+    if (!normalizedTenantId) return null;
+    return tenantRuntimeConfigStore.getTenantRuntimeConfig(normalizedTenantId);
+  }
+
+  function getOwnerResponseProviderForTenant(tenantRuntimeConfig) {
+    const tenantApiKey = String(tenantRuntimeConfig?.openai?.api_key ?? '').trim();
+    const tenantModel = String(tenantRuntimeConfig?.openai?.model ?? '').trim();
+
+    if (tenantApiKey.length === 0 && tenantModel.length === 0) {
+      return ownerResponseProvider;
+    }
+
+    return createOwnerResponseProvider({
+      ...ownerResponseProviderConfig,
+      mode: tenantApiKey.length > 0 ? 'openai' : ownerResponseProvider.mode,
+      openaiApiKey: tenantApiKey.length > 0
+        ? tenantApiKey
+        : ownerResponseProviderConfig.openaiApiKey,
+      openaiModel: tenantModel.length > 0
+        ? tenantModel
+        : ownerResponseProviderConfig.openaiModel
+    });
+  }
   function getOwnerEmbeddingProvider(modeOverride = null) {
     if (!modeOverride) {
       return ownerEmbeddingProvider;
@@ -1409,9 +1569,66 @@ export function createApp(options = {}) {
           crm_automation: crmAutomationInfo(crmAutomationStore),
           owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider),
           owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore),
+          tenant_runtime_config: tenantRuntimeConfigInfo(tenantRuntimeConfigStore),
           owner_confirmation: ownerConfirmationInfo(ownerConfirmationConfig),
           owner_response: ownerResponseInfo(ownerResponseProvider)
         });
+      }
+
+      if (method === 'GET' && path === '/v1/owner-concierge/runtime-config') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        let configRecord;
+        try {
+          configRecord = await resolveTenantRuntimeConfig(tenantId);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const response = createRuntimeConfigSummary(tenantId, configRecord);
+        return json(res, 200, response);
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/runtime-config') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = validateTenantRuntimeConfigRequest(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id).trim();
+        const normalizedConfig = sanitizeTenantRuntimeConfigInput(request.config);
+
+        let updated;
+        try {
+          updated = await tenantRuntimeConfigStore.upsertTenantRuntimeConfig(tenantId, normalizedConfig);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const response = {
+          request_id: String(request.request_id),
+          ...createRuntimeConfigSummary(tenantId, updated),
+          status: 'accepted'
+        };
+        return json(res, 200, { response });
       }
 
       if (method === 'GET' && path === '/internal/orchestration/commands') {
@@ -3738,7 +3955,21 @@ export function createApp(options = {}) {
         }
 
         const request = body.request;
-        const taskPlan = taskPlanner.plan(request);
+        let tenantRuntimeConfig;
+        try {
+          tenantRuntimeConfig = await resolveTenantRuntimeConfig(request.tenant_id);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const personaOverrides = mergePersonaOverrides(
+          request.payload?.persona_overrides,
+          tenantRuntimeConfig
+        );
+        const taskPlan = resolveTenantExecutionPlan(taskPlanner.plan(request), tenantRuntimeConfig);
         const policyDecision = createPolicyDecision(taskPlan);
         const requiresConfirmation = taskPlan?.execution_decision === 'confirm_required';
         if (requiresConfirmation) {
@@ -3767,7 +3998,12 @@ export function createApp(options = {}) {
 
         const correlationId = randomUUID();
         const traceId = randomUUID();
-        const ownerCommand = createOwnerCommandEnvelope(request, correlationId, traceId);
+        const ownerCommand = createOwnerCommandEnvelope(
+          request,
+          correlationId,
+          traceId,
+          personaOverrides
+        );
         const ownerCommandValidation = orchestrationCommandValid(ownerCommand);
         if (!ownerCommandValidation.ok) {
           return json(res, 500, {
@@ -3823,7 +4059,7 @@ export function createApp(options = {}) {
               attachments_count: Array.isArray(request.payload?.attachments)
                 ? request.payload.attachments.length
                 : 0,
-              persona_overrides: sanitizePersonaOverrides(request.payload?.persona_overrides) ?? null
+              persona_overrides: personaOverrides ?? null
             }
           };
 
@@ -3900,11 +4136,12 @@ export function createApp(options = {}) {
         let assistantOutput;
         if (request.operation === 'send_message') {
           try {
-            assistantOutput = await ownerResponseProvider.generateAssistantOutput({
+            const tenantResponseProvider = getOwnerResponseProviderForTenant(tenantRuntimeConfig);
+            assistantOutput = await tenantResponseProvider.generateAssistantOutput({
               text: String(request.payload?.text ?? ''),
               tenant_id: request.tenant_id,
               session_id: request.session_id,
-              persona_overrides: sanitizePersonaOverrides(request.payload?.persona_overrides)
+              persona_overrides: personaOverrides
             });
           } catch (error) {
             return json(res, 502, {
@@ -4253,6 +4490,7 @@ export function createApp(options = {}) {
   handler.crmAutomationStore = crmAutomationStore;
   handler.ownerMemoryStore = ownerMemoryStore;
   handler.ownerMemoryMaintenanceStore = ownerMemoryMaintenanceStore;
+  handler.tenantRuntimeConfigStore = tenantRuntimeConfigStore;
   handler.ownerResponseProvider = ownerResponseProvider;
   return handler;
 }

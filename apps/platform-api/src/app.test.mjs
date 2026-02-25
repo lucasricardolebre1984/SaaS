@@ -33,6 +33,33 @@ function validInteractionConfirmationActionRequest(confirmationId, decision = 'a
   };
 }
 
+function validRuntimeConfigUpsertRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '3d7ad25d-0501-4292-a227-2d2f1f37ff2c',
+      tenant_id: 'tenant_automania',
+      config: {
+        openai: {
+          api_key: 'tenant-openai-key',
+          model: 'gpt-5.1-mini',
+          vision_enabled: true,
+          voice_enabled: true,
+          image_generation_enabled: true,
+          image_read_enabled: true
+        },
+        personas: {
+          owner_concierge_prompt: 'Seja objetivo e execute ordens do proprietario.',
+          whatsapp_agent_prompt: 'Atenda com clareza e registre intencao.'
+        },
+        execution: {
+          confirmations_enabled: false
+        }
+      },
+      ...overrides
+    }
+  };
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -2304,6 +2331,162 @@ test('POST /v1/owner-concierge/interaction returns provider error in strict open
   } finally {
     await new Promise((resolve, reject) => strictServer.close((err) => (err ? reject(err) : resolve())));
     await fs.rm(strictStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settings', async () => {
+  const runtimeStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-runtime-config-'));
+  const runtimeServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: runtimeStorageDir,
+      tenantRuntimeConfigStorageDir: runtimeStorageDir
+    })
+  );
+  await new Promise((resolve) => runtimeServer.listen(0, '127.0.0.1', resolve));
+  const runtimeAddress = runtimeServer.address();
+  const runtimeBaseUrl = `http://127.0.0.1:${runtimeAddress.port}`;
+
+  try {
+    const upsertRes = await fetch(`${runtimeBaseUrl}/v1/owner-concierge/runtime-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validRuntimeConfigUpsertRequest())
+    });
+    assert.equal(upsertRes.status, 200);
+    const upsertBody = await upsertRes.json();
+    assert.equal(upsertBody.response.status, 'accepted');
+    assert.equal(upsertBody.response.runtime.owner_response_mode, 'openai');
+    assert.equal(upsertBody.response.openai.api_key_configured, true);
+    assert.equal(upsertBody.response.execution.confirmations_enabled, false);
+
+    const getRes = await fetch(
+      `${runtimeBaseUrl}/v1/owner-concierge/runtime-config?tenant_id=tenant_automania`
+    );
+    assert.equal(getRes.status, 200);
+    const getBody = await getRes.json();
+    assert.equal(getBody.status, 'ok');
+    assert.equal(getBody.runtime.owner_response_mode, 'openai');
+    assert.equal(getBody.openai.api_key_configured, true);
+    assert.equal(getBody.personas.owner_concierge_prompt.length > 0, true);
+  } finally {
+    await new Promise((resolve, reject) => runtimeServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(runtimeStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('tenant runtime config applies OpenAI response and disables confirmation workflow', async () => {
+  const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-runtime-tenant-openai-'));
+  const routingPolicyPath = path.join(policyDir, 'task-routing.policy.json');
+  const executionPolicyPath = path.join(policyDir, 'owner-tool-execution-policy.json');
+
+  await fs.writeFile(
+    routingPolicyPath,
+    JSON.stringify(
+      buildRoutingPolicyWithSingleRule({
+        id: 'billing_writeoff_route',
+        keywords: ['perdoar'],
+        route: {
+          target_module: 'mod-05-faturamento-cobranca',
+          task_type: 'billing.writeoff.request',
+          priority: 'high',
+          simulate_failure: false
+        }
+      }),
+      null,
+      2
+    )
+  );
+  await fs.writeFile(
+    executionPolicyPath,
+    JSON.stringify(
+      buildExecutionPolicy([{
+        rule_id: 'confirm_billing_writeoff',
+        task_type: 'billing.writeoff.request',
+        target_module: 'mod-05-faturamento-cobranca',
+        decision: 'confirm_required',
+        requires_confirmation: true,
+        reason_code: 'financial_writeoff'
+      }]),
+      null,
+      2
+    )
+  );
+
+  let providerCalled = false;
+  const mockProviderServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST' || req.url !== '/chat/completions') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    providerCalled = true;
+    const authHeader = String(req.headers.authorization ?? '');
+    if (!authHeader.startsWith('Bearer tenant-openai-key')) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
+
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({
+      model: 'gpt-5.1-mini',
+      choices: [{
+        message: {
+          content: 'Resposta tenant runtime OpenAI'
+        }
+      }]
+    }));
+  });
+  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = mockProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: policyDir,
+      tenantRuntimeConfigStorageDir: policyDir,
+      taskRoutingPolicyPath: routingPolicyPath,
+      taskExecutionPolicyPath: executionPolicyPath,
+      ownerResponseMode: 'auto',
+      openaiApiKey: '',
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const configRes = await fetch(`${appBaseUrl}/v1/owner-concierge/runtime-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validRuntimeConfigUpsertRequest())
+    });
+    assert.equal(configRes.status, 200);
+
+    const payload = validOwnerRequest();
+    payload.request.payload.text = 'perdoar cobranca vencida';
+
+    const interactionRes = await fetch(`${appBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    assert.equal(interactionRes.status, 200);
+    const interactionBody = await interactionRes.json();
+    assert.equal(interactionBody.response.assistant_output.provider, 'openai');
+    assert.equal(interactionBody.response.assistant_output.text, 'Resposta tenant runtime OpenAI');
+    assert.equal(interactionBody.response.policy_decision.execution_decision, 'allow');
+    assert.equal(interactionBody.response.policy_decision.requires_confirmation, false);
+    assert.equal(interactionBody.response.confirmation, undefined);
+    assert.ok(Array.isArray(interactionBody.response.downstream_tasks));
+    assert.equal(interactionBody.response.downstream_tasks.length, 1);
+    assert.equal(providerCalled, true);
+  } finally {
+    await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(policyDir, { recursive: true, force: true });
   }
 });
 

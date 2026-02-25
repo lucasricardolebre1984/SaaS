@@ -17,6 +17,12 @@ SaaS base institucional da Automania AI (Nx monorepo).
 5. `mod-05-faturamento-cobranca`
 6. `mod-06-configuracoes` (acesso admin; APIs, integrações, custos e prompts Persona 1/2)
 
+Observacao modulo 06:
+- configuracoes OpenAI/persona agora sincronizam com backend por tenant (nao local-only).
+- endpoints:
+  - `POST /v1/owner-concierge/runtime-config`
+  - `GET /v1/owner-concierge/runtime-config?tenant_id=<id>`
+
 ## Fluxo Diário (obrigatório)
 ```powershell
 cd C:\projetos\fabio

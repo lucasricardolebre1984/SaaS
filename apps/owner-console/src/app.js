@@ -248,6 +248,9 @@ function createDefaultConfig() {
       owner_concierge_prompt: '',
       whatsapp_agent_prompt: ''
     },
+    execution: {
+      confirmations_enabled: false
+    },
     integrations: {
       agenda_google: {
         client_id: '',
@@ -306,6 +309,10 @@ function mergeConfig(raw) {
     personas: {
       ...defaults.personas,
       ...(raw?.personas ?? {})
+    },
+    execution: {
+      ...defaults.execution,
+      ...(raw?.execution ?? {})
     },
     integrations: {
       agenda_google: {
@@ -657,6 +664,71 @@ async function fetchJsonOrThrow(path, options = {}) {
   }
 
   return body;
+}
+
+function buildRuntimeConfigSyncPayload() {
+  return {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      config: {
+        openai: {
+          api_key: state.config.openai.api_key,
+          model: state.config.openai.model,
+          vision_enabled: Boolean(state.config.openai.vision_enabled),
+          voice_enabled: Boolean(state.config.openai.voice_enabled),
+          image_generation_enabled: Boolean(state.config.openai.image_generation_enabled),
+          image_read_enabled: Boolean(state.config.openai.image_read_enabled)
+        },
+        personas: {
+          owner_concierge_prompt: state.config.personas.owner_concierge_prompt,
+          whatsapp_agent_prompt: state.config.personas.whatsapp_agent_prompt
+        },
+        execution: {
+          confirmations_enabled: Boolean(state.config.execution.confirmations_enabled)
+        }
+      }
+    }
+  };
+}
+
+async function pushRuntimeConfigToBackend() {
+  const payload = buildRuntimeConfigSyncPayload();
+  const body = await fetchJsonOrThrow('/v1/owner-concierge/runtime-config', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const response = body?.response ?? null;
+  const runtime = response?.runtime ?? {};
+  return {
+    ownerResponseMode: runtime.owner_response_mode ?? 'auto',
+    openAiConfigured: runtime.openai_configured === true,
+    model: runtime.model ?? state.config.openai.model
+  };
+}
+
+async function pullRuntimeConfigFromBackend() {
+  const body = await fetchJsonOrThrow(
+    `/v1/owner-concierge/runtime-config?tenant_id=${encodeURIComponent(tenantId())}`
+  );
+
+  if (body?.personas) {
+    state.config.personas.owner_concierge_prompt = body.personas.owner_concierge_prompt ?? '';
+    state.config.personas.whatsapp_agent_prompt = body.personas.whatsapp_agent_prompt ?? '';
+  }
+  if (body?.openai?.api_key_configured !== true) {
+    state.config.openai.api_key = '';
+  }
+  if (body?.runtime?.model) {
+    state.config.openai.model = String(body.runtime.model);
+  }
+  if (body?.execution && typeof body.execution.confirmations_enabled === 'boolean') {
+    state.config.execution.confirmations_enabled = body.execution.confirmations_enabled;
+  }
+  populateConfigForm();
+  persistConfig();
 }
 
 async function refreshCustomers() {
@@ -1341,6 +1413,7 @@ function collectConfigForm() {
   state.config.openai.image_read_enabled = cfgOpenAiImageReadInput.checked;
   state.config.personas.owner_concierge_prompt = cfgPersona1PromptInput.value.trim();
   state.config.personas.whatsapp_agent_prompt = cfgPersona2PromptInput.value.trim();
+  state.config.execution.confirmations_enabled = false;
 
   state.config.integrations.agenda_google.client_id = cfgGoogleClientIdInput.value.trim();
   state.config.integrations.agenda_google.client_secret = cfgGoogleClientSecretInput.value.trim();
@@ -1697,14 +1770,21 @@ function applyTenantTheme() {
   updateConfigStatus(`Tema aplicado: layout=${preset.layout}, paleta=${preset.palette}.`);
 }
 
-function saveConfig() {
+async function saveConfig() {
   collectConfigForm();
   applyVisualMode(state.config.runtime.layout, state.config.runtime.palette, false);
   persistConfig();
   setTopbarLabels();
   renderMetricsTable();
-  updateConfigStatus('Configuracoes salvas localmente.');
-  callHealth();
+  try {
+    const syncResult = await pushRuntimeConfigToBackend();
+    updateConfigStatus(
+      `Configuracoes salvas e aplicadas no backend (mode=${syncResult.ownerResponseMode}, model=${syncResult.model}).`
+    );
+  } catch (error) {
+    updateConfigStatus(`Configuracoes salvas localmente, mas sync backend falhou: ${error.message}`);
+  }
+  await callHealth();
 }
 
 function resetMetrics() {
@@ -1745,7 +1825,9 @@ function setupEvents() {
   continuousBtn.addEventListener('click', toggleContinuousMode);
   simulateVoiceBtn.addEventListener('click', () => startSpeakingPulse(1800));
 
-  saveConfigBtn.addEventListener('click', saveConfig);
+  saveConfigBtn.addEventListener('click', () => {
+    saveConfig();
+  });
   resetMetricsBtn.addEventListener('click', resetMetrics);
   applyTenantThemeBtn.addEventListener('click', applyTenantTheme);
   lockSettingsBtn.addEventListener('click', lockSettingsAccess);
@@ -1832,12 +1914,17 @@ function setupEvents() {
   });
 }
 
-function bootstrap() {
+async function bootstrap() {
   bootstrapConfig();
   renderModuleNav();
   setActiveModule('mod-01-owner-concierge');
   setupEvents();
-  callHealth();
+  await callHealth();
+  try {
+    await pullRuntimeConfigFromBackend();
+  } catch {
+    // backend runtime config may not be available yet during cold start
+  }
   refreshInteractionConfirmations();
 }
 

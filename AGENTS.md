@@ -90,6 +90,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-4-owner-console-approval-queue-ui-slice` (completed)
+- Active feature: `milestone-4-runtime-config-coupling-slice` (completed)
 - Active phase: `Implement checkpoint closed`
-- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase (owner approval queue bulk actions + auto-refresh policy).
+- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase for real persona-2 WhatsApp execution over Evolution outbound.

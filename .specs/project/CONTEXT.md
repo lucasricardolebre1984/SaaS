@@ -14,6 +14,7 @@ Fixed menu and modules:
 3. Clientes (Module 03)
 4. Agenda (Module 04)
 5. Faturamento/Cobranca (Module 05)
+6. Configuracoes (Module 06 - tenant runtime control plane)
 
 ## Architecture Direction
 - Nx monorepo baseline
@@ -31,6 +32,7 @@ Only approved imported legacy assets: `contratos/`.
 - Intended default model: gpt-5.1-mini (if available)
 - Multimodal support in Module 01 (text/audio/image/file + continuous chat avatar mode)
 - Tenant personas are optional runtime overlays (persona 1 owner concierge, persona 2 whatsapp agent)
+- Module 06 settings must be backend-coupled by tenant (no local-only runtime for OpenAI/persona execution).
 
 ## Operational Discipline
 - Phases: Specify -> Design -> Tasks -> Implement+Validate
