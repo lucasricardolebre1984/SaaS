@@ -73,6 +73,10 @@
           "additionalProperties": false,
           "properties": {
             "text": { "type": "string" },
+            "provider": { "type": "string", "enum": ["openai", "local", "none"] },
+            "model": { "type": ["string", "null"] },
+            "latency_ms": { "type": "integer", "minimum": 0 },
+            "fallback_reason": { "type": "string", "minLength": 1 },
             "attachments": {
               "type": "array",
               "items": {
@@ -87,7 +91,7 @@
               }
             }
           },
-          "required": ["text"]
+          "required": ["text", "provider", "model", "latency_ms"]
         },
         "downstream_tasks": {
           "type": "array",
@@ -105,9 +109,10 @@
                   "mod-05-faturamento-cobranca"
                 ]
               },
-              "task_type": { "type": "string", "minLength": 3 }
+              "task_type": { "type": "string", "minLength": 3 },
+              "status": { "type": "string", "enum": ["queued", "accepted", "completed", "failed"] }
             },
-            "required": ["task_id", "target_module", "task_type"]
+            "required": ["task_id", "target_module", "task_type", "status"]
           }
         },
         "errors": {

@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Specify (Milestone 4 mod-01 owner ai runtime slice)
-Active feature: milestone-4-mod-01-owner-ai-runtime-slice (draft)
+Active phase: Implement checkpoint closed (Milestone 4 mod-01 owner ai runtime slice)
+Active feature: milestone-4-mod-01-owner-ai-runtime-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -356,9 +356,22 @@ Active feature: milestone-4-mod-01-owner-ai-runtime-slice (draft)
   - draft docs created (`spec.md`, `design.md`, `tasks.md`)
   - focus defined: replace owner runtime stub response with real AI provider flow in contract-first mode
   - implementation blocked until spec/design/tasks approval
+- Opened and completed `milestone-4-mod-01-owner-ai-runtime-slice`:
+  - module 01 interaction now uses real owner response provider (`auto/openai/local/off`)
+  - strict `openai` mode returns deterministic provider error when key/provider is unavailable
+  - contract updated for enriched `assistant_output` (`provider`, `model`, `latency_ms`, `fallback_reason`)
+  - response contract validation added in runtime before returning interaction payload
+  - runtime gates validated:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-044503.log`
+    - `tools/reports/release-dry-run-20260225-044522.log`
+    - `tools/reports/rollback-drill-20260225-044523.log`
 
 ## Next Checkpoint
-Aprovar `spec.md` do slice `milestone-4-mod-01-owner-ai-runtime-slice` e evoluir para Design/Tasks aprovados antes da implementacao.
+Definir proximo slice de Milestone 4 (ex.: orchestrator tool-execution policy para mod-01) e abrir em fase `Specify`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

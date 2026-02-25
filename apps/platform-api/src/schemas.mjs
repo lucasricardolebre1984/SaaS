@@ -56,6 +56,7 @@ ajv.addSchema(orchestrationBaseSchema, orchestrationBaseSchema.$id);
 const validateOrchestrationCommand = ajv.compile(orchestrationCommandsSchema);
 const validateOrchestrationEvent = ajv.compile(orchestrationEventsSchema);
 const validateOwnerRequest = ajv.compile(multimodalApiSchema.properties.request);
+const validateOwnerResponse = ajv.compile(multimodalApiSchema.properties.response);
 const validateMemoryEntryCreateRequest = ajv.compile(memoryEntryCreateSchema.properties.request);
 const validateMemoryEntryListResponse = ajv.compile(memoryEntryListSchema);
 const validateContextPromotionRequest = ajv.compile(contextPromotionSchema.properties.request);
@@ -163,6 +164,11 @@ export function ownerInteractionValid(body) {
   const errors = [...(validateOwnerRequest.errors ?? [])];
   errors.push(...operationSpecificOwnerErrors(body?.request));
   return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function ownerInteractionResponseValid(body) {
+  const ok = validateOwnerResponse(body);
+  return { ok: Boolean(ok), errors: validateOwnerResponse.errors ?? [] };
 }
 
 export function memoryEntryCreateValid(body) {

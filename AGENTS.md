@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-4-mod-01-owner-ai-runtime-slice` (draft)
-- Active phase: `Specify`
-- Immediate checkpoint: approve `spec.md` and advance to `Design`/`Tasks` approval before implementation.
+- Active feature: `milestone-4-mod-01-owner-ai-runtime-slice` (completed)
+- Active phase: `Implement checkpoint closed`
+- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase.

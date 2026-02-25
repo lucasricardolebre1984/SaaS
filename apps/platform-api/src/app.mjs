@@ -28,6 +28,7 @@ import {
   orchestrationCommandValid,
   orchestrationEventValid,
   ownerInteractionValid,
+  ownerInteractionResponseValid,
   paymentCreateValid,
   reminderCreateValid,
   reminderLifecycleEventPayloadValid,
@@ -44,6 +45,7 @@ import { createCrmAutomationStore } from './crm-automation-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
 import { createOwnerMemoryMaintenanceStore } from './owner-memory-maintenance-store.mjs';
 import { createEmbeddingProvider } from './embedding-provider.mjs';
+import { createOwnerResponseProvider } from './owner-response-provider.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
   mapCustomerCreateRequestToStoreRecord
@@ -882,6 +884,13 @@ function ownerMemoryMaintenanceInfo(store) {
   };
 }
 
+function ownerResponseInfo(provider) {
+  return {
+    mode: provider?.mode ?? 'auto',
+    openai_available: provider?.canUseOpenAi === true
+  };
+}
+
 function parseMaintenanceEmbeddingMode(value) {
   if (value == null) return null;
   const mode = String(value).toLowerCase();
@@ -996,6 +1005,12 @@ export function createApp(options = {}) {
     openaiBaseUrl: options.openaiBaseUrl
   };
   const ownerEmbeddingProvider = createEmbeddingProvider(ownerEmbeddingProviderConfig);
+  const ownerResponseProvider = createOwnerResponseProvider({
+    mode: options.ownerResponseMode,
+    openaiApiKey: options.openaiApiKey,
+    openaiModel: options.ownerResponseModel,
+    openaiBaseUrl: options.openaiBaseUrl
+  });
   function getOwnerEmbeddingProvider(modeOverride = null) {
     if (!modeOverride) {
       return ownerEmbeddingProvider;
@@ -1135,7 +1150,8 @@ export function createApp(options = {}) {
           crm_leads: leadInfo(leadStore),
           crm_automation: crmAutomationInfo(crmAutomationStore),
           owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider),
-          owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore)
+          owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore),
+          owner_response: ownerResponseInfo(ownerResponseProvider)
         });
       }
 
@@ -3540,6 +3556,31 @@ export function createApp(options = {}) {
           }]
           : undefined;
 
+        let assistantOutput;
+        if (request.operation === 'send_message') {
+          try {
+            assistantOutput = await ownerResponseProvider.generateAssistantOutput({
+              text: String(request.payload?.text ?? ''),
+              tenant_id: request.tenant_id,
+              session_id: request.session_id,
+              persona_overrides: sanitizePersonaOverrides(request.payload?.persona_overrides)
+            });
+          } catch (error) {
+            return json(res, 502, {
+              error: 'owner_response_provider_error',
+              details: String(error.message ?? error)
+            });
+          }
+        } else {
+          assistantOutput = {
+            text: 'Operation accepted.',
+            provider: 'none',
+            model: null,
+            latency_ms: 0,
+            fallback_reason: 'non_message_operation'
+          };
+        }
+
         const response = {
           request_id: request.request_id,
           status: 'accepted',
@@ -3550,15 +3591,19 @@ export function createApp(options = {}) {
           },
           session_state,
           avatar_state,
-          assistant_output: {
-            text: request.operation === 'send_message'
-              ? 'Interaction accepted and task queued for worker processing.'
-              : 'Operation accepted.'
-          }
+          assistant_output: assistantOutput
         };
 
         if (downstreamTasks) {
           response.downstream_tasks = downstreamTasks;
+        }
+
+        const responseValidation = ownerInteractionResponseValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: responseValidation.errors
+          });
         }
 
         return json(res, 200, { response });
@@ -3626,5 +3671,6 @@ export function createApp(options = {}) {
   handler.crmAutomationStore = crmAutomationStore;
   handler.ownerMemoryStore = ownerMemoryStore;
   handler.ownerMemoryMaintenanceStore = ownerMemoryMaintenanceStore;
+  handler.ownerResponseProvider = ownerResponseProvider;
   return handler;
 }

@@ -1702,6 +1702,11 @@ test('POST /v1/owner-concierge/interaction queues module task and trace is prese
   assert.equal(body.response.owner_command.name, 'owner.command.create');
   assert.equal(body.response.downstream_tasks.length, 1);
   assert.equal(body.response.downstream_tasks[0].status, 'queued');
+  assert.equal(body.response.assistant_output.provider, 'local');
+  assert.equal(body.response.assistant_output.model, 'deterministic-rule-v1');
+  assert.equal(typeof body.response.assistant_output.latency_ms, 'number');
+  assert.match(body.response.assistant_output.text, /queued/i);
+  assert.equal(body.response.assistant_output.fallback_reason, 'fallback:no_openai_key');
 
   const correlationId = body.response.owner_command.correlation_id;
   const traceBeforeRes = await fetch(
@@ -1739,6 +1744,113 @@ test('POST /v1/owner-concierge/interaction queues module task and trace is prese
   assert.match(commandsRaw, /owner\.command\.create/);
   assert.match(eventsRaw, /module\.task\.completed/);
   assert.match(queueRaw, /"history"/);
+});
+
+test('POST /v1/owner-concierge/interaction returns provider error in strict openai mode without key', async () => {
+  const strictStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-owner-openai-strict-'));
+  const strictServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: strictStorageDir,
+      ownerResponseMode: 'openai',
+      openaiApiKey: ''
+    })
+  );
+  await new Promise((resolve) => strictServer.listen(0, '127.0.0.1', resolve));
+  const strictAddress = strictServer.address();
+  const strictBaseUrl = `http://127.0.0.1:${strictAddress.port}`;
+
+  try {
+    const res = await fetch(`${strictBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerRequest())
+    });
+    assert.equal(res.status, 502);
+    const body = await res.json();
+    assert.equal(body.error, 'owner_response_provider_error');
+  } finally {
+    await new Promise((resolve, reject) => strictServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(strictStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('POST /v1/owner-concierge/interaction uses openai response provider in strict mode with mock', async () => {
+  let providerCalled = false;
+  const mockProviderServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST' || req.url !== '/chat/completions') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    providerCalled = true;
+    const authHeader = req.headers.authorization ?? '';
+    if (!String(authHeader).startsWith('Bearer test-key')) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
+
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    assert.equal(body.model, 'gpt-5.1-mini');
+    assert.ok(Array.isArray(body.messages));
+    assert.ok(body.messages.length >= 2);
+
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({
+      model: 'gpt-5.1-mini',
+      choices: [{
+        message: {
+          content: 'Resposta mock da OpenAI para owner concierge'
+        }
+      }]
+    }));
+  });
+  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = mockProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const strictStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-owner-openai-ok-'));
+  const strictServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: strictStorageDir,
+      ownerResponseMode: 'openai',
+      ownerResponseModel: 'gpt-5.1-mini',
+      openaiApiKey: 'test-key',
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => strictServer.listen(0, '127.0.0.1', resolve));
+  const strictAddress = strictServer.address();
+  const strictBaseUrl = `http://127.0.0.1:${strictAddress.port}`;
+
+  try {
+    const payload = validOwnerRequest();
+    payload.request.payload.text = 'Gerar resposta curta para teste';
+
+    const res = await fetch(`${strictBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.response.status, 'accepted');
+    assert.equal(body.response.assistant_output.provider, 'openai');
+    assert.equal(body.response.assistant_output.model, 'gpt-5.1-mini');
+    assert.ok(body.response.assistant_output.latency_ms >= 0);
+    assert.equal(body.response.assistant_output.text, 'Resposta mock da OpenAI para owner concierge');
+    assert.equal(providerCalled, true);
+  } finally {
+    await new Promise((resolve, reject) => strictServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(strictStorageDir, { recursive: true, force: true });
+  }
 });
 
 test('POST /v1/owner-concierge/interaction accepts persona overrides and propagates to task input', async () => {
