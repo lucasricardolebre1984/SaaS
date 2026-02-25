@@ -217,6 +217,27 @@ export function createFileOrchestrationStore(options = {}) {
 
       return null;
     },
+    countPendingTaskConfirmations(tenantId) {
+      return confirmationsState.pending.filter((item) => item.tenant_id === tenantId).length;
+    },
+    listTaskConfirmations(tenantId, options = {}) {
+      const status = typeof options.status === 'string' ? options.status : 'all';
+      const limit = Number.isFinite(Number(options.limit))
+        ? Math.max(1, Math.min(200, Math.floor(Number(options.limit))))
+        : 50;
+
+      let items = [
+        ...confirmationsState.pending,
+        ...confirmationsState.history
+      ].filter((item) => item.tenant_id === tenantId);
+
+      if (status !== 'all') {
+        items = items.filter((item) => item.status === status);
+      }
+
+      items.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      return items.slice(0, limit).map(clone);
+    },
     resolveTaskConfirmation(tenantId, confirmationId, resolution) {
       const index = confirmationsState.pending.findIndex(
         (item) => item.tenant_id === tenantId && item.confirmation_id === confirmationId

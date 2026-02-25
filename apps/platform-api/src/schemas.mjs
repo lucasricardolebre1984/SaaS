@@ -24,6 +24,9 @@ const multimodalApiSchema = readJson('libs/mod-01-owner-concierge/contracts/mult
 const interactionConfirmationActionSchema = readJson(
   'libs/mod-01-owner-concierge/contracts/interaction-confirmation-action.schema.json'
 );
+const interactionConfirmationListSchema = readJson(
+  'libs/mod-01-owner-concierge/contracts/interaction-confirmation-list.schema.json'
+);
 const memoryEntryCreateSchema = readJson('libs/mod-01-owner-concierge/contracts/memory-entry-create.schema.json');
 const memoryEntryListSchema = readJson('libs/mod-01-owner-concierge/contracts/memory-entry-list.schema.json');
 const contextPromotionSchema = readJson('libs/mod-01-owner-concierge/contracts/context-promotion.schema.json');
@@ -65,6 +68,9 @@ const validateInteractionConfirmationActionRequest = ajv.compile(
 );
 const validateInteractionConfirmationActionResponse = ajv.compile(
   interactionConfirmationActionSchema.properties.response
+);
+const validateInteractionConfirmationListResponse = ajv.compile(
+  interactionConfirmationListSchema
 );
 const validateMemoryEntryCreateRequest = ajv.compile(memoryEntryCreateSchema.properties.request);
 const validateMemoryEntryListResponse = ajv.compile(memoryEntryListSchema);
@@ -189,6 +195,11 @@ export function interactionConfirmationActionValid(body) {
 export function interactionConfirmationActionResponseValid(body) {
   const ok = validateInteractionConfirmationActionResponse(body);
   return { ok: Boolean(ok), errors: validateInteractionConfirmationActionResponse.errors ?? [] };
+}
+
+export function interactionConfirmationListResponseValid(body) {
+  const ok = validateInteractionConfirmationListResponse(body);
+  return { ok: Boolean(ok), errors: validateInteractionConfirmationListResponse.errors ?? [] };
 }
 
 export function memoryEntryCreateValid(body) {

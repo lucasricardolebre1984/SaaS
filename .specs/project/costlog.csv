@@ -114,3 +114,6 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4C-SPEC-OPEN milestone 4 mod-01 confirmation workflow slice kickoff and scope approval
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4C-001..003 explicit confirmation workflow endpoint plus file postgres persistence parity confirmation lifecycle events and tests
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4C-004 milestone 4 confirmation workflow gate validation and governance artifact updates
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4Q-SPEC-OPEN milestone 4 confirmation queue safeguards slice kickoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4Q-001..003 tenant queue limit ttl expiration and confirmation list endpoint with store parity and tests
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4Q-004 milestone 4 confirmation queue safeguards gate and governance closure

@@ -4,10 +4,10 @@ SaaS base institucional da Automania AI (Nx monorepo).
 
 ## Status Atual
 - Milestone atual: `Milestone 4 - Next Cycle Definition (in progress)`
-- Slice ativo: `milestone-4-mod-01-confirmation-workflow-slice` (concluído)
+- Slice ativo: `milestone-4-mod-01-confirmation-queue-safeguards-slice` (concluído)
 - Checkpoints recentes:
-  - `feat(mod-01): enforce tool execution policy for task dispatch decisions`
   - `feat(mod-01): add explicit confirmation workflow endpoint for confirm_required`
+  - `feat(mod-01): add confirmation queue safeguards and listing endpoint`
 
 ## Arquitetura Padrão (fixa)
 1. `mod-01-owner-concierge` (chat IA + avatar + memória/contexto)
@@ -59,6 +59,12 @@ npm run rollback:drill
 Novo endpoint de confirmacao explicita:
 - `POST /v1/owner-concierge/interaction-confirmations`
 - uso: resolver `confirmation_id` pendente com `decision=approve|reject` (criado no retorno de `/v1/owner-concierge/interaction` quando a policy retorna `confirm_required`).
+
+Fila operacional de confirmacoes:
+- `GET /v1/owner-concierge/interaction-confirmations?tenant_id=<id>&status=pending&limit=50`
+- safeguards ativos:
+  - limite de pendentes por tenant (`OWNER_CONFIRMATION_MAX_PENDING_PER_TENANT`, default `20`)
+  - TTL de confirmacao (`OWNER_CONFIRMATION_TTL_SECONDS`, default `900`)
 
 CI:
 - workflow `runtime-ci` executa `npm run preprod:validate` em `push/pull_request` para `main`

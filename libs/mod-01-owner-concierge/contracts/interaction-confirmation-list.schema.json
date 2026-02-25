@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-01/interaction-confirmation-list.schema.json",
+  "title": "Module 01 Interaction Confirmation List API",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "status_filter": {
+      "type": "string",
+      "enum": ["all", "pending", "approved", "rejected"]
+    },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "confirmation_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+          "task_type": { "type": "string", "minLength": 3 },
+          "target_module": {
+            "type": "string",
+            "enum": [
+              "mod-02-whatsapp-crm",
+              "mod-03-clientes",
+              "mod-04-agenda",
+              "mod-05-faturamento-cobranca"
+            ]
+          },
+          "reason_code": { "type": ["string", "null"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "resolved_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "required": [
+          "confirmation_id",
+          "status",
+          "task_type",
+          "target_module",
+          "reason_code",
+          "created_at",
+          "resolved_at"
+        ]
+      }
+    }
+  },
+  "required": ["tenant_id", "status_filter", "count", "items"]
+}

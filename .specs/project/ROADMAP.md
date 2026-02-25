@@ -131,6 +131,13 @@ Status update:
     - approval path enqueues `module.task.create` preserving original correlation trace
     - orchestration contracts expanded with confirmation lifecycle events
     - gates passed (`app-platform-api:test`, `contract-checks`, `preprod:validate -- -SkipSmokePostgres`)
+  - feature implemented and validated:
+    - `milestone-4-mod-01-confirmation-queue-safeguards-slice`
+    - safeguards added for confirmation queue: tenant pending limit + TTL expiration on resolution
+    - queue endpoint added:
+      - `GET /v1/owner-concierge/interaction-confirmations`
+    - runtime health now publishes confirmation runtime config (`max_pending_per_tenant`, `ttl_seconds`)
+    - gates passed (`app-platform-api:test`, `contract-checks`, `preprod:validate -- -SkipSmokePostgres`)
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

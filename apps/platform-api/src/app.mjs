@@ -21,6 +21,7 @@ import {
   followupListValid,
   interactionConfirmationActionResponseValid,
   interactionConfirmationActionValid,
+  interactionConfirmationListResponseValid,
   leadCreateValid,
   leadListValid,
   leadStageUpdateValid,
@@ -1038,6 +1039,13 @@ function ownerResponseInfo(provider) {
   };
 }
 
+function ownerConfirmationInfo(config) {
+  return {
+    max_pending_per_tenant: config.maxPendingPerTenant,
+    ttl_seconds: config.ttlSeconds
+  };
+}
+
 function parseMaintenanceEmbeddingMode(value) {
   if (value == null) return null;
   const mode = String(value).toLowerCase();
@@ -1080,6 +1088,47 @@ function parseMaintenanceRunsLimit(value, fallback = 50) {
     return null;
   }
   return Math.min(Math.floor(parsed), 200);
+}
+
+function parseConfirmationStatusFilter(value) {
+  if (value == null || value === '') return 'all';
+  const normalized = String(value).toLowerCase();
+  if (normalized === 'all' || normalized === 'pending' || normalized === 'approved' || normalized === 'rejected') {
+    return normalized;
+  }
+  return null;
+}
+
+function parseConfirmationListLimit(value, fallback = 50) {
+  if (value == null) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return Math.min(Math.floor(parsed), 200);
+}
+
+function parseConfirmationMaxPending(value, fallback = 20) {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.min(Math.floor(parsed), 500);
+}
+
+function parseConfirmationTtlSeconds(value, fallback = 900) {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+  return Math.min(Math.floor(parsed), 7 * 24 * 3600);
+}
+
+function isConfirmationExpired(record, ttlSeconds) {
+  const createdAtMs = Date.parse(record.created_at);
+  if (!Number.isFinite(createdAtMs)) return false;
+  const nowMs = Date.now();
+  return nowMs - createdAtMs > ttlSeconds * 1000;
 }
 
 export function createApp(options = {}) {
@@ -1171,6 +1220,18 @@ export function createApp(options = {}) {
     policyPath: options.taskRoutingPolicyPath,
     executionPolicyPath: options.taskExecutionPolicyPath
   });
+  const ownerConfirmationConfig = {
+    maxPendingPerTenant: parseConfirmationMaxPending(
+      options.ownerConfirmationMaxPendingPerTenant ??
+      process.env.OWNER_CONFIRMATION_MAX_PENDING_PER_TENANT,
+      20
+    ),
+    ttlSeconds: parseConfirmationTtlSeconds(
+      options.ownerConfirmationTtlSeconds ??
+      process.env.OWNER_CONFIRMATION_TTL_SECONDS,
+      900
+    )
+  };
 
   async function runOwnerMemoryReembedBatch(input = {}) {
     const tenantId = String(input.tenant_id ?? '').trim();
@@ -1299,6 +1360,7 @@ export function createApp(options = {}) {
           crm_automation: crmAutomationInfo(crmAutomationStore),
           owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider),
           owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore),
+          owner_confirmation: ownerConfirmationInfo(ownerConfirmationConfig),
           owner_response: ownerResponseInfo(ownerResponseProvider)
         });
       }
@@ -3627,6 +3689,33 @@ export function createApp(options = {}) {
         }
 
         const request = body.request;
+        const taskPlan = taskPlanner.plan(request);
+        const policyDecision = createPolicyDecision(taskPlan);
+        const requiresConfirmation = taskPlan?.execution_decision === 'confirm_required';
+        if (requiresConfirmation) {
+          let pendingCount = 0;
+          try {
+            pendingCount = await store.countPendingTaskConfirmations(request.tenant_id);
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+
+          if (pendingCount >= ownerConfirmationConfig.maxPendingPerTenant) {
+            return json(res, 429, {
+              error: 'confirmation_queue_limit_reached',
+              details: {
+                tenant_id: request.tenant_id,
+                pending_count: pendingCount,
+                max_pending_per_tenant: ownerConfirmationConfig.maxPendingPerTenant,
+                policy_decision: policyDecision
+              }
+            });
+          }
+        }
+
         const correlationId = randomUUID();
         const traceId = randomUUID();
         const ownerCommand = createOwnerCommandEnvelope(request, correlationId, traceId);
@@ -3654,10 +3743,7 @@ export function createApp(options = {}) {
           });
         }
 
-        const taskPlan = taskPlanner.plan(request);
-        const policyDecision = createPolicyDecision(taskPlan);
         const shouldCreateModuleTask = taskPlan?.execution_decision === 'allow';
-        const requiresConfirmation = taskPlan?.execution_decision === 'confirm_required';
         const moduleTaskCommand = shouldCreateModuleTask
           ? createModuleTaskCommand(request, ownerCommand, taskPlan)
           : null;
@@ -3819,6 +3905,51 @@ export function createApp(options = {}) {
         return json(res, 200, { response });
       }
 
+      if (method === 'GET' && path === '/v1/owner-concierge/interaction-confirmations') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const statusFilter = parseConfirmationStatusFilter(parsedUrl.searchParams.get('status'));
+        if (!statusFilter) {
+          return json(res, 400, { error: 'invalid_status_filter' });
+        }
+        const listLimit = parseConfirmationListLimit(parsedUrl.searchParams.get('limit'), 50);
+        if (!listLimit) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+
+        let items;
+        try {
+          items = await store.listTaskConfirmations(tenantId, {
+            status: statusFilter,
+            limit: listLimit
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const response = {
+          tenant_id: tenantId,
+          status_filter: statusFilter,
+          count: items.length,
+          items: items.map((item) => createConfirmationSummary(item))
+        };
+        const responseValidation = interactionConfirmationListResponseValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: responseValidation.errors
+          });
+        }
+
+        return json(res, 200, response);
+      }
+
       if (method === 'POST' && path === '/v1/owner-concierge/interaction-confirmations') {
         const body = await readJsonBody(req);
         if (body === null) {
@@ -3842,6 +3973,38 @@ export function createApp(options = {}) {
           return json(res, 409, {
             error: 'confirmation_not_pending',
             status: existing.status
+          });
+        }
+        if (isConfirmationExpired(existing, ownerConfirmationConfig.ttlSeconds)) {
+          const expired = await store.resolveTaskConfirmation(
+            request.tenant_id,
+            request.confirmation_id,
+            {
+              status: 'rejected',
+              action: 'reject',
+              actor_session_id: request.session_id,
+              resolution_reason: 'expired_ttl'
+            }
+          );
+          if (!expired) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: `unable_to_resolve_expired_confirmation:${request.confirmation_id}`
+            });
+          }
+
+          const expiredEvent = createOwnerConfirmationRejectedEvent(expired);
+          const expiredEventResult = await validateAndPersistEvent(store, expiredEvent);
+          if (!expiredEventResult.ok) {
+            return json(res, 500, {
+              error: expiredEventResult.type,
+              details: expiredEventResult.details
+            });
+          }
+
+          return json(res, 409, {
+            error: 'confirmation_expired',
+            confirmation: createConfirmationSummary(expired)
           });
         }
 

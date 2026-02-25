@@ -33,6 +33,10 @@ function validInteractionConfirmationActionRequest(confirmationId, decision = 'a
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function buildRoutingPolicyWithSingleRule(rule) {
   return {
     version: '1.0.0',
@@ -405,6 +409,8 @@ test('GET /health returns runtime metadata', async () => {
   assert.equal(body.owner_memory.backend, 'file');
   assert.ok(typeof body.owner_memory.storage_dir === 'string');
   assert.ok(typeof body.owner_memory.embedding_mode === 'string');
+  assert.ok(typeof body.owner_confirmation.max_pending_per_tenant === 'number');
+  assert.ok(typeof body.owner_confirmation.ttl_seconds === 'number');
 });
 
 test('owner memory endpoints create/list/promote and emit promotion trace event', async () => {
@@ -2088,6 +2094,187 @@ test('POST /v1/owner-concierge/interaction-confirmations rejects confirmation wi
     assert.equal(queueBody.pending_count, 0);
   } finally {
     await new Promise((resolve, reject) => rejectServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(policyDir, { recursive: true, force: true });
+  }
+});
+
+test('GET /v1/owner-concierge/interaction-confirmations lists queue and per-tenant max pending limit is enforced', async () => {
+  const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-policy-confirm-list-limit-'));
+  const routingPolicyPath = path.join(policyDir, 'task-routing.policy.json');
+  const executionPolicyPath = path.join(policyDir, 'owner-tool-execution-policy.json');
+
+  await fs.writeFile(
+    routingPolicyPath,
+    JSON.stringify(
+      buildRoutingPolicyWithSingleRule({
+        id: 'billing_writeoff_route',
+        keywords: ['perdoar'],
+        route: {
+          target_module: 'mod-05-faturamento-cobranca',
+          task_type: 'billing.writeoff.request',
+          priority: 'high',
+          simulate_failure: false
+        }
+      }),
+      null,
+      2
+    )
+  );
+  await fs.writeFile(
+    executionPolicyPath,
+    JSON.stringify(
+      buildExecutionPolicy([{
+        rule_id: 'confirm_billing_writeoff',
+        task_type: 'billing.writeoff.request',
+        target_module: 'mod-05-faturamento-cobranca',
+        decision: 'confirm_required',
+        requires_confirmation: true,
+        reason_code: 'financial_writeoff'
+      }]),
+      null,
+      2
+    )
+  );
+
+  const limitServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: policyDir,
+      taskRoutingPolicyPath: routingPolicyPath,
+      taskExecutionPolicyPath: executionPolicyPath,
+      ownerConfirmationMaxPendingPerTenant: 1
+    })
+  );
+  await new Promise((resolve) => limitServer.listen(0, '127.0.0.1', resolve));
+  const limitAddress = limitServer.address();
+  const limitBaseUrl = `http://127.0.0.1:${limitAddress.port}`;
+
+  try {
+    const firstPayload = validOwnerRequest();
+    firstPayload.request.payload.text = 'perdoar cobranca vencida';
+
+    const firstRes = await fetch(`${limitBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(firstPayload)
+    });
+    assert.equal(firstRes.status, 200);
+    const firstBody = await firstRes.json();
+    assert.equal(firstBody.response.confirmation.status, 'pending');
+
+    const listRes = await fetch(
+      `${limitBaseUrl}/v1/owner-concierge/interaction-confirmations?tenant_id=tenant_automania&status=pending`
+    );
+    assert.equal(listRes.status, 200);
+    const listBody = await listRes.json();
+    assert.equal(listBody.tenant_id, 'tenant_automania');
+    assert.equal(listBody.status_filter, 'pending');
+    assert.equal(listBody.count, 1);
+    assert.equal(listBody.items[0].status, 'pending');
+
+    const secondPayload = validOwnerRequest();
+    secondPayload.request.request_id = '5618bf8a-9c17-49e2-8b07-c2bd7838f7ac';
+    secondPayload.request.payload.text = 'perdoar cobranca vencida novamente';
+
+    const secondRes = await fetch(`${limitBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(secondPayload)
+    });
+    assert.equal(secondRes.status, 429);
+    const secondBody = await secondRes.json();
+    assert.equal(secondBody.error, 'confirmation_queue_limit_reached');
+    assert.equal(secondBody.details.max_pending_per_tenant, 1);
+  } finally {
+    await new Promise((resolve, reject) => limitServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(policyDir, { recursive: true, force: true });
+  }
+});
+
+test('POST /v1/owner-concierge/interaction-confirmations blocks expired confirmation by ttl', async () => {
+  const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-policy-confirm-ttl-'));
+  const routingPolicyPath = path.join(policyDir, 'task-routing.policy.json');
+  const executionPolicyPath = path.join(policyDir, 'owner-tool-execution-policy.json');
+
+  await fs.writeFile(
+    routingPolicyPath,
+    JSON.stringify(
+      buildRoutingPolicyWithSingleRule({
+        id: 'billing_writeoff_route',
+        keywords: ['perdoar'],
+        route: {
+          target_module: 'mod-05-faturamento-cobranca',
+          task_type: 'billing.writeoff.request',
+          priority: 'high',
+          simulate_failure: false
+        }
+      }),
+      null,
+      2
+    )
+  );
+  await fs.writeFile(
+    executionPolicyPath,
+    JSON.stringify(
+      buildExecutionPolicy([{
+        rule_id: 'confirm_billing_writeoff',
+        task_type: 'billing.writeoff.request',
+        target_module: 'mod-05-faturamento-cobranca',
+        decision: 'confirm_required',
+        requires_confirmation: true,
+        reason_code: 'financial_writeoff'
+      }]),
+      null,
+      2
+    )
+  );
+
+  const ttlServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: policyDir,
+      taskRoutingPolicyPath: routingPolicyPath,
+      taskExecutionPolicyPath: executionPolicyPath,
+      ownerConfirmationTtlSeconds: 1
+    })
+  );
+  await new Promise((resolve) => ttlServer.listen(0, '127.0.0.1', resolve));
+  const ttlAddress = ttlServer.address();
+  const ttlBaseUrl = `http://127.0.0.1:${ttlAddress.port}`;
+
+  try {
+    const payload = validOwnerRequest();
+    payload.request.payload.text = 'perdoar cobranca vencida';
+    const interactionRes = await fetch(`${ttlBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    assert.equal(interactionRes.status, 200);
+    const interactionBody = await interactionRes.json();
+    const confirmationId = interactionBody.response.confirmation.confirmation_id;
+    const correlationId = interactionBody.response.owner_command.correlation_id;
+
+    await sleep(1200);
+
+    const approveRes = await fetch(`${ttlBaseUrl}/v1/owner-concierge/interaction-confirmations`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validInteractionConfirmationActionRequest(confirmationId, 'approve'))
+    });
+    assert.equal(approveRes.status, 409);
+    const approveBody = await approveRes.json();
+    assert.equal(approveBody.error, 'confirmation_expired');
+    assert.equal(approveBody.confirmation.status, 'rejected');
+
+    const traceRes = await fetch(
+      `${ttlBaseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+    );
+    assert.equal(traceRes.status, 200);
+    const traceBody = await traceRes.json();
+    const eventNames = traceBody.events.map((item) => item.name);
+    assert.ok(eventNames.includes('owner.confirmation.rejected'));
+    assert.ok(!eventNames.includes('module.task.created'));
+  } finally {
+    await new Promise((resolve, reject) => ttlServer.close((err) => (err ? reject(err) : resolve())));
     await fs.rm(policyDir, { recursive: true, force: true });
   }
 });

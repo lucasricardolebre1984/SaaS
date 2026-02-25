@@ -373,6 +373,44 @@ export function createPostgresOrchestrationStore(options = {}) {
       }
       return asTaskConfirmation(result.rows[0]);
     },
+    async countPendingTaskConfirmations(tenantId) {
+      const result = await query(
+        `SELECT COUNT(*)::integer AS count
+         FROM ${confirmationsTable}
+         WHERE tenant_id = $1 AND status = 'pending'`,
+        [tenantId]
+      );
+      return result.rows[0]?.count ?? 0;
+    },
+    async listTaskConfirmations(tenantId, options = {}) {
+      const status = typeof options.status === 'string' ? options.status : 'all';
+      const limit = Number.isFinite(Number(options.limit))
+        ? Math.max(1, Math.min(200, Math.floor(Number(options.limit))))
+        : 50;
+
+      if (status === 'all') {
+        const result = await query(
+          `SELECT *
+           FROM ${confirmationsTable}
+           WHERE tenant_id = $1
+           ORDER BY created_at DESC
+           LIMIT $2`,
+          [tenantId, limit]
+        );
+        return result.rows.map(asTaskConfirmation);
+      }
+
+      const result = await query(
+        `SELECT *
+         FROM ${confirmationsTable}
+         WHERE tenant_id = $1
+           AND status = $2
+         ORDER BY created_at DESC
+         LIMIT $3`,
+        [tenantId, status, limit]
+      );
+      return result.rows.map(asTaskConfirmation);
+    },
     async resolveTaskConfirmation(tenantId, confirmationId, resolution) {
       const nowIso = new Date().toISOString();
       const result = await query(
