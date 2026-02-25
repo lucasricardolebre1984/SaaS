@@ -3,7 +3,7 @@
 Date: 2026-02-25  
 Repository: `lucasricardolebre1984/fabio`  
 Branch: `main`
-Current state: `Blocked by GitHub plan (HTTP 403 on private repo without Pro)`
+Current state: `Applied`
 
 ## Enforced Policy
 1. Required status checks (strict):
@@ -22,6 +22,12 @@ Current state: `Blocked by GitHub plan (HTTP 403 on private repo without Pro)`
 7. Branch deletions:
    - `disabled`
 
+## Verification Snapshot
+- `strict`: `true`
+- `contexts`: `Preprod Validate`
+- `required_approving_review_count`: `1`
+- `enforce_admins.enabled`: `true`
+
 ## Operation Commands
 Dry-run:
 ```powershell
@@ -32,13 +38,3 @@ Apply:
 ```powershell
 npm run github:protect-main
 ```
-
-## Blocker
-- API responses for branch protection and rulesets return:
-  - `Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)`
-
-## Unblock Options
-1. Upgrade account/org plan to GitHub Pro/Team.
-2. Make repository public (if policy allows).
-3. After unblocking, rerun:
-   - `npm run github:protect-main`

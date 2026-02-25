@@ -1,6 +1,6 @@
 # Tasks - milestone-3-branch-protection-slice
 
-Status: Blocked (external dependency)
+Status: Completed
 Date: 2026-02-25
 
 ## M3B-001 - Publish branch protection automation script
@@ -10,12 +10,13 @@ Date: 2026-02-25
   - npm script alias for main branch protection
 
 ## M3B-002 - Apply protection on repository main branch
-- Status: blocked
+- Status: completed
 - Output:
-  - attempted protection apply on `lucasricardolebre1984/fabio` branch `main`
-  - blocked by GitHub plan constraint (`HTTP 403`)
+  - protection applied on `lucasricardolebre1984/fabio` branch `main`
+  - validation readback via `gh api`
 - Evidence:
-  - `npm run github:protect-main` output: `Upgrade to GitHub Pro or make this repository public`
+  - `npm run github:protect-main` output: `Applied: strict=True contexts=Preprod Validate approvals=1 enforce_admins=True`
+  - `gh api repos/lucasricardolebre1984/fabio/branches/main/protection`
 
 ## M3B-003 - Governance checkpoint
 - Status: completed

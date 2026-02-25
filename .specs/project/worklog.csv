@@ -100,3 +100,5 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-25,00:50,00:55,0.08,Implement,milestone-3-ci-preprod-gate-slice,M3C-001,pair,done,Integrated runtime CI with unified preprod gate and report artifact upload
 2026-02-25,00:56,01:02,0.10,Implement,milestone-3-branch-protection-slice,M3B-001,pair,done,Published branch protection automation script and npm alias github:protect-main
 2026-02-25,01:02,01:05,0.05,Implement,milestone-3-branch-protection-slice,M3B-002..003,pair,blocked,Apply attempt failed by GitHub plan HTTP 403 documented blocker and governance updates
+2026-02-25,01:28,01:33,0.08,Implement,milestone-3-branch-protection-slice,M3B-002,pair,done,Applied branch protection on main with required check Preprod Validate approvals 1 and admins enforced
+2026-02-25,01:33,01:35,0.03,Governance,milestone-3-branch-protection-slice,M3B-003,pair,done,Updated state roadmap readme agents and branch protection baseline from blocked to completed

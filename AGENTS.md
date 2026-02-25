@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-3-branch-protection-slice` (blocked)
-- Active phase: `Implement blocked (external dependency)`
-- Immediate checkpoint: unblock GitHub plan/visibility and rerun `npm run github:protect-main`.
+- Active feature: `milestone-3-branch-protection-slice` (completed)
+- Active phase: `Implement checkpoint closed`
+- Immediate checkpoint: open release dry-run + rollback drill slice.

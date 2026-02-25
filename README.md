@@ -56,7 +56,7 @@ CI:
 
 Proteção de branch (`main`):
 - automação disponível: `npm run github:protect-main`
-- estado atual: bloqueado por plano GitHub em repo privado (`HTTP 403`)
+- estado atual: aplicado
 - detalhe: `.specs/project/GITHUB-BRANCH-PROTECTION.md`
 
 Nota de isolamento: o smoke deste repositório usa stack Docker `fabio-postgres-smoke` e porta host `55432`, sem conflito com `fabio2` (`5432`).
