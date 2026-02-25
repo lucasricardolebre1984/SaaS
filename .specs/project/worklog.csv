@@ -96,3 +96,5 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-25,00:32,00:34,0.03,Specify,milestone-3-production-readiness-planning,M3P-004,pair,done,Published secrets and configuration hardening plan by environment with rotation and audit criteria
 2026-02-25,00:40,00:49,0.15,Implement,milestone-3-operational-hardening-slice,M3H-001,pair,done,Implemented preprod gate orchestrator script and package command preprod:validate with timestamped report output
 2026-02-25,00:49,00:50,0.02,Implement,milestone-3-operational-hardening-slice,M3H-002..003,pair,done,Aligned runbook and preprod checklist to executable gate and closed governance checkpoint with execution evidence
+2026-02-25,00:55,00:56,0.02,Governance,milestone-3-ci-preprod-gate-slice,M3C-002,pair,done,Updated state roadmap readme agents and checklist mapping for CI preprod gate slice
+2026-02-25,00:50,00:55,0.08,Implement,milestone-3-ci-preprod-gate-slice,M3C-001,pair,done,Integrated runtime CI with unified preprod gate and report artifact upload

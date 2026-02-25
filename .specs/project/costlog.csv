@@ -92,3 +92,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M3P-004 secrets and config hardening plan publication
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3H-001 preprod validation orchestrator implementation and execution
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3H-002..003 runbook checklist alignment and checkpoint closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3C-002 CI gate governance closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3C-001 runtime-ci integration with preprod gate

@@ -22,6 +22,7 @@ Definir critério institucional mínimo para decisão `GO/NO-GO` antes de qualqu
 Gate orchestrator (preferred):
 - comando: `npm run preprod:validate`
 - evidência: `tools/reports/preprod-validate-<timestamp>.log`
+- CI mapping: `.github/workflows/runtime-ci.yml`
 
 1. Contract integrity:
    - comando: `npx nx run contract-tests:contract-checks`

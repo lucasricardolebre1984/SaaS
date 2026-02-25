@@ -50,6 +50,10 @@ Gate único de pré-produção (orquestra todos os checks):
 npm run preprod:validate
 ```
 
+CI:
+- workflow `runtime-ci` executa `npm run preprod:validate` em `push/pull_request` para `main`
+- relatório disponível como artifact (`preprod-validate-report`)
+
 Nota de isolamento: o smoke deste repositório usa stack Docker `fabio-postgres-smoke` e porta host `55432`, sem conflito com `fabio2` (`5432`).
 
 ## Gerar novo SaaS (starter)

@@ -85,6 +85,9 @@ Status update:
 - First execution slice completed:
   - `milestone-3-operational-hardening-slice`
   - executable gate command: `npm run preprod:validate`
+- CI integration slice completed:
+  - `milestone-3-ci-preprod-gate-slice`
+  - runtime workflow runs unified gate and publishes report artifact
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS
