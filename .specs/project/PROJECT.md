@@ -3,7 +3,7 @@
 Project: fabio (Automania AI institutional SaaS base)
 Owner: Lucas Ricardo Lebre
 Created: 2026-02-22
-Status: Execution (Milestone 3 stream)
+Status: Execution (post-Milestone 3 transition)
 
 ## Vision
 Build a reusable SaaS base that can be cloned for future products, with strict process discipline, module boundaries, and measurable engineering/financial performance from day 1.
@@ -30,7 +30,8 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 - Owner console settings/multimodal baseline.
 - Persona 1/2 optional prompt wiring in settings and interaction contracts.
 - SaaS starter generator and operational runbooks.
-- Milestone 3 planning kickoff (release/rollback/observability readiness).
+- Milestone 3 planning and production-readiness closure completed.
+- Milestone 4 scope definition kickoff (next slice in Specify phase).
 
 ## Success Criteria (Current Cycle)
 - .specs complete and reviewed.

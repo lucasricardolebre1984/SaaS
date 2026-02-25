@@ -62,7 +62,7 @@ Status update:
 - Milestone 2 exit checklist closed with explicit GO decision:
   - `.specs/project/MILESTONE-2-EXIT-CHECKLIST.md`
 
-## Milestone 3 - Production Readiness (current)
+## Milestone 3 - Production Readiness (completed)
 Objective: Enable controlled deploy with observability and rollback.
 
 Deliverables:
@@ -77,7 +77,7 @@ Exit criteria:
 - rollback tested
 
 Status update:
-- Planning baseline completed with artifacts:
+- Planning baseline completed com artifacts:
   - `.specs/project/PREPROD-BASELINE-CHECKLIST.md`
   - `apps/platform-api/RUNBOOK-production-readiness.md`
   - `.specs/project/OBSERVABILITY-BASELINE-M3.md`
@@ -97,11 +97,26 @@ Status update:
     - `npm run release:dry-run`
     - `npm run rollback:drill`
   - unified gate now executes operational drill checks with report artifacts
+- Milestone 3 exit checklist closed com decisao GO:
+  - `.specs/project/MILESTONE-3-EXIT-CHECKLIST.md`
+
+## Milestone 4 - Next Cycle Definition (planned)
+Objective: Define the next implementation stream after Milestone 3 readiness closure.
+
+Deliverables:
+- first post-M3 feature slice opened in `.specs/features/*`
+- spec/design/tasks approved before implementation
+- STATE and AGENTS aligned to the new active feature
+
+Exit criteria:
+- next feature has approved `spec.md`, `design.md`, and `tasks.md`
+- implementation can start without scope ambiguity
+
+Status update:
+- pending kickoff
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS
 - Advanced AI cost optimization per provider/model
 - Cross-product analytics layer
-
-
 

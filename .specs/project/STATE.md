@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 3 owner modules UI slice)
-Active feature: milestone-3-owner-modules-ui-slice (completed)
+Active phase: Implement checkpoint closed (Milestone 3 exit/go-no-go slice)
+Active feature: milestone-3-exit-go-no-go-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -344,9 +344,17 @@ Active feature: milestone-3-owner-modules-ui-slice (completed)
   - module 04 wired to `/v1/agenda/appointments` and `/v1/agenda/reminders` (`create`, `update`, `list`)
   - module 05 wired to `/v1/billing/charges`, `/v1/billing/collection-requests`, and `/v1/billing/payments`
   - preprod gate revalidated (`npm run preprod:validate -- -SkipSmokePostgres`) with pass report at `tools/reports/preprod-validate-20260225-030003.log`
+- Opened and completed `milestone-3-exit-go-no-go-slice`:
+  - published final readiness artifact `.specs/project/MILESTONE-3-EXIT-CHECKLIST.md` with explicit `GO` decision
+  - roadmap/state aligned to mark Milestone 3 as completed
+  - gates revalidated with fresh reports:
+    - `tools/reports/preprod-validate-20260225-042844.log`
+    - `tools/reports/release-dry-run-20260225-042900.log`
+    - `tools/reports/rollback-drill-20260225-042902.log`
+  - metrics checkpoint closed with `M3X` entries in `worklog.csv` and `costlog.csv`
 
 ## Next Checkpoint
-Open Milestone 3 exit/go-no-go closure slice with explicit readiness decision artifact and include Owner Console module 03/04/05 evidence in readiness pack.
+Definir proximo ciclo/milestone apos readiness GO (ex.: primeiro slice de runtime IA para mod-01, respeitando fases Specify -> Design -> Tasks -> Implement).
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

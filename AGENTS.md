@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-3-release-rollback-drill-slice` (completed)
+- Active feature: `milestone-3-exit-go-no-go-slice` (completed)
 - Active phase: `Implement checkpoint closed`
-- Immediate checkpoint: open Milestone 3 exit/go-no-go closure slice.
+- Immediate checkpoint: define next cycle/milestone scope and open the first feature in `Specify` phase.

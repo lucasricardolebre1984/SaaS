@@ -2,7 +2,7 @@
 
 Project: fabio
 Date: 2026-02-25
-Status: Milestone 3 execution active
+Status: Post-Milestone 3 transition active
 
 ## Mission
 Create a reusable SaaS operating system for Automania AI with strict phase workflow, modular architecture, and measurable outcomes (delivery, quality, reliability, and cost).
@@ -38,4 +38,4 @@ Only approved imported legacy assets: `contratos/`.
 - Metrics tracking in worklog/costlog
 
 ## Immediate Goal
-Close Milestone 3 with explicit GO/NO-GO readiness decision artifact after release dry-run and rollback drill gates.
+Define the next cycle (Milestone 4) and open the first feature slice in `Specify` phase with approved scope boundaries.
