@@ -295,13 +295,16 @@ Active feature: milestone-3-production-readiness-planning
   - `.specs/features/milestone-3-production-readiness-planning/spec.md`
   - `.specs/features/milestone-3-production-readiness-planning/design.md`
   - `.specs/features/milestone-3-production-readiness-planning/tasks.md`
+- M3P-001 completed:
+  - pre-production baseline checklist published with GO/NO-GO gates and owners
+  - artifact: `.specs/project/PREPROD-BASELINE-CHECKLIST.md`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
 
 ## Next Checkpoint
-Open Milestone 3 planning spec/design/tasks and define pre-production readiness gates.
+Execute M3P-002 (unified operational runbook: deploy, rollback, incident, provider fallback).
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

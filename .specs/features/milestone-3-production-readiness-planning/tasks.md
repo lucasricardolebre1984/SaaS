@@ -4,10 +4,12 @@ Status: Draft
 Date: 2026-02-25
 
 ## M3P-001 - Publicar baseline de pré-produção
-- Status: pending
+- Status: completed
 - Output:
   - checklist formal de pré-produção
   - critérios GO/NO-GO
+- Evidence:
+  - `.specs/project/PREPROD-BASELINE-CHECKLIST.md`
 
 ## M3P-002 - Publicar runbook operacional unificado
 - Status: pending
