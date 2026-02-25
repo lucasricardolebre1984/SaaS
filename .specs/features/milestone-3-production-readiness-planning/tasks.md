@@ -12,11 +12,13 @@ Date: 2026-02-25
   - `.specs/project/PREPROD-BASELINE-CHECKLIST.md`
 
 ## M3P-002 - Publicar runbook operacional unificado
-- Status: pending
+- Status: completed
 - Output:
   - deploy + rollback
   - incident response
   - fallback de providers
+- Evidence:
+  - `apps/platform-api/RUNBOOK-production-readiness.md`
 
 ## M3P-003 - Definir observabilidade mínima por módulo
 - Status: pending
