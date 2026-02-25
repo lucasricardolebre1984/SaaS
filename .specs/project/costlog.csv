@@ -105,3 +105,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3U-005 build preprod gate pass and governance checkpoint closure
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3X-001..002 milestone 3 exit checklist publication and roadmap state alignment
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3X-003 milestone 3 exit slice metrics closure and consistency audit
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4O-SPEC-OPEN milestone 4 mod-01 owner ai runtime slice kickoff and governance alignment

@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 3 exit/go-no-go slice)
-Active feature: milestone-3-exit-go-no-go-slice (completed)
+Active phase: Specify (Milestone 4 mod-01 owner ai runtime slice)
+Active feature: milestone-4-mod-01-owner-ai-runtime-slice (draft)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -352,9 +352,13 @@ Active feature: milestone-3-exit-go-no-go-slice (completed)
     - `tools/reports/release-dry-run-20260225-042900.log`
     - `tools/reports/rollback-drill-20260225-042902.log`
   - metrics checkpoint closed with `M3X` entries in `worklog.csv` and `costlog.csv`
+- Opened `milestone-4-mod-01-owner-ai-runtime-slice` in Specify phase:
+  - draft docs created (`spec.md`, `design.md`, `tasks.md`)
+  - focus defined: replace owner runtime stub response with real AI provider flow in contract-first mode
+  - implementation blocked until spec/design/tasks approval
 
 ## Next Checkpoint
-Definir proximo ciclo/milestone apos readiness GO (ex.: primeiro slice de runtime IA para mod-01, respeitando fases Specify -> Design -> Tasks -> Implement).
+Aprovar `spec.md` do slice `milestone-4-mod-01-owner-ai-runtime-slice` e evoluir para Design/Tasks aprovados antes da implementacao.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

@@ -113,10 +113,11 @@ Exit criteria:
 - implementation can start without scope ambiguity
 
 Status update:
-- pending kickoff
+- kickoff started:
+  - feature opened: `milestone-4-mod-01-owner-ai-runtime-slice`
+  - phase: `Specify` (draft docs created, pending approval)
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS
 - Advanced AI cost optimization per provider/model
 - Cross-product analytics layer
-

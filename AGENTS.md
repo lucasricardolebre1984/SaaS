@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-3-exit-go-no-go-slice` (completed)
-- Active phase: `Implement checkpoint closed`
-- Immediate checkpoint: define next cycle/milestone scope and open the first feature in `Specify` phase.
+- Active feature: `milestone-4-mod-01-owner-ai-runtime-slice` (draft)
+- Active phase: `Specify`
+- Immediate checkpoint: approve `spec.md` and advance to `Design`/`Tasks` approval before implementation.
