@@ -4,10 +4,10 @@ SaaS base institucional da Automania AI (Nx monorepo).
 
 ## Status Atual
 - Milestone atual: `Milestone 3 - Production Readiness (execution)`
-- Slice ativo: `milestone-3-operational-hardening-slice` (concluído)
+- Slice ativo: `milestone-3-release-rollback-drill-slice` (concluído)
 - Checkpoints recentes:
-  - `feat(m2): owner settings persona prompts and contract propagation` (`5b2b7ce`)
-  - `chore(governance): log postgres smoke validation and isolation evidence` (`0d72fb6`)
+  - `fix(m3): apply branch protection and resolve automation payload issue` (`1c57e7f`)
+  - `fix(ci): make preprod scripts pwsh-compatible for Linux runners` (`d311990`)
 
 ## Arquitetura Padrão (fixa)
 1. `mod-01-owner-concierge` (chat IA + avatar + memória/contexto)
@@ -48,6 +48,12 @@ npm run smoke:postgres
 Gate único de pré-produção (orquestra todos os checks):
 ```powershell
 npm run preprod:validate
+```
+
+Drills operacionais:
+```powershell
+npm run release:dry-run
+npm run rollback:drill
 ```
 
 CI:

@@ -103,3 +103,5 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-25,01:28,01:33,0.08,Implement,milestone-3-branch-protection-slice,M3B-002,pair,done,Applied branch protection on main with required check Preprod Validate approvals 1 and admins enforced
 2026-02-25,01:33,01:35,0.03,Governance,milestone-3-branch-protection-slice,M3B-003,pair,done,Updated state roadmap readme agents and branch protection baseline from blocked to completed
 2026-02-25,01:35,01:42,0.12,Fix,milestone-3-ci-preprod-gate-slice,M3C-001-fix,pair,done,Made npm scripts pwsh-compatible for Linux runners and revalidated preprod gate skip-smoke path
+2026-02-25,02:12,02:24,0.20,Implement,milestone-3-release-rollback-drill-slice,M3R-001..003,pair,done,Published release dry-run and rollback-drill scripts and integrated operational gates into preprod validate
+2026-02-25,02:24,02:31,0.12,Governance,milestone-3-release-rollback-drill-slice,M3R-004,pair,done,Updated runbook checklist state roadmap agents and fixed start-day active feature suffix parsing

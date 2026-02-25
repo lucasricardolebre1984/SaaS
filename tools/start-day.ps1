@@ -73,6 +73,7 @@ if (Test-Path $statePath) {
   $featureMatch = [regex]::Match($stateRaw, '(?m)^Active feature:\s*(.+)$')
   if ($featureMatch.Success) {
     $activeFeature = $featureMatch.Groups[1].Value.Trim()
+    $activeFeature = [regex]::Replace($activeFeature, '\s+\([^)]+\)\s*$', '')
   }
   $phaseMatch = [regex]::Match($stateRaw, '(?m)^Active phase:\s*(.+)$')
   if ($phaseMatch.Success) {

@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 3 branch protection slice)
-Active feature: milestone-3-branch-protection-slice (completed)
+Active phase: Implement checkpoint closed (Milestone 3 release rollback drill slice)
+Active feature: milestone-3-release-rollback-drill-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -329,9 +329,18 @@ Active feature: milestone-3-branch-protection-slice (completed)
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
+- Opened and completed `milestone-3-release-rollback-drill-slice`:
+  - published release command `npm run release:dry-run` (`tools/release-dry-run.ps1`)
+  - published rollback drill command `npm run rollback:drill` (`tools/rollback-drill.ps1`)
+  - integrated operational drill gates in `preprod:validate` with recursion-safe flags
+  - validated commands:
+    - `npm run release:dry-run -- -SkipPreprodValidate -SkipBranchProtectionCheck`
+    - `npm run rollback:drill -- -SkipPostgresSmoke`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+- `tools/start-day.ps1` now sanitizes active feature names with trailing status suffix (example: ` (completed)`), preventing false missing-doc loads.
 
 ## Next Checkpoint
-Open next Milestone 3 execution slice for release dry-run and rollback drill.
+Open Milestone 3 exit/go-no-go closure slice with explicit readiness decision artifact.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

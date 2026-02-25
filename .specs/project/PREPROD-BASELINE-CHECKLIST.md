@@ -23,6 +23,9 @@ Gate orchestrator (preferred):
 - comando: `npm run preprod:validate`
 - evidência: `tools/reports/preprod-validate-<timestamp>.log`
 - CI mapping: `.github/workflows/runtime-ci.yml`
+- drills operacionais incluídos:
+  - `tools/reports/release-dry-run-<timestamp>.log`
+  - `tools/reports/rollback-drill-<timestamp>.log`
 
 1. Contract integrity:
    - comando: `npx nx run contract-tests:contract-checks`
@@ -47,6 +50,14 @@ Gate orchestrator (preferred):
 6. CRM console build:
    - comando: `npx nx run app-crm-console:build`
    - owner: Engineering
+   - status exigido: pass
+7. Release dry-run:
+   - comando: `npm run release:dry-run`
+   - owner: Engineering/Ops
+   - status exigido: pass
+8. Rollback drill:
+   - comando: `npm run rollback:drill`
+   - owner: Engineering/Ops
    - status exigido: pass
 
 ## Operational Readiness Criteria

@@ -9,6 +9,8 @@
     "tenant:validate": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/validate-sample-tenant-pack.ps1",
     "smoke:postgres": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/smoke-postgres-orchestration.ps1",
     "preprod:validate": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/preprod-validate.ps1",
+    "release:dry-run": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/release-dry-run.ps1",
+    "rollback:drill": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/rollback-drill.ps1",
     "generate:saas-starter": "node ./tools/generate-saas-starter.mjs",
     "skills:install": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/install-project-skills.ps1 -Agent codex -Force",
     "init:day": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -ForceSkills",

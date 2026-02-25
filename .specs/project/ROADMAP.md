@@ -88,9 +88,15 @@ Status update:
 - CI integration slice completed:
   - `milestone-3-ci-preprod-gate-slice`
   - runtime workflow runs unified gate and publishes report artifact
-- Branch protection slice partially executed:
+- Branch protection slice completed:
   - automation published (`tools/enforce-branch-protection.ps1`)
   - enforcement completed on `main` with required check `Preprod Validate`
+- Release/rollback drill slice completed:
+  - `milestone-3-release-rollback-drill-slice`
+  - commands published:
+    - `npm run release:dry-run`
+    - `npm run rollback:drill`
+  - unified gate now executes operational drill checks with report artifacts
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS
