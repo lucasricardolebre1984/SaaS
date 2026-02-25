@@ -1,8 +1,8 @@
 # CONTEXT
 
 Project: fabio
-Date: 2026-02-22
-Status: Institutional baseline defined
+Date: 2026-02-24
+Status: Milestone 2 implementation active
 
 ## Mission
 Create a reusable SaaS operating system for Automania AI with strict phase workflow, modular architecture, and measurable outcomes (delivery, quality, reliability, and cost).
@@ -30,6 +30,7 @@ Only approved imported legacy assets: `contratos/`.
 - Default neutral assistant behavior
 - Intended default model: gpt-5.1-mini (if available)
 - Multimodal support in Module 01 (text/audio/image/file + continuous chat avatar mode)
+- Tenant personas are optional runtime overlays (persona 1 owner concierge, persona 2 whatsapp agent)
 
 ## Operational Discipline
 - Phases: Specify -> Design -> Tasks -> Implement+Validate
@@ -37,4 +38,4 @@ Only approved imported legacy assets: `contratos/`.
 - Metrics tracking in worklog/costlog
 
 ## Immediate Goal
-Implement contracts and data model foundation for SaaS Standard v1 before runtime business coding.
+Close `milestone-2-owner-settings-multimodal-slice` with persona settings contract propagation and clean checkpoint (commit + gates), then proceed to Milestone 2 exit evaluation.

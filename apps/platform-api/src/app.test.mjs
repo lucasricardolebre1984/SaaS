@@ -1741,6 +1741,75 @@ test('POST /v1/owner-concierge/interaction queues module task and trace is prese
   assert.match(queueRaw, /"history"/);
 });
 
+test('POST /v1/owner-concierge/interaction accepts persona overrides and propagates to task input', async () => {
+  const payload = validOwnerRequest();
+  payload.request.request_id = '858fcf19-1d4a-4cc5-8a05-6da723b5bb9f';
+  payload.request.payload = {
+    text: 'Enviar follow-up para lead quente',
+    persona_overrides: {
+      owner_concierge_prompt: 'Papel: concierge do proprietario. Tom: executivo.',
+      whatsapp_agent_prompt: 'Papel: agente whatsapp. Tom: cordial.'
+    }
+  };
+
+  const res = await fetch(`${baseUrl}/v1/owner-concierge/interaction`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.response.status, 'accepted');
+
+  const correlationId = body.response.owner_command.correlation_id;
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+
+  const ownerCommand = traceBody.commands.find((item) => item.name === 'owner.command.create');
+  const taskCommand = traceBody.commands.find((item) => item.name === 'module.task.create');
+  assert.ok(ownerCommand);
+  assert.ok(taskCommand);
+
+  assert.equal(
+    ownerCommand.payload.persona_overrides.owner_concierge_prompt,
+    payload.request.payload.persona_overrides.owner_concierge_prompt
+  );
+  assert.equal(
+    ownerCommand.payload.persona_overrides.whatsapp_agent_prompt,
+    payload.request.payload.persona_overrides.whatsapp_agent_prompt
+  );
+  assert.equal(
+    taskCommand.payload.input.persona_overrides.owner_concierge_prompt,
+    payload.request.payload.persona_overrides.owner_concierge_prompt
+  );
+  assert.equal(
+    taskCommand.payload.input.persona_overrides.whatsapp_agent_prompt,
+    payload.request.payload.persona_overrides.whatsapp_agent_prompt
+  );
+});
+
+test('POST /v1/owner-concierge/interaction rejects empty persona_overrides object', async () => {
+  const payload = validOwnerRequest();
+  payload.request.payload = {
+    text: 'Oi',
+    persona_overrides: {}
+  };
+
+  const res = await fetch(`${baseUrl}/v1/owner-concierge/interaction`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.error, 'validation_error');
+});
+
 test('POST /v1/owner-concierge/interaction rejects invalid request', async () => {
   const payload = validOwnerRequest();
   delete payload.request.payload.text;

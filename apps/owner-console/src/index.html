@@ -15,17 +15,11 @@
           <p>Owner Concierge</p>
         </div>
 
-        <nav class="module-nav">
-          <button class="module-nav__item is-active" type="button">01 Chat IA</button>
-          <button class="module-nav__item" type="button">02 CRM WhatsApp</button>
-          <button class="module-nav__item" type="button">03 Clientes</button>
-          <button class="module-nav__item" type="button">04 Agenda</button>
-          <button class="module-nav__item" type="button">05 Cobranca</button>
-        </nav>
+        <nav class="module-nav" id="moduleNav"></nav>
 
         <p class="sidebar-note">
-          Padrao visual institucional para clonar em novos SaaS.
-          Layout e paleta podem ser trocados por tenant sem alterar o core.
+          Padrao visual institucional para clonar em novos SaaS. O menu 06 Configuracoes centraliza APIs,
+          integracoes e metricas.
         </p>
       </aside>
 
@@ -34,46 +28,20 @@
           <div class="topbar__left">
             <button id="mobileMenuBtn" class="menu-btn" type="button" aria-label="Abrir menu">Menu</button>
             <div>
-              <p class="brand-caption">FC Solucoes</p>
-              <h2>Chat IA VIVA</h2>
+              <p class="brand-caption" id="topTenantLabel">tenant_automania</p>
+              <h2 id="topModuleTitle">01 Chat IA</h2>
             </div>
           </div>
 
           <div class="topbar__right">
-            <label>
-              API
-              <input id="apiBase" value="http://127.0.0.1:4300" />
-            </label>
-            <label>
-              Tenant
-              <input id="tenantId" value="tenant_automania" />
-            </label>
-            <label>
-              Session
-              <input id="sessionId" />
-            </label>
-            <label>
-              Layout
-              <select id="layoutSelect">
-                <option value="fabio2">Fabio2</option>
-                <option value="studio">Studio</option>
-              </select>
-            </label>
-            <label>
-              Paleta
-              <select id="paletteSelect">
-                <option value="ocean">Ocean</option>
-                <option value="forest">Forest</option>
-                <option value="sunset">Sunset</option>
-              </select>
-            </label>
-            <button id="applyTenantThemeBtn" class="btn btn--ghost" type="button">Tema Tenant</button>
+            <button id="openSettingsBtn" class="btn btn--ghost" type="button">Configuracoes</button>
+            <span id="settingsLockStatus" class="status-pill is-locked">admin: bloqueado</span>
             <button id="healthBtn" class="btn btn--ghost" type="button">Health</button>
             <span id="healthStatus" class="status-pill">idle</span>
           </div>
         </header>
 
-        <main class="workspace">
+        <main class="workspace" id="chatWorkspace">
           <section class="chat-panel card">
             <header class="card__header">
               <h3>Chat do Proprietario</h3>
@@ -90,12 +58,24 @@
             </div>
 
             <form id="chatForm" class="composer">
-              <input id="messageInput" placeholder="Ex.: criar cobranca e avisar no WhatsApp" autocomplete="off" />
-              <button class="btn" type="submit">Enviar</button>
+              <div class="composer-tools">
+                <button id="audioRecordBtn" class="btn btn--ghost" type="button">Audio</button>
+                <button id="photoPickBtn" class="btn btn--ghost" type="button">Foto</button>
+                <button id="filePickBtn" class="btn btn--ghost" type="button">Arquivo</button>
+                <input id="photoInput" type="file" accept="image/*" class="hidden" />
+                <input id="fileInput" type="file" class="hidden" />
+              </div>
+
+              <div id="pendingAttachments" class="pending-attachments"></div>
+
+              <div class="composer-row">
+                <input id="messageInput" placeholder="Ex.: criar cobranca e avisar no WhatsApp" autocomplete="off" />
+                <button class="btn" type="submit">Enviar</button>
+              </div>
             </form>
           </section>
 
-          <aside class="voice-panel card">
+          <aside class="voice-panel card" id="voicePanel">
             <header class="card__header">
               <h3>Avatar Continuo</h3>
               <button id="simulateVoiceBtn" class="btn btn--ghost" type="button">Simular Voz</button>
@@ -126,6 +106,144 @@
             </div>
           </aside>
         </main>
+
+        <section class="workspace hidden" id="modulePlaceholderWorkspace">
+          <section class="card placeholder-card">
+            <header class="card__header">
+              <h3 id="placeholderTitle">Modulo em evolucao</h3>
+            </header>
+            <div class="placeholder-body">
+              <p id="placeholderText">
+                Este modulo sera expandido no proximo slice mantendo os contratos institucionais.
+              </p>
+            </div>
+          </section>
+        </section>
+
+        <section class="settings-workspace hidden" id="settingsWorkspace">
+          <section class="card">
+            <header class="card__header">
+              <h3>Runtime Core</h3>
+              <div class="card__actions">
+                <button id="lockSettingsBtn" class="btn btn--ghost" type="button">Bloquear Config</button>
+                <button id="applyTenantThemeBtn" class="btn btn--ghost" type="button">Tema Tenant</button>
+                <button id="saveConfigBtn" class="btn" type="button">Salvar Config</button>
+              </div>
+            </header>
+            <div class="settings-grid">
+              <label>API Base URL<input id="cfgApiBase" /></label>
+              <label>Tenant ID<input id="cfgTenantId" /></label>
+              <label>Session ID<input id="cfgSessionId" /></label>
+              <div class="settings-inline">
+                <button id="cfgRegenerateSessionBtn" class="btn btn--ghost" type="button">Nova Session</button>
+              </div>
+              <label>Layout
+                <select id="cfgLayout">
+                  <option value="fabio2">Fabio2</option>
+                  <option value="studio">Studio</option>
+                </select>
+              </label>
+              <label>Paleta
+                <select id="cfgPalette">
+                  <option value="ocean">Ocean</option>
+                  <option value="forest">Forest</option>
+                  <option value="sunset">Sunset</option>
+                </select>
+              </label>
+              <label>FX USD-BRL (estimativa)<input id="cfgFxUsdBrl" type="number" step="0.01" min="0.01" /></label>
+            </div>
+            <p class="settings-note">
+              Acesso ao modulo 06 protegido por senha admin local (sessao atual). Para este slice: <code>191530</code>.
+            </p>
+          </section>
+
+          <section class="card">
+            <header class="card__header">
+              <h3>OpenAI Padrao SaaS</h3>
+            </header>
+            <div class="settings-grid">
+              <label>OpenAI API Key<input id="cfgOpenAiApiKey" type="password" placeholder="sk-..." /></label>
+              <label>Modelo Principal<input id="cfgOpenAiModel" /></label>
+              <label class="toggle-label"><input id="cfgOpenAiVision" type="checkbox" /> Visao (ler imagem)</label>
+              <label class="toggle-label"><input id="cfgOpenAiVoice" type="checkbox" /> Voz (audio input/output)</label>
+              <label class="toggle-label"><input id="cfgOpenAiImageGen" type="checkbox" /> Criacao de imagem</label>
+              <label class="toggle-label"><input id="cfgOpenAiImageRead" type="checkbox" /> Analise de imagem</label>
+            </div>
+            <p class="settings-note">
+              Neste slice os dados ficam no navegador/localStorage. Vault seguro no backend entra no proximo ciclo.
+            </p>
+          </section>
+
+          <section class="card">
+            <header class="card__header">
+              <h3>Personas (Tenant)</h3>
+            </header>
+            <div class="settings-grid settings-grid--wide">
+              <label>Persona 1 (Concierge do Proprietario)
+                <textarea
+                  id="cfgPersona1Prompt"
+                  rows="6"
+                  placeholder="Prompt da persona 1 (orquestradora do SaaS)"
+                ></textarea>
+              </label>
+              <label>Persona 2 (Agente WhatsApp)
+                <textarea
+                  id="cfgPersona2Prompt"
+                  rows="6"
+                  placeholder="Prompt da persona 2 (atendimento e follow-up no WhatsApp)"
+                ></textarea>
+              </label>
+            </div>
+            <p class="settings-note">
+              Exemplo formato Persona 1: "Papel: Concierge do proprietario. Objetivo: orquestrar modulos 2-5. Regras:
+              confirmar dados criticos antes de executar cobranca/agenda. Tom: executivo e direto."
+            </p>
+            <p class="settings-note">
+              Exemplo formato Persona 2: "Papel: Agente WhatsApp. Objetivo: atender leads e clientes. Regras: responder
+              com clareza, registrar intencao e enviar retorno para modulo 1. Tom: humano e cordial."
+            </p>
+            <p class="settings-note">
+              Se os prompts ficarem vazios, o SaaS continua em modo neutro (sem persona) e segue aprendendo via
+              memoria/contexto.
+            </p>
+          </section>
+
+          <section class="card">
+            <header class="card__header">
+              <h3>Integracoes por Modulo</h3>
+            </header>
+            <div class="settings-grid">
+              <label>Agenda / Google Client ID<input id="cfgGoogleClientId" /></label>
+              <label>Agenda / Google Client Secret<input id="cfgGoogleClientSecret" type="password" /></label>
+              <label>Agenda / Google Refresh Token<input id="cfgGoogleRefreshToken" type="password" /></label>
+              <label>CRM / Evolution Base URL<input id="cfgEvolutionBaseUrl" placeholder="https://evolution.local" /></label>
+              <label>CRM / Evolution API Key<input id="cfgEvolutionApiKey" type="password" /></label>
+              <label>Billing Provider<input id="cfgBillingProvider" placeholder="stripe, asaas, etc" /></label>
+              <label>Billing API Key<input id="cfgBillingApiKey" type="password" /></label>
+            </div>
+          </section>
+
+          <section class="card">
+            <header class="card__header">
+              <h3>Metricas de Gasto de API por Modulo</h3>
+              <button id="resetMetricsBtn" class="btn btn--ghost" type="button">Resetar Metricas</button>
+            </header>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Modulo</th>
+                    <th>Calls</th>
+                    <th>Estimado USD</th>
+                    <th>Estimado BRL</th>
+                  </tr>
+                </thead>
+                <tbody id="metricsRows"></tbody>
+              </table>
+            </div>
+            <p id="configStatus" class="settings-note">Aguardando configuracao.</p>
+          </section>
+        </section>
       </div>
     </div>
 

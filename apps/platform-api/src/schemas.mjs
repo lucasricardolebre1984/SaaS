@@ -100,6 +100,29 @@ function operationSpecificOwnerErrors(request) {
         message: 'must be a non-empty string for send_message'
       });
     }
+
+    const personaOverrides = payload.persona_overrides;
+    if (personaOverrides !== undefined) {
+      if (!personaOverrides || typeof personaOverrides !== 'object' || Array.isArray(personaOverrides)) {
+        errors.push({
+          instancePath: '/request/payload/persona_overrides',
+          message: 'must be an object when provided for send_message'
+        });
+      } else {
+        const ownerPrompt = typeof personaOverrides.owner_concierge_prompt === 'string'
+          ? personaOverrides.owner_concierge_prompt.trim()
+          : '';
+        const whatsappPrompt = typeof personaOverrides.whatsapp_agent_prompt === 'string'
+          ? personaOverrides.whatsapp_agent_prompt.trim()
+          : '';
+        if (ownerPrompt.length === 0 && whatsappPrompt.length === 0) {
+          errors.push({
+            instancePath: '/request/payload/persona_overrides',
+            message: 'must provide at least one non-empty persona prompt'
+          });
+        }
+      }
+    }
   }
 
   if (op === 'toggle_continuous_mode') {

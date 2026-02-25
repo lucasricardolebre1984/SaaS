@@ -9,7 +9,10 @@
     "tenant:validate": "powershell -ExecutionPolicy Bypass -File ./tools/validate-sample-tenant-pack.ps1",
     "smoke:postgres": "powershell -ExecutionPolicy Bypass -File ./tools/smoke-postgres-orchestration.ps1",
     "generate:saas-starter": "node ./tools/generate-saas-starter.mjs",
-    "start:day": "powershell -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -SkipInstall",
+    "skills:install": "powershell -ExecutionPolicy Bypass -File ./tools/install-project-skills.ps1 -Agent codex -Force",
+    "init:day": "powershell -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -ForceSkills",
+    "resume:day": "powershell -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -SkipInstall",
+    "start:day": "npm run init:day",
     "end:day": "powershell -ExecutionPolicy Bypass -File ./tools/end-day.ps1 -ShowPending"
   },
   "dependencies": {

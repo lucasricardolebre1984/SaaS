@@ -79,3 +79,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M2U-003..004 static build serve toolchain wiring and validation for owner/crm consoles
 2026-02-23,internal,engineering-time,local,0.00,0.00,specification,M2T-PLAN draft kickoff for milestone-2 template generator slice
 2026-02-23,internal,engineering-time,local,0.00,0.00,implementation,M2T-001..004 saas starter generator implementation and validation
+2026-02-24,internal,engineering-time,local,0.00,0.00,implementation,M2S-001..005 owner settings multimodal slice implementation and validation
+2026-02-24,internal,engineering-time,local,0.00,0.00,implementation,M2S-007 persona prompt settings and runtime contract propagation

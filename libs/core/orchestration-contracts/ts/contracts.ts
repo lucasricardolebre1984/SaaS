@@ -85,6 +85,10 @@ export type OwnerCommandCreate = CommandEnvelope<
     text: string;
     mode: "one-shot" | "continuous";
     attachments?: Array<{ type: "audio" | "image" | "file"; uri: string }>;
+    persona_overrides?: {
+      owner_concierge_prompt?: string;
+      whatsapp_agent_prompt?: string;
+    };
   }
 >;
 

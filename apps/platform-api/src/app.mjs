@@ -115,6 +115,27 @@ function avatarStateFromRequest(request) {
   return { enabled: false, state: 'disabled' };
 }
 
+function sanitizePersonaOverrides(raw) {
+  if (!raw || typeof raw !== 'object') return undefined;
+
+  const ownerPrompt = typeof raw.owner_concierge_prompt === 'string'
+    ? raw.owner_concierge_prompt.trim()
+    : '';
+  const whatsappPrompt = typeof raw.whatsapp_agent_prompt === 'string'
+    ? raw.whatsapp_agent_prompt.trim()
+    : '';
+
+  const sanitized = {};
+  if (ownerPrompt.length > 0) {
+    sanitized.owner_concierge_prompt = ownerPrompt;
+  }
+  if (whatsappPrompt.length > 0) {
+    sanitized.whatsapp_agent_prompt = whatsappPrompt;
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+}
+
 function createOwnerCommandEnvelope(request, correlationId, traceId) {
   const mode = modeFromRequest(request);
   const text =
@@ -127,6 +148,7 @@ function createOwnerCommandEnvelope(request, correlationId, traceId) {
       uri: item.uri
     }))
     : undefined;
+  const personaOverrides = sanitizePersonaOverrides(request.payload?.persona_overrides);
 
   const payload = {
     owner_command_id: request.request_id,
@@ -135,6 +157,9 @@ function createOwnerCommandEnvelope(request, correlationId, traceId) {
   };
   if (attachments && attachments.length > 0) {
     payload.attachments = attachments;
+  }
+  if (personaOverrides) {
+    payload.persona_overrides = personaOverrides;
   }
 
   return {
@@ -224,7 +249,7 @@ function createModuleTaskCommand(request, ownerCommand, taskPlan) {
   if (!taskPlan) return null;
   const taskId = randomUUID();
 
-  return {
+  const command = {
     schema_version: ORCHESTRATION_SCHEMA_VERSION,
     kind: 'command',
     command_id: randomUUID(),
@@ -256,6 +281,13 @@ function createModuleTaskCommand(request, ownerCommand, taskPlan) {
       }
     }
   };
+
+  const personaOverrides = sanitizePersonaOverrides(ownerCommand.payload?.persona_overrides);
+  if (personaOverrides) {
+    command.payload.input.persona_overrides = personaOverrides;
+  }
+
+  return command;
 }
 
 function createModuleTaskCreatedEvent(moduleTaskCommand) {

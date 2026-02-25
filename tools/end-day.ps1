@@ -200,4 +200,5 @@ if ($ShowPending -and -not [string]::IsNullOrWhiteSpace($activeFeature)) {
 }
 
 Write-Step "Next-day command"
-Write-Host ".\tools\start-day.ps1 -Agent codex -SkipInstall"
+Write-Host "npm run init:day"
+Write-Host "or (fast resume): npm run resume:day"

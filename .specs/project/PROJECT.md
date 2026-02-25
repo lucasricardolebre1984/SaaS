@@ -3,7 +3,7 @@
 Project: fabio (Automania AI institutional SaaS base)
 Owner: Lucas Ricardo Lebre
 Created: 2026-02-22
-Status: Planning and foundation
+Status: Implementation (Milestone 2 stream)
 
 ## Vision
 Build a reusable SaaS base that can be cloned for future products, with strict process discipline, module boundaries, and measurable engineering/financial performance from day 1.
@@ -24,17 +24,18 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 - No risky direct migration without specification and task gating.
 - No ad-hoc feature work outside the active phase.
 
-## Scope for Foundation Cycle
+## Scope for Current Cycle
 - Brownfield mapping of fabio2.
-- Creation of .specs governance and first migration feature plan.
-- Nx bootstrap and workspace standards.
-- Initial module decomposition plan.
+- Milestone 2 UI and template hardening.
+- Owner console settings/multimodal baseline.
+- Persona 1/2 optional prompt wiring in settings and interaction contracts.
+- SaaS starter generator and operational runbooks.
 
-## Success Criteria (Foundation)
+## Success Criteria (Current Cycle)
 - .specs complete and reviewed.
-- First migration feature has approved spec/design/tasks.
-- Workspace standards documented and reproducible.
-- Metrics dictionary is in place with owner and formulas.
+- Active milestone feature has approved spec/design/tasks and implementation evidence.
+- Workspace standards and daily commands documented in `AGENTS.md`.
+- Metrics and checkpoints updated (`STATE`, `worklog`, `costlog`).
 
 ## Working Principles
 - One phase at a time.

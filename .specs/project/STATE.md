@@ -1,8 +1,8 @@
 # STATE
 
-Last update: 2026-02-23
-Active phase: Implement (milestone 2 template generator slice)
-Active feature: milestone-2-template-generator-slice
+Last update: 2026-02-25
+Active phase: Implement (milestone 2 owner settings multimodal slice)
+Active feature: milestone-2-owner-settings-multimodal-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -265,9 +265,33 @@ Active feature: milestone-2-template-generator-slice
   - dry-run, generation, conflict-protection, and overwrite paths validated
 - Generation validation artifact:
   - `.tmp/generated-saas/automania-prime`
+- Opened `milestone-2-owner-settings-multimodal-slice` to expand module-01 UX with:
+  - module `06 Configuracoes` as fixed last menu item
+  - API/integration configuration workspace
+  - local API spend metrics by module
+  - chat multimodal actions (audio, image, file)
+- M2S-001..005 completed in owner-console:
+  - dynamic module navigation now renders `06 Configuracoes` as fixed last item
+  - runtime/OpenAI/integration settings moved to dedicated configuration workspace
+  - local API spend dashboard per module added with reset action
+  - chat composer now supports attachment queue (audio, image, file) with contract-compatible payload fields
+  - owner-console build and serve checks validated
+- M2S-006 completed in owner-console:
+  - module `06 Configuracoes` now requires admin password (`191530`) before access
+  - topbar now shows lock status badge (`admin: bloqueado/liberado`)
+  - runtime card includes `Bloquear Config` action to relock module 06 in current session
+- M2S-007 completed in owner-console/runtime contracts:
+  - module `06 Configuracoes` now includes Persona 1 and Persona 2 prompt fields with format examples
+  - interaction payload supports optional `persona_overrides` in module 01 contract
+  - runtime propagates persona overrides to `owner.command.create` and `module.task.create.input`
+  - no-persona mode preserved (empty prompts keep neutral baseline behavior)
+- Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
+  - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
+  - removed external skill set archive to avoid cross-repo context drift
+- `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
 
 ## Next Checkpoint
-Close `milestone-2-template-generator-slice` checkpoint commit and evaluate Milestone 2 exit criteria.
+Commit owner settings multimodal slice and continue Milestone 2 exit evaluation.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

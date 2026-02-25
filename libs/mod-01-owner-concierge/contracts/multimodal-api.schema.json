@@ -160,6 +160,15 @@
                       },
                       "required": ["type", "uri"]
                     }
+                  },
+                  "persona_overrides": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "minProperties": 1,
+                    "properties": {
+                      "owner_concierge_prompt": { "type": "string", "minLength": 1 },
+                      "whatsapp_agent_prompt": { "type": "string", "minLength": 1 }
+                    }
                   }
                 },
                 "required": ["text"]

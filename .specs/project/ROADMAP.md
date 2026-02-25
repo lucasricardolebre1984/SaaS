@@ -1,6 +1,6 @@
 # ROADMAP
 
-Last update: 2026-02-23
+Last update: 2026-02-24
 
 ## Milestone 0 - Institutional Foundation (completed)
 Objective: Create governance, architecture baseline, and metrics operating system.
@@ -54,6 +54,11 @@ Deliverables:
 Exit criteria:
 - New SaaS skeleton created in less than 1 day
 - Shared modules reused with minimal overrides
+
+Status update:
+- UI shell slice completed (`milestone-2-ui-shell-slice`).
+- Template generator slice completed (`milestone-2-template-generator-slice`).
+- Owner settings/multimodal slice implemented with persona 1/2 prompt contract propagation and pending commit checkpoint (`milestone-2-owner-settings-multimodal-slice`).
 
 ## Milestone 3 - Production Readiness
 Objective: Enable controlled deploy with observability and rollback.
