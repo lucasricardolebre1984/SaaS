@@ -84,3 +84,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,docker-desktop,local,0.00,0.00,validation,M2S-VAL-POSTGRES smoke postgres isolated stack execution
 2026-02-25,internal,engineering-time,local,0.00,0.00,documentation,M2X-002 SaaS standard manual publication
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M2X-001 milestone 2 exit checklist and roadmap transition
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M3P-PLAN milestone 3 planning docs kickoff

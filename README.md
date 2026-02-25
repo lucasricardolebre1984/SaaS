@@ -3,8 +3,8 @@
 SaaS base institucional da Automania AI (Nx monorepo).
 
 ## Status Atual
-- Milestone atual: `Milestone 2 - Shared SaaS Template`
-- Slice ativo: `milestone-2-owner-settings-multimodal-slice` (implementado e validado)
+- Milestone atual: `Milestone 3 - Production Readiness (planning)`
+- Slice ativo: `milestone-3-production-readiness-planning` (spec/design/tasks abertos)
 - Checkpoints recentes:
   - `feat(m2): owner settings persona prompts and contract propagation` (`5b2b7ce`)
   - `chore(governance): log postgres smoke validation and isolation evidence` (`0d72fb6`)

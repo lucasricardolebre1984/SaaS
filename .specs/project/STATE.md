@@ -291,6 +291,10 @@ Active feature: milestone-3-production-readiness-planning
   - isolation confirmed from `fabio2`: smoke uses compose project `fabio-postgres-smoke` and host port `55432` while `fabio2` uses `5432`
 - Milestone 2 exit checklist published with GO decision:
   - `.specs/project/MILESTONE-2-EXIT-CHECKLIST.md`
+- Opened Milestone 3 planning feature docs:
+  - `.specs/features/milestone-3-production-readiness-planning/spec.md`
+  - `.specs/features/milestone-3-production-readiness-planning/design.md`
+  - `.specs/features/milestone-3-production-readiness-planning/tasks.md`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
