@@ -292,6 +292,26 @@ function createModuleTaskCommand(request, ownerCommand, taskPlan) {
   return command;
 }
 
+function createPolicyDecision(taskPlan) {
+  if (!taskPlan || typeof taskPlan !== 'object') {
+    return {
+      route_rule_id: null,
+      policy_rule_id: null,
+      execution_decision: 'none',
+      requires_confirmation: false,
+      reason_code: null
+    };
+  }
+
+  return {
+    route_rule_id: taskPlan.rule_id ?? null,
+    policy_rule_id: taskPlan.policy_rule_id ?? null,
+    execution_decision: taskPlan.execution_decision ?? 'none',
+    requires_confirmation: taskPlan.requires_confirmation === true,
+    reason_code: taskPlan.policy_reason_code ?? null
+  };
+}
+
 function createModuleTaskCreatedEvent(moduleTaskCommand) {
   const targetModule = moduleTaskCommand.target_module;
   return {
@@ -764,13 +784,14 @@ async function validateAndPersistEvent(store, event) {
   return { ok: true };
 }
 
-function orchestrationInfo(store, policyPath) {
+function orchestrationInfo(store, policyPath, executionPolicyPath) {
   if (store.backend === 'postgres') {
     return {
       backend: 'postgres',
       storage_dir: null,
       queue_file: null,
-      policy_path: policyPath
+      policy_path: policyPath,
+      execution_policy_path: executionPolicyPath
     };
   }
 
@@ -778,7 +799,8 @@ function orchestrationInfo(store, policyPath) {
     backend: 'file',
     storage_dir: store.storageDir,
     queue_file: store.queueFilePath,
-    policy_path: policyPath
+    policy_path: policyPath,
+    execution_policy_path: executionPolicyPath
   };
 }
 
@@ -1021,7 +1043,8 @@ export function createApp(options = {}) {
     });
   }
   const taskPlanner = createTaskPlanner({
-    policyPath: options.taskRoutingPolicyPath
+    policyPath: options.taskRoutingPolicyPath,
+    executionPolicyPath: options.taskExecutionPolicyPath
   });
 
   async function runOwnerMemoryReembedBatch(input = {}) {
@@ -1143,7 +1166,7 @@ export function createApp(options = {}) {
         return json(res, 200, {
           status: 'ok',
           service: 'app-platform-api',
-          orchestration: orchestrationInfo(store, taskPlanner.policyPath),
+          orchestration: orchestrationInfo(store, taskPlanner.policyPath, taskPlanner.executionPolicyPath),
           customers: customerInfo(customerStore),
           agenda: agendaInfo(agendaStore),
           billing: billingInfo(billingStore),
@@ -3507,7 +3530,11 @@ export function createApp(options = {}) {
         }
 
         const taskPlan = taskPlanner.plan(request);
-        const moduleTaskCommand = createModuleTaskCommand(request, ownerCommand, taskPlan);
+        const policyDecision = createPolicyDecision(taskPlan);
+        const shouldCreateModuleTask = taskPlan?.execution_decision === 'allow';
+        const moduleTaskCommand = shouldCreateModuleTask
+          ? createModuleTaskCommand(request, ownerCommand, taskPlan)
+          : null;
         if (moduleTaskCommand) {
           const moduleTaskCommandValidation = orchestrationCommandValid(moduleTaskCommand);
           if (!moduleTaskCommandValidation.ok) {
@@ -3591,7 +3618,8 @@ export function createApp(options = {}) {
           },
           session_state,
           avatar_state,
-          assistant_output: assistantOutput
+          assistant_output: assistantOutput,
+          policy_decision: policyDecision
         };
 
         if (downstreamTasks) {

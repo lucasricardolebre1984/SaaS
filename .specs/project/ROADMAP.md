@@ -121,7 +121,9 @@ Status update:
     - gates passed (`app-platform-api:test`, `contract-checks`, `preprod:validate -- -SkipSmokePostgres`)
   - next feature opened in Specify:
     - `milestone-4-mod-01-tool-execution-policy-slice`
-    - status: draft docs created, pending approval
+    - status: implemented and validated
+    - planner/runtime now enforce `allow|deny|confirm_required` before queue dispatch
+    - interaction contract includes `policy_decision` metadata
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

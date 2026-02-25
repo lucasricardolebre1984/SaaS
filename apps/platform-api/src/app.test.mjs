@@ -21,6 +21,31 @@ function validOwnerRequest() {
   };
 }
 
+function buildRoutingPolicyWithSingleRule(rule) {
+  return {
+    version: '1.0.0',
+    default_route: {
+      target_module: 'mod-02-whatsapp-crm',
+      task_type: 'crm.followup.send',
+      priority: 'normal',
+      simulate_failure: false
+    },
+    rules: [rule]
+  };
+}
+
+function buildExecutionPolicy(rules = []) {
+  return {
+    version: '1.0.0',
+    default_decision: {
+      decision: 'allow',
+      requires_confirmation: false,
+      reason_code: 'default_allow'
+    },
+    rules
+  };
+}
+
 function validWebhookRequest() {
   return {
     event_id: '402893a1-14c1-4ad7-abf2-f83f7dce4c3f',
@@ -1702,6 +1727,8 @@ test('POST /v1/owner-concierge/interaction queues module task and trace is prese
   assert.equal(body.response.owner_command.name, 'owner.command.create');
   assert.equal(body.response.downstream_tasks.length, 1);
   assert.equal(body.response.downstream_tasks[0].status, 'queued');
+  assert.equal(body.response.policy_decision.execution_decision, 'allow');
+  assert.equal(body.response.policy_decision.requires_confirmation, false);
   assert.equal(body.response.assistant_output.provider, 'local');
   assert.equal(body.response.assistant_output.model, 'deterministic-rule-v1');
   assert.equal(typeof body.response.assistant_output.latency_ms, 'number');
@@ -1744,6 +1771,170 @@ test('POST /v1/owner-concierge/interaction queues module task and trace is prese
   assert.match(commandsRaw, /owner\.command\.create/);
   assert.match(eventsRaw, /module\.task\.completed/);
   assert.match(queueRaw, /"history"/);
+});
+
+test('POST /v1/owner-concierge/interaction blocks task creation when policy decision is deny', async () => {
+  const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-policy-deny-'));
+  const routingPolicyPath = path.join(policyDir, 'task-routing.policy.json');
+  const executionPolicyPath = path.join(policyDir, 'owner-tool-execution-policy.json');
+
+  await fs.writeFile(
+    routingPolicyPath,
+    JSON.stringify(
+      buildRoutingPolicyWithSingleRule({
+        id: 'customer_delete_route',
+        keywords: ['excluir'],
+        route: {
+          target_module: 'mod-03-clientes',
+          task_type: 'customer.delete.request',
+          priority: 'high',
+          simulate_failure: false
+        }
+      }),
+      null,
+      2
+    )
+  );
+  await fs.writeFile(
+    executionPolicyPath,
+    JSON.stringify(
+      buildExecutionPolicy([{
+        rule_id: 'deny_customer_delete',
+        task_type: 'customer.delete.request',
+        target_module: 'mod-03-clientes',
+        decision: 'deny',
+        requires_confirmation: false,
+        reason_code: 'sensitive_customer_delete'
+      }]),
+      null,
+      2
+    )
+  );
+
+  const denyServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: policyDir,
+      taskRoutingPolicyPath: routingPolicyPath,
+      taskExecutionPolicyPath: executionPolicyPath
+    })
+  );
+  await new Promise((resolve) => denyServer.listen(0, '127.0.0.1', resolve));
+  const denyAddress = denyServer.address();
+  const denyBaseUrl = `http://127.0.0.1:${denyAddress.port}`;
+
+  try {
+    const payload = validOwnerRequest();
+    payload.request.payload.text = 'excluir cliente agora';
+
+    const res = await fetch(`${denyBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.response.status, 'accepted');
+    assert.equal(body.response.policy_decision.execution_decision, 'deny');
+    assert.equal(body.response.policy_decision.requires_confirmation, false);
+    assert.equal(body.response.policy_decision.reason_code, 'sensitive_customer_delete');
+    assert.equal(body.response.downstream_tasks, undefined);
+
+    const correlationId = body.response.owner_command.correlation_id;
+    const traceRes = await fetch(
+      `${denyBaseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+    );
+    assert.equal(traceRes.status, 200);
+    const traceBody = await traceRes.json();
+    const eventNames = traceBody.events.map((item) => item.name);
+    assert.ok(eventNames.includes('owner.command.created'));
+    assert.ok(!eventNames.includes('module.task.created'));
+    assert.equal(traceBody.commands.some((item) => item.name === 'module.task.create'), false);
+  } finally {
+    await new Promise((resolve, reject) => denyServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(policyDir, { recursive: true, force: true });
+  }
+});
+
+test('POST /v1/owner-concierge/interaction marks confirm_required without enqueuing task', async () => {
+  const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-policy-confirm-'));
+  const routingPolicyPath = path.join(policyDir, 'task-routing.policy.json');
+  const executionPolicyPath = path.join(policyDir, 'owner-tool-execution-policy.json');
+
+  await fs.writeFile(
+    routingPolicyPath,
+    JSON.stringify(
+      buildRoutingPolicyWithSingleRule({
+        id: 'billing_writeoff_route',
+        keywords: ['perdoar'],
+        route: {
+          target_module: 'mod-05-faturamento-cobranca',
+          task_type: 'billing.writeoff.request',
+          priority: 'high',
+          simulate_failure: false
+        }
+      }),
+      null,
+      2
+    )
+  );
+  await fs.writeFile(
+    executionPolicyPath,
+    JSON.stringify(
+      buildExecutionPolicy([{
+        rule_id: 'confirm_billing_writeoff',
+        task_type: 'billing.writeoff.request',
+        target_module: 'mod-05-faturamento-cobranca',
+        decision: 'confirm_required',
+        requires_confirmation: true,
+        reason_code: 'financial_writeoff'
+      }]),
+      null,
+      2
+    )
+  );
+
+  const confirmServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: policyDir,
+      taskRoutingPolicyPath: routingPolicyPath,
+      taskExecutionPolicyPath: executionPolicyPath
+    })
+  );
+  await new Promise((resolve) => confirmServer.listen(0, '127.0.0.1', resolve));
+  const confirmAddress = confirmServer.address();
+  const confirmBaseUrl = `http://127.0.0.1:${confirmAddress.port}`;
+
+  try {
+    const payload = validOwnerRequest();
+    payload.request.payload.text = 'perdoar cobranca vencida';
+
+    const res = await fetch(`${confirmBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.response.status, 'accepted');
+    assert.equal(body.response.policy_decision.execution_decision, 'confirm_required');
+    assert.equal(body.response.policy_decision.requires_confirmation, true);
+    assert.equal(body.response.policy_decision.reason_code, 'financial_writeoff');
+    assert.equal(body.response.downstream_tasks, undefined);
+
+    const correlationId = body.response.owner_command.correlation_id;
+    const traceRes = await fetch(
+      `${confirmBaseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+    );
+    assert.equal(traceRes.status, 200);
+    const traceBody = await traceRes.json();
+    const eventNames = traceBody.events.map((item) => item.name);
+    assert.ok(eventNames.includes('owner.command.created'));
+    assert.ok(!eventNames.includes('module.task.created'));
+    assert.equal(traceBody.commands.some((item) => item.name === 'module.task.create'), false);
+  } finally {
+    await new Promise((resolve, reject) => confirmServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(policyDir, { recursive: true, force: true });
+  }
 });
 
 test('POST /v1/owner-concierge/interaction returns provider error in strict openai mode without key', async () => {

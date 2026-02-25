@@ -93,6 +93,27 @@
           },
           "required": ["text", "provider", "model", "latency_ms"]
         },
+        "policy_decision": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "route_rule_id": { "type": ["string", "null"] },
+            "policy_rule_id": { "type": ["string", "null"] },
+            "execution_decision": {
+              "type": "string",
+              "enum": ["allow", "deny", "confirm_required", "none"]
+            },
+            "requires_confirmation": { "type": "boolean" },
+            "reason_code": { "type": ["string", "null"] }
+          },
+          "required": [
+            "route_rule_id",
+            "policy_rule_id",
+            "execution_decision",
+            "requires_confirmation",
+            "reason_code"
+          ]
+        },
         "downstream_tasks": {
           "type": "array",
           "items": {
@@ -145,6 +166,9 @@
       },
       "then": {
         "properties": {
+          "response": {
+            "required": ["policy_decision"]
+          },
           "request": {
             "properties": {
               "payload": {

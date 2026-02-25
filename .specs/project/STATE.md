@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Specify (Milestone 4 mod-01 tool execution policy slice)
-Active feature: milestone-4-mod-01-tool-execution-policy-slice (draft)
+Active phase: Implement checkpoint closed (Milestone 4 mod-01 tool execution policy slice)
+Active feature: milestone-4-mod-01-tool-execution-policy-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -373,9 +373,22 @@ Active feature: milestone-4-mod-01-tool-execution-policy-slice (draft)
   - draft docs created (`spec.md`, `design.md`, `tasks.md`)
   - focus defined: policy enforcement for module task dispatch (`allow|deny|confirm_required`) in mod-01
   - implementation blocked until spec/design/tasks approval
+- Opened and completed `milestone-4-mod-01-tool-execution-policy-slice`:
+  - task planner now enforces execution policy (`allow|deny|confirm_required`) before creating `module.task.create`
+  - execution policy config published: `apps/platform-api/config/owner-tool-execution-policy.json`
+  - interaction response now includes `policy_decision` metadata with route/policy rule ids and reason code
+  - deny/confirm-required paths keep `owner.command.create` audit trail without enqueuing downstream task
+  - runtime gates validated:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-045720.log`
+    - `tools/reports/release-dry-run-20260225-045739.log`
+    - `tools/reports/rollback-drill-20260225-045741.log`
 
 ## Next Checkpoint
-Aprovar `spec.md` do slice `milestone-4-mod-01-tool-execution-policy-slice` e evoluir para Design/Tasks aprovados antes da implementacao.
+Definir proximo slice de Milestone 4 (ex.: confirmation workflow endpoint para `confirm_required`) e abrir em fase `Specify`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
