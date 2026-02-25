@@ -1,40 +1,56 @@
 # fabio
 
-SaaS base institucional da Automania AI (Nx monorepo em construção).
+SaaS base institucional da Automania AI (Nx monorepo).
 
-## Status
-- Fase atual: `Governance Closure (Milestone 1 exit checklist)`
-- Feature ativa: `milestone-1-exit-checklist-slice`
-- Milestone 1: concluído (ver `.specs/project/MILESTONE-1-EXIT-CHECKLIST.md`)
-- Próximo marco: `Milestone 2 - Shared SaaS Template`
+## Status Atual
+- Milestone atual: `Milestone 2 - Shared SaaS Template`
+- Slice ativo: `milestone-2-owner-settings-multimodal-slice` (implementado e validado)
+- Checkpoints recentes:
+  - `feat(m2): owner settings persona prompts and contract propagation` (`5b2b7ce`)
+  - `chore(governance): log postgres smoke validation and isolation evidence` (`0d72fb6`)
 
-## Estrutura principal
-- `apps/`: aplicações do workspace
-- `libs/`: módulos e core compartilhado
-- `.specs/`: governança, specs, design e tasks
-- `skills/(project)/`: skills de operação do projeto
-- `tools/`: scripts operacionais (`start-day`, `end-day`, etc.)
+## Arquitetura Padrão (fixa)
+1. `mod-01-owner-concierge` (chat IA + avatar + memória/contexto)
+2. `mod-02-whatsapp-crm`
+3. `mod-03-clientes`
+4. `mod-04-agenda`
+5. `mod-05-faturamento-cobranca`
+6. `mod-06-configuracoes` (acesso admin; APIs, integrações, custos e prompts Persona 1/2)
 
-## Fluxo diário
+## Fluxo Diário (obrigatório)
 ```powershell
 cd C:\projetos\fabio
-.\tools\start-day.ps1 -Agent codex -ForceSkills
+npm run init:day
 ```
 
-## Bootstrap runtime skeleton
+Retomar sessão:
 ```powershell
-npm install
-.\nx show projects
-.\nx run contract-tests:contract-checks
+npm run resume:day
 ```
 
-## Runtime dual concierge slice
+Encerrar sessão:
 ```powershell
-.\nx run app-platform-api:test
-.\nx run app-platform-api:serve
+npm run end:day
 ```
 
-## Encerramento diário
+## Validar o SaaS local
 ```powershell
-.\tools\end-day.ps1 -ShowPending
+npx nx run app-platform-api:test
+npx nx run contract-tests:contract-checks
+npx nx run app-owner-console:build
 ```
+
+Smoke completo com Postgres:
+```powershell
+npm run smoke:postgres
+```
+
+Nota de isolamento: o smoke deste repositório usa stack Docker `fabio-postgres-smoke` e porta host `55432`, sem conflito com `fabio2` (`5432`).
+
+## Gerar novo SaaS (starter)
+```powershell
+npm run generate:saas-starter -- --saas-name "Meu SaaS" --tenant-id "tenant_meu_saas" --layout-default studio --palette-default ocean
+```
+
+Manual operacional:
+- `docs/SAAS-STANDARD-MANUAL.md`

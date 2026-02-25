@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-2-owner-settings-multimodal-slice`
-- Active phase: `Implement (milestone 2 owner settings multimodal slice)`
-- Immediate checkpoint: commit milestone-2 owner settings slice and run Milestone 2 exit evaluation.
+- Active feature: `milestone-3-production-readiness-planning`
+- Active phase: `Specify (milestone 3 production readiness planning)`
+- Immediate checkpoint: open spec/design/tasks for Milestone 3 and preserve Milestone 2 stability gates.

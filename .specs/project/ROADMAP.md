@@ -1,6 +1,6 @@
 # ROADMAP
 
-Last update: 2026-02-24
+Last update: 2026-02-25
 
 ## Milestone 0 - Institutional Foundation (completed)
 Objective: Create governance, architecture baseline, and metrics operating system.
@@ -43,7 +43,7 @@ Status update:
 - Exit checklist closed in `.specs/project/MILESTONE-1-EXIT-CHECKLIST.md`.
 - Ready to start Milestone 2 implementation stream.
 
-## Milestone 2 - Shared SaaS Template (current)
+## Milestone 2 - Shared SaaS Template (completed)
 Objective: Make this repository reusable as SaaS starter kit.
 
 Deliverables:
@@ -58,9 +58,11 @@ Exit criteria:
 Status update:
 - UI shell slice completed (`milestone-2-ui-shell-slice`).
 - Template generator slice completed (`milestone-2-template-generator-slice`).
-- Owner settings/multimodal slice implemented with persona 1/2 prompt contract propagation and pending commit checkpoint (`milestone-2-owner-settings-multimodal-slice`).
+- Owner settings/multimodal slice implemented with persona 1/2 prompt contract propagation (`milestone-2-owner-settings-multimodal-slice`).
+- Milestone 2 exit checklist closed with explicit GO decision:
+  - `.specs/project/MILESTONE-2-EXIT-CHECKLIST.md`
 
-## Milestone 3 - Production Readiness
+## Milestone 3 - Production Readiness (current)
 Objective: Enable controlled deploy with observability and rollback.
 
 Deliverables:

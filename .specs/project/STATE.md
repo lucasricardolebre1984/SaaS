@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement (milestone 2 owner settings multimodal slice)
-Active feature: milestone-2-owner-settings-multimodal-slice
+Active phase: Specify (milestone 3 production readiness planning)
+Active feature: milestone-3-production-readiness-planning
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -289,13 +289,15 @@ Active feature: milestone-2-owner-settings-multimodal-slice
   - command: `npm run smoke:postgres`
   - status: passed (full end-to-end flow with owner/crm/billing/memory/scheduler)
   - isolation confirmed from `fabio2`: smoke uses compose project `fabio-postgres-smoke` and host port `55432` while `fabio2` uses `5432`
+- Milestone 2 exit checklist published with GO decision:
+  - `.specs/project/MILESTONE-2-EXIT-CHECKLIST.md`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
 
 ## Next Checkpoint
-Proceed with Milestone 2 exit evaluation checklist and operational handoff docs.
+Open Milestone 3 planning spec/design/tasks and define pre-production readiness gates.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
