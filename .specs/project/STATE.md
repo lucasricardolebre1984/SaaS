@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 4 mod-01 owner ai runtime slice)
-Active feature: milestone-4-mod-01-owner-ai-runtime-slice (completed)
+Active phase: Specify (Milestone 4 mod-01 tool execution policy slice)
+Active feature: milestone-4-mod-01-tool-execution-policy-slice (draft)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -369,9 +369,13 @@ Active feature: milestone-4-mod-01-owner-ai-runtime-slice (completed)
     - `tools/reports/preprod-validate-20260225-044503.log`
     - `tools/reports/release-dry-run-20260225-044522.log`
     - `tools/reports/rollback-drill-20260225-044523.log`
+- Opened `milestone-4-mod-01-tool-execution-policy-slice` in Specify phase:
+  - draft docs created (`spec.md`, `design.md`, `tasks.md`)
+  - focus defined: policy enforcement for module task dispatch (`allow|deny|confirm_required`) in mod-01
+  - implementation blocked until spec/design/tasks approval
 
 ## Next Checkpoint
-Definir proximo slice de Milestone 4 (ex.: orchestrator tool-execution policy para mod-01) e abrir em fase `Specify`.
+Aprovar `spec.md` do slice `milestone-4-mod-01-tool-execution-policy-slice` e evoluir para Design/Tasks aprovados antes da implementacao.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

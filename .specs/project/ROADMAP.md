@@ -114,11 +114,14 @@ Exit criteria:
 
 Status update:
 - kickoff started:
-  - feature opened: `milestone-4-mod-01-owner-ai-runtime-slice`
   - feature implemented and validated:
+    - `milestone-4-mod-01-owner-ai-runtime-slice`
     - owner response runtime provider (`auto/openai/local/off`) integrated in module 01
     - contract enrichment for `assistant_output`
     - gates passed (`app-platform-api:test`, `contract-checks`, `preprod:validate -- -SkipSmokePostgres`)
+  - next feature opened in Specify:
+    - `milestone-4-mod-01-tool-execution-policy-slice`
+    - status: draft docs created, pending approval
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS
