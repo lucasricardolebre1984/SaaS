@@ -15,6 +15,9 @@ Date: 2026-02-25
 - UI integration in `apps/owner-console/src/app.js`:
   - settings save performs backend sync (`/v1/owner-concierge/runtime-config`)
   - startup pulls sanitized runtime config snapshot
+  - module 02 uses embedded CRM view (`iframe /crm`) instead of placeholder
+- CRM integration in `apps/crm-console/src/app.js`:
+  - supports query bootstrap (`tenant`, `api`, `layout`, `palette`) for owner->crm synchronization
 
 ## Data Model (tenant runtime config)
 - `openai`

@@ -299,6 +299,23 @@ body {
   font-size: 0.8rem;
 }
 
+.module-embed-card {
+  min-height: 72vh;
+}
+
+.module-embed-wrap {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-3);
+}
+
+.module-embed-frame {
+  width: 100%;
+  min-height: calc(72vh - 24px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-soft);
+}
+
 .card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -719,6 +736,11 @@ html[data-layout='studio'] .workspace {
 html[data-layout='studio'] .module-form--compact,
 html[data-layout='studio'] .module-code {
   background: rgba(15, 23, 42, 0.45);
+}
+
+html[data-layout='studio'] .module-embed-frame {
+  border-color: rgba(148, 163, 184, 0.26);
+  background: rgba(15, 23, 42, 0.42);
 }
 
 html[data-layout='studio'] .module-status.status-error {

@@ -16,6 +16,7 @@ Close the runtime gap between Owner Console module `06 Configuracoes` and the pl
   - Tenant persona prompts must be applied when request does not provide explicit overrides.
   - Confirmation workflow can be disabled per tenant runtime config.
 - Owner Console settings save must sync config to backend (not local-only).
+- Module `02 CRM WhatsApp` inside Owner Console must be operationally coupled (no placeholder view).
 
 ## Functional Requirements
 1. Saving module 06 settings must push OpenAI/persona config to backend by tenant.
@@ -23,6 +24,7 @@ Close the runtime gap between Owner Console module `06 Configuracoes` and the pl
 3. Without persona prompts, system remains neutral and functional.
 4. If tenant runtime sets `confirmations_enabled=false`, `confirm_required` routes must execute as `allow`.
 5. Runtime config retrieval endpoint must return sanitized status (`api_key_configured`), not raw secret.
+6. Selecting module 02 in Owner Console must open embedded CRM view synchronized with current tenant/api/layout/palette.
 
 ## Non-Functional Requirements
 - Preserve existing contract/test gates and avoid regressions in legacy confirmation tests.

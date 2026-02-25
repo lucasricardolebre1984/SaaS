@@ -462,6 +462,9 @@ Active feature: milestone-4-runtime-config-coupling-slice (completed)
     - persona fallback (tenant prompts when request has no explicit overrides)
     - execution override (`confirm_required` converted to `allow` when tenant disables confirmations)
   - owner console now reports backend sync status instead of local-only note.
+  - module 02 (CRM WhatsApp) in Owner Console no longer uses placeholder:
+    - embedded CRM view enabled in module workspace
+    - owner runtime settings (tenant/api/layout/palette) sync to embedded CRM via URL bootstrap params
   - validation evidence:
     - `npx nx run app-platform-api:test`
     - `npx nx run contract-tests:contract-checks`

@@ -23,6 +23,9 @@ Observacao modulo 06:
   - `POST /v1/owner-concierge/runtime-config`
   - `GET /v1/owner-concierge/runtime-config?tenant_id=<id>`
 
+Observacao modulo 02:
+- no Owner Console, o item `02 CRM WhatsApp` agora abre o CRM embutido (sem placeholder), sincronizado com tenant/api/layout/paleta atuais.
+
 ## Fluxo Diário (obrigatório)
 ```powershell
 cd C:\projetos\fabio

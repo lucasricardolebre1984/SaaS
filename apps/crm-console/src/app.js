@@ -119,6 +119,29 @@ function tenantId() {
   return tenantIdInput.value.trim();
 }
 
+function applyBootstrapFromQuery() {
+  const params = new URLSearchParams(window.location.search || '');
+  const tenant = params.get('tenant');
+  const api = params.get('api');
+  const layout = params.get('layout');
+  const palette = params.get('palette');
+
+  if (tenant && tenant.trim().length > 0) {
+    tenantIdInput.value = tenant.trim();
+  }
+  if (api && api.trim().length > 0) {
+    apiBaseInput.value = normalizeApiBase(api);
+    persistApiBasePreference(apiBaseInput.value);
+  }
+  if (layout || palette) {
+    applyVisualMode({
+      layout: layout ?? layoutSelect.value,
+      palette: palette ?? paletteSelect.value,
+      persist: true
+    });
+  }
+}
+
 function safeText(value) {
   return String(value ?? '').replace(/[<>&"]/g, (ch) => (
     ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : ch === '&' ? '&amp;' : '&quot;'
@@ -265,4 +288,5 @@ apiBaseInput.addEventListener('blur', () => {
 
 restoreVisualMode();
 apiBaseInput.value = loadApiBasePreference();
+applyBootstrapFromQuery();
 loadLeads();

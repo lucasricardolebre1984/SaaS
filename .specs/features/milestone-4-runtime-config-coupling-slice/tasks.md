@@ -34,7 +34,18 @@ Date: 2026-02-25
   - `apps/owner-console/src/app.js`
   - `apps/owner-console/src/index.html`
 
-## M4RC-004 - Validate gates and governance
+## M4RC-004 - Couple module 02 visual operation into Owner Console
+- Status: completed
+- Output:
+  - removed module 02 placeholder behavior
+  - added embedded CRM workspace in Owner Console and synchronized URL bootstrap params
+- Evidence:
+  - `apps/owner-console/src/index.html`
+  - `apps/owner-console/src/styles.css`
+  - `apps/owner-console/src/app.js`
+  - `apps/crm-console/src/app.js`
+
+## M4RC-005 - Validate gates and governance
 - Status: completed
 - Verification:
   - `npx nx run app-platform-api:test`

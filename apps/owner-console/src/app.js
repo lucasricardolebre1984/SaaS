@@ -72,6 +72,8 @@ const placeholderTextEl = document.getElementById('placeholderText');
 const moduleClientesViewEl = document.getElementById('moduleClientesView');
 const moduleAgendaViewEl = document.getElementById('moduleAgendaView');
 const moduleBillingViewEl = document.getElementById('moduleBillingView');
+const moduleCrmViewEl = document.getElementById('moduleCrmView');
+const crmEmbeddedFrameEl = document.getElementById('crmEmbeddedFrame');
 
 const customerCreateForm = document.getElementById('customerCreateForm');
 const customerNameInput = document.getElementById('customerName');
@@ -389,16 +391,40 @@ function moduleMeta(moduleId) {
 }
 
 const MODULE_WORKSPACE_IDS = new Set([
+  'mod-02-whatsapp-crm',
   'mod-03-clientes',
   'mod-04-agenda',
   'mod-05-faturamento-cobranca'
 ]);
 
 const MODULE_VIEW_BY_ID = {
+  'mod-02-whatsapp-crm': moduleCrmViewEl,
   'mod-03-clientes': moduleClientesViewEl,
   'mod-04-agenda': moduleAgendaViewEl,
   'mod-05-faturamento-cobranca': moduleBillingViewEl
 };
+
+function crmEmbeddedUrl() {
+  const params = new URLSearchParams({
+    tenant: tenantId(),
+    api: apiBase(),
+    layout: state.config.runtime.layout,
+    palette: state.config.runtime.palette,
+    embedded: '1'
+  });
+  return `/crm/?${params.toString()}`;
+}
+
+function syncCrmEmbeddedFrame(forceReload = false) {
+  if (!crmEmbeddedFrameEl) return;
+  const nextUrl = crmEmbeddedUrl();
+  const currentUrl = crmEmbeddedFrameEl.dataset.currentSrc || crmEmbeddedFrameEl.getAttribute('src') || '';
+  if (!forceReload && currentUrl === nextUrl) {
+    return;
+  }
+  crmEmbeddedFrameEl.src = nextUrl;
+  crmEmbeddedFrameEl.dataset.currentSrc = nextUrl;
+}
 
 function renderModuleNav() {
   const items = getNavModules();
@@ -1215,6 +1241,11 @@ async function createPayment(event) {
 async function loadModuleWorkspace(moduleId) {
   renderModuleWorkspace(moduleId);
 
+  if (moduleId === 'mod-02-whatsapp-crm') {
+    syncCrmEmbeddedFrame();
+    return;
+  }
+
   if (moduleId === 'mod-03-clientes') {
     renderCustomersTable();
     if (state.moduleData.customers.length === 0) {
@@ -1266,6 +1297,8 @@ function applyVisualMode(layout, palette, persist = true) {
   if (safeLayout === 'studio') {
     bodyEl.classList.remove('menu-open');
   }
+
+  syncCrmEmbeddedFrame();
 }
 
 function setActiveModule(moduleId) {
@@ -1766,6 +1799,7 @@ function applyTenantTheme() {
   cfgLayoutSelect.value = preset.layout;
   cfgPaletteSelect.value = preset.palette;
   applyVisualMode(preset.layout, preset.palette, false);
+  syncCrmEmbeddedFrame(true);
   persistConfig();
   updateConfigStatus(`Tema aplicado: layout=${preset.layout}, paleta=${preset.palette}.`);
 }
@@ -1775,6 +1809,7 @@ async function saveConfig() {
   applyVisualMode(state.config.runtime.layout, state.config.runtime.palette, false);
   persistConfig();
   setTopbarLabels();
+  syncCrmEmbeddedFrame(true);
   renderMetricsTable();
   try {
     const syncResult = await pushRuntimeConfigToBackend();
@@ -1916,6 +1951,7 @@ function setupEvents() {
 
 async function bootstrap() {
   bootstrapConfig();
+  syncCrmEmbeddedFrame();
   renderModuleNav();
   setActiveModule('mod-01-owner-concierge');
   setupEvents();
