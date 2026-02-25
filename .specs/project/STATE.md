@@ -470,6 +470,14 @@ Active feature: milestone-4-runtime-config-coupling-slice (completed)
     - `npx nx run contract-tests:contract-checks`
     - `npx nx run app-owner-console:build`
     - `npx nx run app-crm-console:build`
+- Applied hotfix `ops-embedded-crm-openai-fallback-hotfix`:
+  - CRM embedded mode now hides duplicated internal sidebar/menu when rendered inside Owner module 02.
+  - Owner response provider now tries OpenAI `/responses` first and falls back to `/chat/completions`.
+  - Tenant runtime OpenAI config now runs in `auto` mode (prefer OpenAI with graceful fallback), reducing hard API failures in chat flow.
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`
 
 ## Next Checkpoint
 Definir proximo slice de Milestone 4 para integrar execucao real da persona 2 (WhatsApp) com Evolution outbound em fluxo tenant-config-first.

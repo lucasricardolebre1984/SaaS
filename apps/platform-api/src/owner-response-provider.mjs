@@ -49,7 +49,7 @@ function normalizeAssistantContent(raw) {
 
 function buildLocalReply(payload, fallbackReason = null) {
   const userText = asNonEmptyString(payload?.text) ?? '';
-  const base = 'Interaction accepted and task queued for worker processing.';
+  const base = 'Entendido. Solicitação recebida e task queued para execução.';
   const text = userText.length > 0 ? `${base} Input: ${userText}` : base;
 
   return {
@@ -61,7 +61,57 @@ function buildLocalReply(payload, fallbackReason = null) {
   };
 }
 
-async function requestOpenAiReply(options, payload) {
+async function requestOpenAiResponsesReply(options, payload) {
+  const ownerPrompt = asNonEmptyString(payload?.persona_overrides?.owner_concierge_prompt);
+  const whatsappPrompt = asNonEmptyString(payload?.persona_overrides?.whatsapp_agent_prompt);
+
+  const instructionParts = [
+    'You are the neutral Owner Concierge for a modular SaaS. Keep responses concise and operational.'
+  ];
+  if (ownerPrompt) {
+    instructionParts.push(`Owner persona override:\n${ownerPrompt}`);
+  }
+  if (whatsappPrompt) {
+    instructionParts.push(`WhatsApp agent guidance:\n${whatsappPrompt}`);
+  }
+
+  const startedAt = Date.now();
+  const response = await fetch(`${options.baseUrl}/responses`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${options.apiKey}`
+    },
+    body: JSON.stringify({
+      model: options.model,
+      temperature: 0.2,
+      instructions: instructionParts.join('\n\n'),
+      input: asNonEmptyString(payload?.text) ?? ''
+    })
+  });
+
+  if (!response.ok) {
+    const raw = await response.text();
+    throw new Error(`openai_responses_http_${response.status}:${raw.slice(0, 500)}`);
+  }
+
+  const body = await response.json();
+  const outputText = asNonEmptyString(body?.output_text)
+    ?? normalizeAssistantContent(body?.output?.[0]?.content)
+    ?? normalizeAssistantContent(body?.output);
+  if (!outputText) {
+    throw new Error('openai_responses_invalid_payload');
+  }
+
+  return {
+    text: outputText,
+    provider: 'openai',
+    model: asNonEmptyString(body?.model) ?? options.model,
+    latency_ms: Math.max(0, Date.now() - startedAt)
+  };
+}
+
+async function requestOpenAiChatCompletionsReply(options, payload) {
   const messages = [];
   messages.push({
     role: 'system',
@@ -114,6 +164,20 @@ async function requestOpenAiReply(options, payload) {
     model: asNonEmptyString(body?.model) ?? options.model,
     latency_ms: Math.max(0, Date.now() - startedAt)
   };
+}
+
+async function requestOpenAiReply(options, payload) {
+  try {
+    return await requestOpenAiResponsesReply(options, payload);
+  } catch (responsesError) {
+    try {
+      return await requestOpenAiChatCompletionsReply(options, payload);
+    } catch (chatError) {
+      throw new Error(
+        `openai_all_endpoints_failed:${String(responsesError.message ?? responsesError)}|${String(chatError.message ?? chatError)}`
+      );
+    }
+  }
 }
 
 export function createOwnerResponseProvider(options = {}) {

@@ -33,6 +33,7 @@ const kpis = {
   won: document.getElementById('kpi-won'),
   lost: document.getElementById('kpi-lost')
 };
+let embeddedMode = false;
 
 function normalizeLayout(layout) {
   return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
@@ -125,6 +126,16 @@ function applyBootstrapFromQuery() {
   const api = params.get('api');
   const layout = params.get('layout');
   const palette = params.get('palette');
+  const embedded = params.get('embedded');
+
+  embeddedMode = embedded === '1' || embedded === 'true';
+  if (embeddedMode) {
+    rootEl.dataset.embedded = '1';
+    bodyEl.classList.add('embedded-mode');
+  } else {
+    delete rootEl.dataset.embedded;
+    bodyEl.classList.remove('embedded-mode');
+  }
 
   if (tenant && tenant.trim().length > 0) {
     tenantIdInput.value = tenant.trim();

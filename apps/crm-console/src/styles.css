@@ -363,6 +363,24 @@ th {
   background: var(--color-card);
 }
 
+html[data-embedded='1'] .shell-bg {
+  display: none;
+}
+
+html[data-embedded='1'] .app-shell {
+  grid-template-columns: 1fr;
+  min-height: auto;
+}
+
+html[data-embedded='1'] .sidebar,
+html[data-embedded='1'] .menu-btn {
+  display: none !important;
+}
+
+html[data-embedded='1'] .content {
+  width: 100%;
+}
+
 /* Layout 2: Studio Neural */
 html[data-layout='studio'] .shell-bg {
   background:

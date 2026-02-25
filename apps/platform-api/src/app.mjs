@@ -1378,7 +1378,7 @@ export function createApp(options = {}) {
 
     return createOwnerResponseProvider({
       ...ownerResponseProviderConfig,
-      mode: tenantApiKey.length > 0 ? 'openai' : ownerResponseProvider.mode,
+      mode: tenantApiKey.length > 0 ? 'auto' : ownerResponseProvider.mode,
       openaiApiKey: tenantApiKey.length > 0
         ? tenantApiKey
         : ownerResponseProviderConfig.openaiApiKey,
