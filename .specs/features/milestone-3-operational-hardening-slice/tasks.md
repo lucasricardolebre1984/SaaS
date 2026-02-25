@@ -11,7 +11,7 @@ Date: 2026-02-25
 - Evidence:
   - `tools/preprod-validate.ps1`
   - `package.json`
-  - execution report: `tools/reports/preprod-validate-20260225-004810.log`
+  - execution report (local artifact): `tools/reports/preprod-validate-*.log`
 
 ## M3H-002 - Align runbooks to executable gate
 - Status: completed

@@ -313,8 +313,8 @@ Active feature: milestone-3-operational-hardening-slice (completed)
 - Opened and completed `milestone-3-operational-hardening-slice`:
   - created gate orchestrator `npm run preprod:validate` (`tools/preprod-validate.ps1`)
   - aligned runbook/checklist to executable preprod gate
-  - executed full validation with success and generated report:
-    - `tools/reports/preprod-validate-20260225-004810.log`
+  - executed full validation with success and generated local report:
+    - `tools/reports/preprod-validate-*.log`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
