@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 4 mod-01 tool execution policy slice)
-Active feature: milestone-4-mod-01-tool-execution-policy-slice (completed)
+Active phase: Implement checkpoint closed (Milestone 4 mod-01 confirmation workflow slice)
+Active feature: milestone-4-mod-01-confirmation-workflow-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -386,9 +386,28 @@ Active feature: milestone-4-mod-01-tool-execution-policy-slice (completed)
     - `tools/reports/preprod-validate-20260225-045720.log`
     - `tools/reports/release-dry-run-20260225-045739.log`
     - `tools/reports/rollback-drill-20260225-045741.log`
+- Opened and completed `milestone-4-mod-01-confirmation-workflow-slice`:
+  - `confirm_required` now persists pending task confirmation with explicit `confirmation_id` and policy metadata.
+  - new endpoint implemented:
+    - `POST /v1/owner-concierge/interaction-confirmations`
+    - supports `approve|reject` decision with state guard (`pending` only)
+  - approval path now creates/enqueues `module.task.create` preserving original `correlation_id`/`trace_id`.
+  - new confirmation lifecycle events emitted:
+    - `owner.confirmation.requested`
+    - `owner.confirmation.approved`
+    - `owner.confirmation.rejected`
+  - orchestration persistence parity updated (`file` + `postgres`) for confirmations.
+  - runtime and contract gates validated:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-051326.log`
+    - `tools/reports/release-dry-run-20260225-051356.log`
+    - `tools/reports/rollback-drill-20260225-051358.log`
 
 ## Next Checkpoint
-Definir proximo slice de Milestone 4 (ex.: confirmation workflow endpoint para `confirm_required`) e abrir em fase `Specify`.
+Definir proximo slice de Milestone 4 para fila UX de aprovacoes (module 01) e safeguards por tenant (rate-limit/ttl) em fase `Specify`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

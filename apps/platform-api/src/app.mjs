@@ -19,6 +19,8 @@ import {
   evolutionWebhookValid,
   followupCreateValid,
   followupListValid,
+  interactionConfirmationActionResponseValid,
+  interactionConfirmationActionValid,
   leadCreateValid,
   leadListValid,
   leadStageUpdateValid,
@@ -310,6 +312,129 @@ function createPolicyDecision(taskPlan) {
     requires_confirmation: taskPlan.requires_confirmation === true,
     reason_code: taskPlan.policy_reason_code ?? null
   };
+}
+
+function createConfirmationSummary(record) {
+  if (!record) return undefined;
+  return {
+    confirmation_id: record.confirmation_id,
+    status: record.status,
+    task_type: record.task_plan_ref?.task_type ?? 'unknown.task',
+    target_module: record.task_plan_ref?.target_module ?? 'mod-02-whatsapp-crm',
+    reason_code: record.reason_code ?? null,
+    created_at: record.created_at,
+    resolved_at: record.resolved_at ?? null
+  };
+}
+
+function createOwnerConfirmationRequestedEvent(record) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'owner.confirmation.requested',
+    tenant_id: record.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: record.owner_command_ref.correlation_id,
+    causation_id: record.owner_command_ref.command_id,
+    trace_id: record.owner_command_ref.trace_id,
+    status: 'info',
+    payload: {
+      confirmation_id: record.confirmation_id,
+      task_type: record.task_plan_ref.task_type,
+      target_module: record.task_plan_ref.target_module,
+      reason_code: record.reason_code ?? null
+    }
+  };
+}
+
+function createOwnerConfirmationApprovedEvent(record, moduleTaskCommand) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'owner.confirmation.approved',
+    tenant_id: record.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: record.owner_command_ref.correlation_id,
+    causation_id: record.owner_command_ref.command_id,
+    trace_id: record.owner_command_ref.trace_id,
+    status: 'accepted',
+    payload: {
+      confirmation_id: record.confirmation_id,
+      task_id: moduleTaskCommand.payload.task_id,
+      task_type: moduleTaskCommand.payload.task_type,
+      target_module: moduleTaskCommand.target_module
+    }
+  };
+}
+
+function createOwnerConfirmationRejectedEvent(record) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'owner.confirmation.rejected',
+    tenant_id: record.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: record.owner_command_ref.correlation_id,
+    causation_id: record.owner_command_ref.command_id,
+    trace_id: record.owner_command_ref.trace_id,
+    status: 'info',
+    payload: {
+      confirmation_id: record.confirmation_id,
+      task_type: record.task_plan_ref.task_type,
+      target_module: record.task_plan_ref.target_module,
+      reason_code: record.reason_code ?? null
+    }
+  };
+}
+
+function createModuleTaskCommandFromConfirmation(record, actorSessionId) {
+  const taskId = randomUUID();
+  const snapshot = record.request_snapshot ?? {};
+  const command = {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'command',
+    command_id: randomUUID(),
+    name: 'module.task.create',
+    tenant_id: record.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: record.task_plan_ref.target_module,
+    created_at: new Date().toISOString(),
+    correlation_id: record.owner_command_ref.correlation_id,
+    causation_id: record.owner_command_ref.command_id,
+    trace_id: record.owner_command_ref.trace_id,
+    actor: {
+      actor_id: actorSessionId,
+      actor_type: 'owner',
+      channel: snapshot.channel ?? 'ui-chat'
+    },
+    payload: {
+      task_id: taskId,
+      task_type: record.task_plan_ref.task_type,
+      priority: record.task_plan_ref.priority,
+      input: {
+        request_id: snapshot.request_id,
+        session_id: snapshot.session_id,
+        text: snapshot.text ?? '',
+        attachments_count: Number(snapshot.attachments_count ?? 0),
+        planning_rule: record.task_plan_ref.route_rule_id ?? 'confirmation_resume'
+      }
+    }
+  };
+
+  if (snapshot.persona_overrides) {
+    command.payload.input.persona_overrides = snapshot.persona_overrides;
+  }
+
+  return command;
 }
 
 function createModuleTaskCreatedEvent(moduleTaskCommand) {
@@ -3532,9 +3657,63 @@ export function createApp(options = {}) {
         const taskPlan = taskPlanner.plan(request);
         const policyDecision = createPolicyDecision(taskPlan);
         const shouldCreateModuleTask = taskPlan?.execution_decision === 'allow';
+        const requiresConfirmation = taskPlan?.execution_decision === 'confirm_required';
         const moduleTaskCommand = shouldCreateModuleTask
           ? createModuleTaskCommand(request, ownerCommand, taskPlan)
           : null;
+        let confirmationSummary;
+
+        if (requiresConfirmation && taskPlan) {
+          const confirmationInput = {
+            tenant_id: request.tenant_id,
+            reason_code: taskPlan.policy_reason_code ?? null,
+            owner_command_ref: {
+              command_id: ownerCommand.command_id,
+              correlation_id: ownerCommand.correlation_id,
+              trace_id: ownerCommand.trace_id
+            },
+            task_plan_ref: {
+              target_module: taskPlan.target_module,
+              task_type: taskPlan.task_type,
+              priority: taskPlan.priority,
+              simulate_failure: taskPlan.simulate_failure === true,
+              route_rule_id: taskPlan.rule_id ?? null,
+              policy_rule_id: taskPlan.policy_rule_id ?? null
+            },
+            request_snapshot: {
+              request_id: request.request_id,
+              session_id: request.session_id,
+              channel: request.channel,
+              text: String(request.payload?.text ?? ''),
+              attachments_count: Array.isArray(request.payload?.attachments)
+                ? request.payload.attachments.length
+                : 0,
+              persona_overrides: sanitizePersonaOverrides(request.payload?.persona_overrides) ?? null
+            }
+          };
+
+          let confirmationRecord;
+          try {
+            confirmationRecord = await store.createTaskConfirmation(confirmationInput);
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+
+          const requestedEvent = createOwnerConfirmationRequestedEvent(confirmationRecord);
+          const requestedEventResult = await validateAndPersistEvent(store, requestedEvent);
+          if (!requestedEventResult.ok) {
+            return json(res, 500, {
+              error: requestedEventResult.type,
+              details: requestedEventResult.details
+            });
+          }
+
+          confirmationSummary = createConfirmationSummary(confirmationRecord);
+        }
+
         if (moduleTaskCommand) {
           const moduleTaskCommandValidation = orchestrationCommandValid(moduleTaskCommand);
           if (!moduleTaskCommandValidation.ok) {
@@ -3622,6 +3801,9 @@ export function createApp(options = {}) {
           policy_decision: policyDecision
         };
 
+        if (confirmationSummary) {
+          response.confirmation = confirmationSummary;
+        }
         if (downstreamTasks) {
           response.downstream_tasks = downstreamTasks;
         }
@@ -3634,6 +3816,166 @@ export function createApp(options = {}) {
           });
         }
 
+        return json(res, 200, { response });
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/interaction-confirmations') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = interactionConfirmationActionValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const existing = await store.getTaskConfirmation(request.tenant_id, request.confirmation_id);
+        if (!existing) {
+          return json(res, 404, { error: 'confirmation_not_found' });
+        }
+        if (existing.status !== 'pending') {
+          return json(res, 409, {
+            error: 'confirmation_not_pending',
+            status: existing.status
+          });
+        }
+
+        if (request.decision === 'approve') {
+          const moduleTaskCommand = createModuleTaskCommandFromConfirmation(existing, request.session_id);
+          const moduleTaskCommandValidation = orchestrationCommandValid(moduleTaskCommand);
+          if (!moduleTaskCommandValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: moduleTaskCommandValidation.errors
+            });
+          }
+
+          const moduleTaskPersistError = await persistCommandSafely(store, moduleTaskCommand);
+          if (moduleTaskPersistError) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(moduleTaskPersistError.message ?? moduleTaskPersistError)
+            });
+          }
+
+          const createdEvent = createModuleTaskCreatedEvent(moduleTaskCommand);
+          const createdEventResult = await validateAndPersistEvent(store, createdEvent);
+          if (!createdEventResult.ok) {
+            return json(res, 500, {
+              error: createdEventResult.type,
+              details: createdEventResult.details
+            });
+          }
+
+          try {
+            await store.enqueueModuleTask(moduleTaskCommand, {
+              simulateFailure: existing.task_plan_ref?.simulate_failure === true
+            });
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+
+          const resolved = await store.resolveTaskConfirmation(
+            request.tenant_id,
+            request.confirmation_id,
+            {
+              status: 'approved',
+              action: 'approve',
+              actor_session_id: request.session_id,
+              resolution_reason: request.resolution_reason ?? null,
+              module_task: {
+                task_id: moduleTaskCommand.payload.task_id,
+                target_module: moduleTaskCommand.target_module,
+                task_type: moduleTaskCommand.payload.task_type,
+                status: 'queued'
+              }
+            }
+          );
+          if (!resolved) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: `unable_to_resolve_confirmation:${request.confirmation_id}`
+            });
+          }
+
+          const approvedEvent = createOwnerConfirmationApprovedEvent(resolved, moduleTaskCommand);
+          const approvedEventResult = await validateAndPersistEvent(store, approvedEvent);
+          if (!approvedEventResult.ok) {
+            return json(res, 500, {
+              error: approvedEventResult.type,
+              details: approvedEventResult.details
+            });
+          }
+
+          const response = {
+            request_id: request.request_id,
+            status: 'accepted',
+            confirmation: createConfirmationSummary(resolved),
+            downstream_task: {
+              task_id: moduleTaskCommand.payload.task_id,
+              target_module: moduleTaskCommand.target_module,
+              task_type: moduleTaskCommand.payload.task_type,
+              status: 'queued'
+            }
+          };
+
+          const responseValidation = interactionConfirmationActionResponseValid(response);
+          if (!responseValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: responseValidation.errors
+            });
+          }
+
+          return json(res, 200, { response });
+        }
+
+        const resolved = await store.resolveTaskConfirmation(
+          request.tenant_id,
+          request.confirmation_id,
+          {
+            status: 'rejected',
+            action: 'reject',
+            actor_session_id: request.session_id,
+            resolution_reason: request.resolution_reason ?? null
+          }
+        );
+        if (!resolved) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: `unable_to_resolve_confirmation:${request.confirmation_id}`
+          });
+        }
+
+        const rejectedEvent = createOwnerConfirmationRejectedEvent(resolved);
+        const rejectedEventResult = await validateAndPersistEvent(store, rejectedEvent);
+        if (!rejectedEventResult.ok) {
+          return json(res, 500, {
+            error: rejectedEventResult.type,
+            details: rejectedEventResult.details
+          });
+        }
+
+        const response = {
+          request_id: request.request_id,
+          status: 'accepted',
+          confirmation: createConfirmationSummary(resolved)
+        };
+        const responseValidation = interactionConfirmationActionResponseValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: responseValidation.errors
+          });
+        }
         return json(res, 200, { response });
       }
 

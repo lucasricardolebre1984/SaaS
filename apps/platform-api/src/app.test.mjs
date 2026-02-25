@@ -21,6 +21,18 @@ function validOwnerRequest() {
   };
 }
 
+function validInteractionConfirmationActionRequest(confirmationId, decision = 'approve') {
+  return {
+    request: {
+      request_id: '4fee0174-1f86-4be2-9293-a2ea58023dd4',
+      tenant_id: 'tenant_automania',
+      session_id: '67c28929-5ff7-48ef-bdcc-6f7f4dc6580b',
+      confirmation_id: confirmationId,
+      decision
+    }
+  };
+}
+
 function buildRoutingPolicyWithSingleRule(rule) {
   return {
     version: '1.0.0',
@@ -1855,7 +1867,7 @@ test('POST /v1/owner-concierge/interaction blocks task creation when policy deci
   }
 });
 
-test('POST /v1/owner-concierge/interaction marks confirm_required without enqueuing task', async () => {
+test('POST /v1/owner-concierge/interaction creates pending confirmation and approval enqueues task', async () => {
   const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-policy-confirm-'));
   const routingPolicyPath = path.join(policyDir, 'task-routing.policy.json');
   const executionPolicyPath = path.join(policyDir, 'owner-tool-execution-policy.json');
@@ -1920,6 +1932,10 @@ test('POST /v1/owner-concierge/interaction marks confirm_required without enqueu
     assert.equal(body.response.policy_decision.requires_confirmation, true);
     assert.equal(body.response.policy_decision.reason_code, 'financial_writeoff');
     assert.equal(body.response.downstream_tasks, undefined);
+    assert.ok(typeof body.response.confirmation.confirmation_id === 'string');
+    assert.equal(body.response.confirmation.status, 'pending');
+    assert.equal(body.response.confirmation.task_type, 'billing.writeoff.request');
+    assert.equal(body.response.confirmation.target_module, 'mod-05-faturamento-cobranca');
 
     const correlationId = body.response.owner_command.correlation_id;
     const traceRes = await fetch(
@@ -1929,10 +1945,149 @@ test('POST /v1/owner-concierge/interaction marks confirm_required without enqueu
     const traceBody = await traceRes.json();
     const eventNames = traceBody.events.map((item) => item.name);
     assert.ok(eventNames.includes('owner.command.created'));
+    assert.ok(eventNames.includes('owner.confirmation.requested'));
     assert.ok(!eventNames.includes('module.task.created'));
     assert.equal(traceBody.commands.some((item) => item.name === 'module.task.create'), false);
+
+    const approvalPayload = validInteractionConfirmationActionRequest(
+      body.response.confirmation.confirmation_id,
+      'approve'
+    );
+    const approvalRes = await fetch(`${confirmBaseUrl}/v1/owner-concierge/interaction-confirmations`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(approvalPayload)
+    });
+    assert.equal(approvalRes.status, 200);
+    const approvalBody = await approvalRes.json();
+    assert.equal(approvalBody.response.status, 'accepted');
+    assert.equal(approvalBody.response.confirmation.status, 'approved');
+    assert.equal(approvalBody.response.downstream_task.status, 'queued');
+
+    const traceAfterApprovalRes = await fetch(
+      `${confirmBaseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+    );
+    assert.equal(traceAfterApprovalRes.status, 200);
+    const traceAfterApproval = await traceAfterApprovalRes.json();
+    const eventNamesAfterApproval = traceAfterApproval.events.map((item) => item.name);
+    assert.ok(eventNamesAfterApproval.includes('module.task.created'));
+    assert.ok(eventNamesAfterApproval.includes('owner.confirmation.approved'));
+    assert.equal(
+      traceAfterApproval.commands.some((item) => item.name === 'module.task.create'),
+      true
+    );
+
+    const queueRes = await fetch(`${confirmBaseUrl}/internal/orchestration/module-task-queue`);
+    assert.equal(queueRes.status, 200);
+    const queueBody = await queueRes.json();
+    assert.ok(queueBody.pending_count >= 1);
+
+    const secondApprovalRes = await fetch(`${confirmBaseUrl}/v1/owner-concierge/interaction-confirmations`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(approvalPayload)
+    });
+    assert.equal(secondApprovalRes.status, 409);
+    const secondApprovalBody = await secondApprovalRes.json();
+    assert.equal(secondApprovalBody.error, 'confirmation_not_pending');
   } finally {
     await new Promise((resolve, reject) => confirmServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(policyDir, { recursive: true, force: true });
+  }
+});
+
+test('POST /v1/owner-concierge/interaction-confirmations rejects confirmation without enqueuing task', async () => {
+  const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-policy-confirm-reject-'));
+  const routingPolicyPath = path.join(policyDir, 'task-routing.policy.json');
+  const executionPolicyPath = path.join(policyDir, 'owner-tool-execution-policy.json');
+
+  await fs.writeFile(
+    routingPolicyPath,
+    JSON.stringify(
+      buildRoutingPolicyWithSingleRule({
+        id: 'billing_writeoff_route',
+        keywords: ['perdoar'],
+        route: {
+          target_module: 'mod-05-faturamento-cobranca',
+          task_type: 'billing.writeoff.request',
+          priority: 'high',
+          simulate_failure: false
+        }
+      }),
+      null,
+      2
+    )
+  );
+  await fs.writeFile(
+    executionPolicyPath,
+    JSON.stringify(
+      buildExecutionPolicy([{
+        rule_id: 'confirm_billing_writeoff',
+        task_type: 'billing.writeoff.request',
+        target_module: 'mod-05-faturamento-cobranca',
+        decision: 'confirm_required',
+        requires_confirmation: true,
+        reason_code: 'financial_writeoff'
+      }]),
+      null,
+      2
+    )
+  );
+
+  const rejectServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: policyDir,
+      taskRoutingPolicyPath: routingPolicyPath,
+      taskExecutionPolicyPath: executionPolicyPath
+    })
+  );
+  await new Promise((resolve) => rejectServer.listen(0, '127.0.0.1', resolve));
+  const rejectAddress = rejectServer.address();
+  const rejectBaseUrl = `http://127.0.0.1:${rejectAddress.port}`;
+
+  try {
+    const payload = validOwnerRequest();
+    payload.request.payload.text = 'perdoar cobranca vencida';
+
+    const res = await fetch(`${rejectBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    const confirmationId = body.response.confirmation.confirmation_id;
+    const correlationId = body.response.owner_command.correlation_id;
+
+    const rejectPayload = validInteractionConfirmationActionRequest(confirmationId, 'reject');
+    const rejectRes = await fetch(`${rejectBaseUrl}/v1/owner-concierge/interaction-confirmations`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(rejectPayload)
+    });
+    assert.equal(rejectRes.status, 200);
+    const rejectBody = await rejectRes.json();
+    assert.equal(rejectBody.response.status, 'accepted');
+    assert.equal(rejectBody.response.confirmation.status, 'rejected');
+    assert.equal(rejectBody.response.downstream_task, undefined);
+
+    const traceRes = await fetch(
+      `${rejectBaseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+    );
+    assert.equal(traceRes.status, 200);
+    const traceBody = await traceRes.json();
+    const eventNames = traceBody.events.map((item) => item.name);
+    assert.ok(eventNames.includes('owner.confirmation.requested'));
+    assert.ok(eventNames.includes('owner.confirmation.rejected'));
+    assert.ok(!eventNames.includes('module.task.created'));
+    assert.equal(traceBody.commands.some((item) => item.name === 'module.task.create'), false);
+
+    const queueRes = await fetch(`${rejectBaseUrl}/internal/orchestration/module-task-queue`);
+    assert.equal(queueRes.status, 200);
+    const queueBody = await queueRes.json();
+    assert.equal(queueBody.pending_count, 0);
+  } finally {
+    await new Promise((resolve, reject) => rejectServer.close((err) => (err ? reject(err) : resolve())));
     await fs.rm(policyDir, { recursive: true, force: true });
   }
 });

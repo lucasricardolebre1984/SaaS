@@ -3,11 +3,11 @@
 SaaS base institucional da Automania AI (Nx monorepo).
 
 ## Status Atual
-- Milestone atual: `Milestone 3 - Production Readiness (execution)`
-- Slice ativo: `milestone-3-release-rollback-drill-slice` (concluído)
+- Milestone atual: `Milestone 4 - Next Cycle Definition (in progress)`
+- Slice ativo: `milestone-4-mod-01-confirmation-workflow-slice` (concluído)
 - Checkpoints recentes:
-  - `fix(m3): apply branch protection and resolve automation payload issue` (`1c57e7f`)
-  - `fix(ci): make preprod scripts pwsh-compatible for Linux runners` (`d311990`)
+  - `feat(mod-01): enforce tool execution policy for task dispatch decisions`
+  - `feat(mod-01): add explicit confirmation workflow endpoint for confirm_required`
 
 ## Arquitetura Padrão (fixa)
 1. `mod-01-owner-concierge` (chat IA + avatar + memória/contexto)
@@ -55,6 +55,10 @@ Drills operacionais:
 npm run release:dry-run
 npm run rollback:drill
 ```
+
+Novo endpoint de confirmacao explicita:
+- `POST /v1/owner-concierge/interaction-confirmations`
+- uso: resolver `confirmation_id` pendente com `decision=approve|reject` (criado no retorno de `/v1/owner-concierge/interaction` quando a policy retorna `confirm_required`).
 
 CI:
 - workflow `runtime-ci` executa `npm run preprod:validate` em `push/pull_request` para `main`

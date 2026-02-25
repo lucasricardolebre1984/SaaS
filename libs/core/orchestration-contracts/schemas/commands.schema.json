@@ -82,10 +82,13 @@
                 "enum": [
                   "crm.followup.send",
                   "crm.lead.capture",
+                  "crm.campaign.send",
                   "customer.upsert",
+                  "customer.delete.request",
                   "agenda.commitment.schedule",
                   "billing.charge.create",
-                  "billing.collection.request"
+                  "billing.collection.request",
+                  "billing.writeoff.request"
                 ]
               },
               "priority": { "type": "string", "enum": ["low", "normal", "high"] },

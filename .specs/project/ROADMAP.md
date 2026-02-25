@@ -100,7 +100,7 @@ Status update:
 - Milestone 3 exit checklist closed com decisao GO:
   - `.specs/project/MILESTONE-3-EXIT-CHECKLIST.md`
 
-## Milestone 4 - Next Cycle Definition (planned)
+## Milestone 4 - Next Cycle Definition (in progress)
 Objective: Define the next implementation stream after Milestone 3 readiness closure.
 
 Deliverables:
@@ -124,6 +124,13 @@ Status update:
     - status: implemented and validated
     - planner/runtime now enforce `allow|deny|confirm_required` before queue dispatch
     - interaction contract includes `policy_decision` metadata
+  - feature implemented and validated:
+    - `milestone-4-mod-01-confirmation-workflow-slice`
+    - `confirm_required` now creates pending confirmation with explicit `confirmation_id`
+    - endpoint `POST /v1/owner-concierge/interaction-confirmations` resolves `approve|reject`
+    - approval path enqueues `module.task.create` preserving original correlation trace
+    - orchestration contracts expanded with confirmation lifecycle events
+    - gates passed (`app-platform-api:test`, `contract-checks`, `preprod:validate -- -SkipSmokePostgres`)
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

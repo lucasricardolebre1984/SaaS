@@ -7,6 +7,9 @@
     "name": {
       "enum": [
         "owner.command.created",
+        "owner.confirmation.requested",
+        "owner.confirmation.approved",
+        "owner.confirmation.rejected",
         "owner.context.promoted",
         "owner.memory.reembed.started",
         "owner.memory.reembed.completed",
@@ -51,6 +54,69 @@
               "mode": { "type": "string", "enum": ["one-shot", "continuous"] }
             },
             "required": ["owner_command_id", "mode"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.confirmation.requested" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "confirmation_id": { "type": "string", "format": "uuid" },
+              "task_type": { "type": "string", "minLength": 3 },
+              "target_module": { "$ref": "./base.schema.json#/$defs/moduleId" },
+              "reason_code": { "type": ["string", "null"] }
+            },
+            "required": ["confirmation_id", "task_type", "target_module", "reason_code"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.confirmation.approved" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "accepted" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "confirmation_id": { "type": "string", "format": "uuid" },
+              "task_id": { "type": "string", "format": "uuid" },
+              "task_type": { "type": "string", "minLength": 3 },
+              "target_module": { "$ref": "./base.schema.json#/$defs/moduleId" }
+            },
+            "required": ["confirmation_id", "task_id", "task_type", "target_module"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.confirmation.rejected" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "confirmation_id": { "type": "string", "format": "uuid" },
+              "task_type": { "type": "string", "minLength": 3 },
+              "target_module": { "$ref": "./base.schema.json#/$defs/moduleId" },
+              "reason_code": { "type": ["string", "null"] }
+            },
+            "required": ["confirmation_id", "task_type", "target_module", "reason_code"]
           }
         }
       }

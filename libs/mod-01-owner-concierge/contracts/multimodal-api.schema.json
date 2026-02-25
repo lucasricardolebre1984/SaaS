@@ -114,6 +114,36 @@
             "reason_code"
           ]
         },
+        "confirmation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "confirmation_id": { "type": "string", "format": "uuid" },
+            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+            "task_type": { "type": "string", "minLength": 3 },
+            "target_module": {
+              "type": "string",
+              "enum": [
+                "mod-02-whatsapp-crm",
+                "mod-03-clientes",
+                "mod-04-agenda",
+                "mod-05-faturamento-cobranca"
+              ]
+            },
+            "reason_code": { "type": ["string", "null"] },
+            "created_at": { "type": "string", "format": "date-time" },
+            "resolved_at": { "type": ["string", "null"] }
+          },
+          "required": [
+            "confirmation_id",
+            "status",
+            "task_type",
+            "target_module",
+            "reason_code",
+            "created_at",
+            "resolved_at"
+          ]
+        },
         "downstream_tasks": {
           "type": "array",
           "items": {

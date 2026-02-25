@@ -21,6 +21,9 @@ const orchestrationBaseSchema = readJson('libs/core/orchestration-contracts/sche
 const orchestrationCommandsSchema = readJson('libs/core/orchestration-contracts/schemas/commands.schema.json');
 const orchestrationEventsSchema = readJson('libs/core/orchestration-contracts/schemas/events.schema.json');
 const multimodalApiSchema = readJson('libs/mod-01-owner-concierge/contracts/multimodal-api.schema.json');
+const interactionConfirmationActionSchema = readJson(
+  'libs/mod-01-owner-concierge/contracts/interaction-confirmation-action.schema.json'
+);
 const memoryEntryCreateSchema = readJson('libs/mod-01-owner-concierge/contracts/memory-entry-create.schema.json');
 const memoryEntryListSchema = readJson('libs/mod-01-owner-concierge/contracts/memory-entry-list.schema.json');
 const contextPromotionSchema = readJson('libs/mod-01-owner-concierge/contracts/context-promotion.schema.json');
@@ -57,6 +60,12 @@ const validateOrchestrationCommand = ajv.compile(orchestrationCommandsSchema);
 const validateOrchestrationEvent = ajv.compile(orchestrationEventsSchema);
 const validateOwnerRequest = ajv.compile(multimodalApiSchema.properties.request);
 const validateOwnerResponse = ajv.compile(multimodalApiSchema.properties.response);
+const validateInteractionConfirmationActionRequest = ajv.compile(
+  interactionConfirmationActionSchema.properties.request
+);
+const validateInteractionConfirmationActionResponse = ajv.compile(
+  interactionConfirmationActionSchema.properties.response
+);
 const validateMemoryEntryCreateRequest = ajv.compile(memoryEntryCreateSchema.properties.request);
 const validateMemoryEntryListResponse = ajv.compile(memoryEntryListSchema);
 const validateContextPromotionRequest = ajv.compile(contextPromotionSchema.properties.request);
@@ -169,6 +178,17 @@ export function ownerInteractionValid(body) {
 export function ownerInteractionResponseValid(body) {
   const ok = validateOwnerResponse(body);
   return { ok: Boolean(ok), errors: validateOwnerResponse.errors ?? [] };
+}
+
+export function interactionConfirmationActionValid(body) {
+  const ok = validateInteractionConfirmationActionRequest(body?.request);
+  const errors = [...(validateInteractionConfirmationActionRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function interactionConfirmationActionResponseValid(body) {
+  const ok = validateInteractionConfirmationActionResponse(body);
+  return { ok: Boolean(ok), errors: validateInteractionConfirmationActionResponse.errors ?? [] };
 }
 
 export function memoryEntryCreateValid(body) {

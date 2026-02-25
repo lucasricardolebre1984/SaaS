@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-4-mod-01-tool-execution-policy-slice` (completed)
+- Active feature: `milestone-4-mod-01-confirmation-workflow-slice` (completed)
 - Active phase: `Implement checkpoint closed`
-- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase.
+- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase (owner approval queue UX + tenant safeguards).
