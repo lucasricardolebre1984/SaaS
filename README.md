@@ -4,10 +4,10 @@ SaaS base institucional da Automania AI (Nx monorepo).
 
 ## Status Atual
 - Milestone atual: `Milestone 4 - Next Cycle Definition (in progress)`
-- Slice ativo: `milestone-4-mod-01-confirmation-queue-safeguards-slice` (concluído)
+- Slice ativo: `milestone-4-owner-console-approval-queue-ui-slice` (concluído)
 - Checkpoints recentes:
-  - `feat(mod-01): add explicit confirmation workflow endpoint for confirm_required`
   - `feat(mod-01): add confirmation queue safeguards and listing endpoint`
+  - `feat(owner-console): add approvals queue UI with approve/reject actions`
 
 ## Arquitetura Padrão (fixa)
 1. `mod-01-owner-concierge` (chat IA + avatar + memória/contexto)
@@ -65,6 +65,7 @@ Fila operacional de confirmacoes:
 - safeguards ativos:
   - limite de pendentes por tenant (`OWNER_CONFIRMATION_MAX_PENDING_PER_TENANT`, default `20`)
   - TTL de confirmacao (`OWNER_CONFIRMATION_TTL_SECONDS`, default `900`)
+- no Owner Console (modulo 01), o painel `Fila de Aprovacoes` permite listar e executar `Aprovar/Rejeitar` direto no chat.
 
 CI:
 - workflow `runtime-ci` executa `npm run preprod:validate` em `push/pull_request` para `main`

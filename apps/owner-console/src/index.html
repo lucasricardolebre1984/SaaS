@@ -57,6 +57,45 @@
               </article>
             </div>
 
+            <section class="approval-queue">
+              <header class="approval-queue__header">
+                <h4>Fila de Aprovacoes</h4>
+                <div class="approval-queue__controls">
+                  <label>
+                    Status
+                    <select id="confirmationsStatusFilter">
+                      <option value="pending">pending</option>
+                      <option value="all">all</option>
+                      <option value="approved">approved</option>
+                      <option value="rejected">rejected</option>
+                    </select>
+                  </label>
+                  <label>
+                    Limite
+                    <input id="confirmationsLimit" type="number" min="1" max="200" value="20" />
+                  </label>
+                  <button id="confirmationsRefreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+                </div>
+              </header>
+
+              <p id="confirmationsStatus" class="module-status">Fila ainda nao carregada.</p>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Criado</th>
+                      <th>Task</th>
+                      <th>Status</th>
+                      <th>Motivo</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="confirmationsRows"></tbody>
+                </table>
+              </div>
+            </section>
+
             <form id="chatForm" class="composer">
               <div class="composer-tools">
                 <button id="audioRecordBtn" class="btn btn--ghost" type="button">Audio</button>

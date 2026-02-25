@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 4 mod-01 confirmation queue safeguards slice)
-Active feature: milestone-4-mod-01-confirmation-queue-safeguards-slice (completed)
+Active phase: Implement checkpoint closed (Milestone 4 owner console approval queue ui slice)
+Active feature: milestone-4-owner-console-approval-queue-ui-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -423,9 +423,27 @@ Active feature: milestone-4-mod-01-confirmation-queue-safeguards-slice (complete
     - `tools/reports/preprod-validate-20260225-052500.log`
     - `tools/reports/release-dry-run-20260225-052522.log`
     - `tools/reports/rollback-drill-20260225-052523.log`
+- Opened and completed `milestone-4-owner-console-approval-queue-ui-slice`:
+  - module 01 owner console now includes operational approvals queue panel inside chat workspace.
+  - queue UI supports:
+    - status filter (`pending|approved|rejected|all`)
+    - limit control
+    - row actions `approve` and `reject`
+  - queue UI integrated with runtime endpoints:
+    - `GET /v1/owner-concierge/interaction-confirmations`
+    - `POST /v1/owner-concierge/interaction-confirmations`
+  - interaction flow now auto-refreshes queue when response returns pending confirmation.
+  - runtime and preprod gates validated:
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-platform-api:test`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-053613.log`
+    - `tools/reports/release-dry-run-20260225-053632.log`
+    - `tools/reports/rollback-drill-20260225-053634.log`
 
 ## Next Checkpoint
-Definir proximo slice de Milestone 4 para UX de fila de aprovacoes no Owner Console (acoes operator-first) em fase `Specify`.
+Definir proximo slice de Milestone 4 para operacao de fila no Owner Console com bulk actions e politica de auto-refresh controlada em fase `Specify`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

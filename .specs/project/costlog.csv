@@ -117,3 +117,6 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4Q-SPEC-OPEN milestone 4 confirmation queue safeguards slice kickoff
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4Q-001..003 tenant queue limit ttl expiration and confirmation list endpoint with store parity and tests
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4Q-004 milestone 4 confirmation queue safeguards gate and governance closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4UQ-SPEC-OPEN owner console approvals queue ui slice kickoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4UQ-001..002 module 01 approvals queue UI list filter action wiring and auto-refresh behavior
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4UQ-003 owner console approvals queue slice validation and governance closure

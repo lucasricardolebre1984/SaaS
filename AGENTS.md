@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-4-mod-01-confirmation-queue-safeguards-slice` (completed)
+- Active feature: `milestone-4-owner-console-approval-queue-ui-slice` (completed)
 - Active phase: `Implement checkpoint closed`
-- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase (owner approval queue UX no console + operator actions).
+- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase (owner approval queue bulk actions + auto-refresh policy).

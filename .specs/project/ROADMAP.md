@@ -138,6 +138,14 @@ Status update:
       - `GET /v1/owner-concierge/interaction-confirmations`
     - runtime health now publishes confirmation runtime config (`max_pending_per_tenant`, `ttl_seconds`)
     - gates passed (`app-platform-api:test`, `contract-checks`, `preprod:validate -- -SkipSmokePostgres`)
+  - feature implemented and validated:
+    - `milestone-4-owner-console-approval-queue-ui-slice`
+    - module 01 owner console now has operational approvals queue panel with filter + action buttons
+    - UI integrated with endpoints:
+      - `GET /v1/owner-concierge/interaction-confirmations`
+      - `POST /v1/owner-concierge/interaction-confirmations`
+    - chat flow auto-refreshes queue when `confirm_required` returns pending confirmation
+    - gates passed (`app-owner-console:build`, `app-platform-api:test`, `preprod:validate -- -SkipSmokePostgres`)
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

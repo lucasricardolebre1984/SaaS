@@ -46,7 +46,8 @@ const state = {
     customerDetail: null,
     reminders: [],
     charges: [],
-    appointments: []
+    appointments: [],
+    confirmations: []
   }
 };
 
@@ -140,6 +141,11 @@ const messagesEl = document.getElementById('messages');
 const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
 const pendingAttachmentsEl = document.getElementById('pendingAttachments');
+const confirmationsStatusEl = document.getElementById('confirmationsStatus');
+const confirmationsRowsEl = document.getElementById('confirmationsRows');
+const confirmationsStatusFilterEl = document.getElementById('confirmationsStatusFilter');
+const confirmationsLimitEl = document.getElementById('confirmationsLimit');
+const confirmationsRefreshBtn = document.getElementById('confirmationsRefreshBtn');
 
 const continuousBtn = document.getElementById('continuousBtn');
 const continuousStateEl = document.getElementById('continuousState');
@@ -537,6 +543,61 @@ function renderChargesTable() {
     chargeIdOptionsEl,
     state.moduleData.charges.map((item) => item.charge_id)
   );
+}
+
+function confirmationFilterValue() {
+  const value = confirmationsStatusFilterEl?.value ?? 'pending';
+  if (value === 'pending' || value === 'approved' || value === 'rejected' || value === 'all') {
+    return value;
+  }
+  return 'pending';
+}
+
+function confirmationLimitValue() {
+  const raw = Number(confirmationsLimitEl?.value ?? 20);
+  if (!Number.isFinite(raw) || raw <= 0) {
+    return 20;
+  }
+  return Math.min(Math.floor(raw), 200);
+}
+
+function renderConfirmationsTable() {
+  if (!confirmationsRowsEl) return;
+  if (!Array.isArray(state.moduleData.confirmations) || state.moduleData.confirmations.length === 0) {
+    confirmationsRowsEl.innerHTML = '<tr><td colspan="5">Sem confirmacoes para o filtro atual.</td></tr>';
+    return;
+  }
+
+  confirmationsRowsEl.innerHTML = state.moduleData.confirmations
+    .map((item) => {
+      const status = item.status ?? '-';
+      const created = formatDateTime(item.created_at);
+      const taskLabel = `${item.task_type ?? '-'} -> ${item.target_module ?? '-'}`;
+      const reason = item.reason_code ?? '-';
+      const actionButtons = status === 'pending'
+        ? `
+          <div class="table-actions">
+            <button type="button" class="btn btn--ghost btn--tiny" data-confirm-action="approve" data-confirmation-id="${item.confirmation_id}">
+              Aprovar
+            </button>
+            <button type="button" class="btn btn--ghost btn--tiny" data-confirm-action="reject" data-confirmation-id="${item.confirmation_id}">
+              Rejeitar
+            </button>
+          </div>
+        `
+        : '<span class="muted">resolvido</span>';
+
+      return `
+        <tr>
+          <td>${created}</td>
+          <td><code>${taskLabel}</code></td>
+          <td>${status}</td>
+          <td>${reason}</td>
+          <td>${actionButtons}</td>
+        </tr>
+      `;
+    })
+    .join('');
 }
 
 function renderModuleWorkspace(moduleId) {
@@ -1119,6 +1180,7 @@ function setActiveModule(moduleId) {
     moduleWorkspaceEl.classList.add('hidden');
     settingsWorkspaceEl.classList.add('hidden');
     modulePlaceholderWorkspaceEl.classList.add('hidden');
+    refreshInteractionConfirmations();
     return;
   }
 
@@ -1360,6 +1422,58 @@ async function callHealth() {
   }
 }
 
+async function refreshInteractionConfirmations() {
+  try {
+    const status = confirmationFilterValue();
+    const limit = confirmationLimitValue();
+    const path = `/v1/owner-concierge/interaction-confirmations?tenant_id=${encodeURIComponent(tenantId())}&status=${encodeURIComponent(status)}&limit=${limit}`;
+    const body = await fetchJsonOrThrow(path);
+    state.moduleData.confirmations = Array.isArray(body.items) ? body.items : [];
+    renderConfirmationsTable();
+    setModuleStatus(
+      confirmationsStatusEl,
+      `Fila carregada (${status}): ${state.moduleData.confirmations.length} item(ns).`
+    );
+    trackModuleSpend('mod-01-owner-concierge', 0.0006, 1);
+  } catch (error) {
+    setModuleStatus(confirmationsStatusEl, `Erro ao carregar fila: ${error.message}`, true);
+  }
+}
+
+async function resolveInteractionConfirmation(confirmationId, decision) {
+  if (!confirmationId || (decision !== 'approve' && decision !== 'reject')) {
+    return;
+  }
+
+  try {
+    const body = await fetchJsonOrThrow('/v1/owner-concierge/interaction-confirmations', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: crypto.randomUUID(),
+          tenant_id: tenantId(),
+          session_id: sessionId(),
+          confirmation_id: confirmationId,
+          decision
+        }
+      })
+    });
+
+    const finalStatus = body?.response?.confirmation?.status ?? 'unknown';
+    const taskInfo = body?.response?.downstream_task
+      ? ` | task: ${body.response.downstream_task.task_type}`
+      : '';
+    appendMessage(`[confirmacao ${decision}] ${confirmationId} -> ${finalStatus}${taskInfo}`);
+    setModuleStatus(confirmationsStatusEl, `Confirmacao ${decision} executada: ${confirmationId}.`);
+    trackModuleSpend('mod-01-owner-concierge', 0.0012, 1);
+    await refreshInteractionConfirmations();
+  } catch (error) {
+    appendMessage(`Falha ao resolver confirmacao ${confirmationId}: ${error.message}`);
+    setModuleStatus(confirmationsStatusEl, `Erro ao resolver confirmacao: ${error.message}`, true);
+  }
+}
+
 async function toggleContinuousMode() {
   const next = !state.continuous;
   try {
@@ -1445,6 +1559,14 @@ async function sendInteraction(text, attachments = []) {
       ? ` | tasks: ${body.response.downstream_tasks.length}`
       : '';
     appendMessage(`[${status}] ${output}${tasks}`);
+
+    const confirmation = body.response?.confirmation;
+    if (confirmation?.status === 'pending') {
+      appendMessage(
+        `[confirmacao pendente] ${confirmation.task_type} (${confirmation.confirmation_id})`
+      );
+      await refreshInteractionConfirmations();
+    }
 
     trackModuleSpend('mod-01-owner-concierge', estimateMessageCostUSD(attachments), 1);
   } catch (error) {
@@ -1632,6 +1754,24 @@ function setupEvents() {
     removePendingAttachment(target.dataset.removeAttachment);
   });
 
+  confirmationsRefreshBtn.addEventListener('click', () => {
+    refreshInteractionConfirmations();
+  });
+  confirmationsStatusFilterEl.addEventListener('change', () => {
+    refreshInteractionConfirmations();
+  });
+  confirmationsLimitEl.addEventListener('change', () => {
+    refreshInteractionConfirmations();
+  });
+  confirmationsRowsEl.addEventListener('click', (event) => {
+    const actionBtn = event.target.closest('[data-confirm-action][data-confirmation-id]');
+    if (!actionBtn) return;
+    resolveInteractionConfirmation(
+      actionBtn.dataset.confirmationId,
+      actionBtn.dataset.confirmAction
+    );
+  });
+
   customerCreateForm.addEventListener('submit', createCustomer);
   customersRefreshBtn.addEventListener('click', refreshCustomers);
   customerDetailBtn.addEventListener('click', loadCustomerDetail);
@@ -1668,6 +1808,7 @@ function bootstrap() {
   setActiveModule('mod-01-owner-concierge');
   setupEvents();
   callHealth();
+  refreshInteractionConfirmations();
 }
 
 bootstrap();
