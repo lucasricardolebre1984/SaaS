@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 3 CI preprod gate slice)
-Active feature: milestone-3-ci-preprod-gate-slice (completed)
+Active phase: Implement (blocked on external dependency)
+Active feature: milestone-3-branch-protection-slice (blocked)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -319,13 +319,18 @@ Active feature: milestone-3-ci-preprod-gate-slice (completed)
   - runtime CI workflow now executes `npm run preprod:validate` as unified gate
   - CI uploads `tools/reports/preprod-validate-*.log` as artifact (`if: always()`)
   - local dry run validated with `-SkipSmokePostgres` before CI push
+- Opened `milestone-3-branch-protection-slice`:
+  - branch protection automation script published (`tools/enforce-branch-protection.ps1`)
+  - apply attempt blocked by GitHub plan constraint on private repo:
+    - `HTTP 403: Upgrade to GitHub Pro or make this repository public`
+  - blocker documented in `.specs/project/GITHUB-BRANCH-PROTECTION.md`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
 
 ## Next Checkpoint
-Open next Milestone 3 execution slice for branch protection and required checks policy.
+Resolve GitHub plan/repository visibility blocker and rerun `npm run github:protect-main`.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

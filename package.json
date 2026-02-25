@@ -14,7 +14,8 @@
     "init:day": "powershell -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -ForceSkills",
     "resume:day": "powershell -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -SkipInstall",
     "start:day": "npm run init:day",
-    "end:day": "powershell -ExecutionPolicy Bypass -File ./tools/end-day.ps1 -ShowPending"
+    "end:day": "powershell -ExecutionPolicy Bypass -File ./tools/end-day.ps1 -ShowPending",
+    "github:protect-main": "powershell -ExecutionPolicy Bypass -File ./tools/enforce-branch-protection.ps1 -Apply -Branch main"
   },
   "dependencies": {
     "pg": "^8.16.3"

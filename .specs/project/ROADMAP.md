@@ -88,6 +88,9 @@ Status update:
 - CI integration slice completed:
   - `milestone-3-ci-preprod-gate-slice`
   - runtime workflow runs unified gate and publishes report artifact
+- Branch protection slice partially executed:
+  - automation published (`tools/enforce-branch-protection.ps1`)
+  - enforcement blocked by GitHub plan constraint on private repo (`HTTP 403`)
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS
