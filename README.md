@@ -34,6 +34,19 @@ npm run end:day
 ```
 
 ## Validar o SaaS local
+Subir o SaaS completo (API + Owner + CRM) com um comando:
+```powershell
+npm run serve:all
+```
+
+Endpoints:
+- `http://127.0.0.1:4300` (API)
+- `http://127.0.0.1:4401` (Owner Console)
+- `http://127.0.0.1:4402` (CRM Console)
+
+Parar tudo: `Ctrl + C`.
+
+Checks individuais:
 ```powershell
 npx nx run app-platform-api:test
 npx nx run contract-tests:contract-checks
