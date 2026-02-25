@@ -285,13 +285,17 @@ Active feature: milestone-2-owner-settings-multimodal-slice
   - interaction payload supports optional `persona_overrides` in module 01 contract
   - runtime propagates persona overrides to `owner.command.create` and `module.task.create.input`
   - no-persona mode preserved (empty prompts keep neutral baseline behavior)
+- Postgres smoke revalidated after Docker Desktop startup with isolated stack:
+  - command: `npm run smoke:postgres`
+  - status: passed (full end-to-end flow with owner/crm/billing/memory/scheduler)
+  - isolation confirmed from `fabio2`: smoke uses compose project `fabio-postgres-smoke` and host port `55432` while `fabio2` uses `5432`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
 
 ## Next Checkpoint
-Commit owner settings multimodal slice and continue Milestone 2 exit evaluation.
+Proceed with Milestone 2 exit evaluation checklist and operational handoff docs.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
