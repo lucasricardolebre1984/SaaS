@@ -301,13 +301,16 @@ Active feature: milestone-3-production-readiness-planning
 - M3P-002 completed:
   - unified production-readiness runbook published (deploy, rollback, incident, provider fallback)
   - artifact: `apps/platform-api/RUNBOOK-production-readiness.md`
+- M3P-003 completed:
+  - observability baseline defined by module with SLI/SLO, alert severity and operational owners
+  - artifact: `.specs/project/OBSERVABILITY-BASELINE-M3.md`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
 
 ## Next Checkpoint
-Execute M3P-003 (define minimum observability baseline by module with SLI/SLO + alerts + owners).
+Execute M3P-004 (define secrets/config hardening plan by environment).
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

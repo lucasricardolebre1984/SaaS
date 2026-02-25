@@ -21,11 +21,13 @@ Date: 2026-02-25
   - `apps/platform-api/RUNBOOK-production-readiness.md`
 
 ## M3P-003 - Definir observabilidade mínima por módulo
-- Status: pending
+- Status: completed
 - Output:
   - SLIs/SLOs
   - alertas por severidade
   - owners operacionais
+- Evidence:
+  - `.specs/project/OBSERVABILITY-BASELINE-M3.md`
 
 ## M3P-004 - Definir plano de hardening de segredos/configuração
 - Status: pending
