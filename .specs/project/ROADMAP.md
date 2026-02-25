@@ -76,6 +76,13 @@ Exit criteria:
 - canary deployment validated
 - rollback tested
 
+Status update:
+- Planning baseline completed with artifacts:
+  - `.specs/project/PREPROD-BASELINE-CHECKLIST.md`
+  - `apps/platform-api/RUNBOOK-production-readiness.md`
+  - `.specs/project/OBSERVABILITY-BASELINE-M3.md`
+  - `.specs/project/SECRETS-HARDENING-PLAN-M3.md`
+
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS
 - Advanced AI cost optimization per provider/model

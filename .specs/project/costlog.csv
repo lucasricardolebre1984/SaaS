@@ -88,3 +88,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M3P-001 pre-production baseline checklist publication
 2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M3P-002 production readiness runbook publication
 2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M3P-003 observability baseline publication
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3P-005 milestone 3 planning checkpoint closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M3P-004 secrets and config hardening plan publication

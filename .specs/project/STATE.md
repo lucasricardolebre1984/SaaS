@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-25
-Active phase: Specify (milestone 3 production readiness planning)
-Active feature: milestone-3-production-readiness-planning
+Active phase: Planning checkpoint closed (Milestone 3)
+Active feature: milestone-3-production-readiness-planning (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -304,13 +304,19 @@ Active feature: milestone-3-production-readiness-planning
 - M3P-003 completed:
   - observability baseline defined by module with SLI/SLO, alert severity and operational owners
   - artifact: `.specs/project/OBSERVABILITY-BASELINE-M3.md`
+- M3P-004 completed:
+  - secrets/config hardening policy defined per environment with rotation and audit criteria
+  - artifact: `.specs/project/SECRETS-HARDENING-PLAN-M3.md`
+- M3P-005 completed:
+  - governance planning checkpoint closed for Milestone 3 readiness planning
+  - outputs updated in `STATE`, `worklog`, `costlog`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
 
 ## Next Checkpoint
-Execute M3P-004 (define secrets/config hardening plan by environment).
+Open Milestone 3 implementation slice (operational hardening execution) with new spec/design/tasks.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

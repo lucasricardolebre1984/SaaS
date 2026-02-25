@@ -1,6 +1,6 @@
 # Tasks - milestone-3-production-readiness-planning
 
-Status: Draft
+Status: Completed
 Date: 2026-02-25
 
 ## M3P-001 - Publicar baseline de pré-produção
@@ -30,14 +30,20 @@ Date: 2026-02-25
   - `.specs/project/OBSERVABILITY-BASELINE-M3.md`
 
 ## M3P-004 - Definir plano de hardening de segredos/configuração
-- Status: pending
+- Status: completed
 - Output:
   - política por ambiente
   - rotação/revogação
   - critérios de auditoria
+- Evidence:
+  - `.specs/project/SECRETS-HARDENING-PLAN-M3.md`
 
 ## M3P-005 - Fechar checkpoint de governança do planning
-- Status: pending
+- Status: completed
 - Output:
   - atualização de `STATE`, `worklog`, `costlog`
   - decisão de entrada em implementação Milestone 3
+- Evidence:
+  - `.specs/project/STATE.md`
+  - `.specs/project/worklog.csv`
+  - `.specs/project/costlog.csv`

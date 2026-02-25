@@ -73,6 +73,6 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-3-production-readiness-planning`
-- Active phase: `Specify (milestone 3 production readiness planning)`
-- Immediate checkpoint: open spec/design/tasks for Milestone 3 and preserve Milestone 2 stability gates.
+- Active feature: `milestone-3-production-readiness-planning` (completed)
+- Active phase: `Planning checkpoint closed`
+- Immediate checkpoint: open Milestone 3 implementation slice for operational hardening execution.
