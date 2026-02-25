@@ -5,6 +5,8 @@
   "description": "Automania AI institutional SaaS base",
   "scripts": {
     "nx": "nx",
+    "serve:saas": "npx nx run app-platform-api:serve",
+    "serve:split": "npx nx run-many --target=serve --projects=app-platform-api,app-owner-console,app-crm-console --parallel=3",
     "serve:all": "npx nx run-many --target=serve --projects=app-platform-api,app-owner-console,app-crm-console --parallel=3",
     "contracts:check": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/run-contract-checks.ps1",
     "tenant:validate": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/validate-sample-tenant-pack.ps1",

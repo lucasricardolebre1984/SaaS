@@ -441,6 +441,18 @@ Active feature: milestone-4-owner-console-approval-queue-ui-slice (completed)
     - `tools/reports/preprod-validate-20260225-053613.log`
     - `tools/reports/release-dry-run-20260225-053632.log`
     - `tools/reports/rollback-drill-20260225-053634.log`
+- Applied operational hotfix `ops-unified-runtime-hotfix`:
+  - API runtime now serves unified SaaS on single endpoint `4001` with:
+    - Owner console at `/owner/`
+    - CRM console at `/crm/`
+    - API at `/api/*` (plus direct `/v1/*` compatibility)
+  - CORS/preflight standardized for runtime requests (`OPTIONS 204`, allow origin/methods/headers).
+  - Owner/CRM consoles now auto-resolve API base for unified mode and migrate legacy local default `http://127.0.0.1:4300` to `window.origin/api` when applicable.
+  - local validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`
+    - smoke check (`/health`, `/api/health`, `/owner/`, `/crm/`, CORS preflight) passed with `200/204`.
 
 ## Next Checkpoint
 Definir proximo slice de Milestone 4 para operacao de fila no Owner Console com bulk actions e politica de auto-refresh controlada em fase `Specify`.

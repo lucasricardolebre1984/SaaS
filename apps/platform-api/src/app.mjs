@@ -56,10 +56,30 @@ import {
 
 const ORCHESTRATION_SCHEMA_VERSION = '1.0.0';
 const ORCHESTRATION_LOG_LIMIT = 200;
+const DEFAULT_CORS_ALLOW_METHODS = 'GET,POST,PATCH,PUT,DELETE,OPTIONS';
+const DEFAULT_CORS_ALLOW_HEADERS = 'content-type,authorization,x-requested-with';
+const DEFAULT_CORS_MAX_AGE = '86400';
 
 function json(res, statusCode, payload) {
   res.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(payload));
+}
+
+function parseCorsAllowOrigins(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter((item) => item.length > 0);
+  }
+  const raw = String(value ?? '*').trim();
+  if (raw === '*' || raw.length === 0) return ['*'];
+  return raw.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+}
+
+function resolveCorsOrigin(originHeader, allowOrigins) {
+  if (allowOrigins.includes('*')) return '*';
+  if (!originHeader) return null;
+  const origin = String(originHeader).trim();
+  if (allowOrigins.includes(origin)) return origin;
+  return null;
 }
 
 async function readJsonBody(req) {
@@ -1232,6 +1252,18 @@ export function createApp(options = {}) {
       900
     )
   };
+  const corsAllowOrigins = parseCorsAllowOrigins(
+    options.corsAllowOrigins ?? process.env.CORS_ALLOW_ORIGINS ?? '*'
+  );
+  const corsAllowMethods = String(
+    options.corsAllowMethods ?? process.env.CORS_ALLOW_METHODS ?? DEFAULT_CORS_ALLOW_METHODS
+  );
+  const corsAllowHeaders = String(
+    options.corsAllowHeaders ?? process.env.CORS_ALLOW_HEADERS ?? DEFAULT_CORS_ALLOW_HEADERS
+  );
+  const corsMaxAge = String(
+    options.corsMaxAge ?? process.env.CORS_MAX_AGE ?? DEFAULT_CORS_MAX_AGE
+  );
 
   async function runOwnerMemoryReembedBatch(input = {}) {
     const tenantId = String(input.tenant_id ?? '').trim();
@@ -1344,6 +1376,23 @@ export function createApp(options = {}) {
 
   const handler = async function app(req, res) {
     const { method, url } = req;
+    const corsOrigin = resolveCorsOrigin(req.headers.origin, corsAllowOrigins);
+    if (corsOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+      res.setHeader('Access-Control-Allow-Methods', corsAllowMethods);
+      res.setHeader('Access-Control-Allow-Headers', corsAllowHeaders);
+      res.setHeader('Access-Control-Max-Age', corsMaxAge);
+      if (corsOrigin !== '*') {
+        res.setHeader('Vary', 'Origin');
+      }
+    }
+
+    if (method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     const parsedUrl = new URL(url ?? '/', 'http://localhost');
     const path = parsedUrl.pathname;
 

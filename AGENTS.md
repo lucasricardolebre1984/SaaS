@@ -17,6 +17,23 @@ Raw PowerShell equivalents:
 - `.\tools\start-day.ps1 -Agent codex -SkipInstall`
 - `.\tools\end-day.ps1 -ShowPending`
 
+## Runtime Commands (SaaS Local)
+Run from `C:\projetos\fabio`.
+
+Recommended unified runtime (single endpoint):
+- `npm run serve:saas`
+- opens:
+  - `http://127.0.0.1:4001/owner/`
+  - `http://127.0.0.1:4001/crm/`
+  - API at `http://127.0.0.1:4001/api/*`
+
+Legacy split runtime (3 processes):
+- `npm run serve:split`
+- endpoints:
+  - API: `http://127.0.0.1:4300`
+  - Owner: `http://127.0.0.1:4401`
+  - CRM: `http://127.0.0.1:4402`
+
 ## Mandatory Load Order (Every Session)
 1. `.specs/project/CONTEXT.md`
 2. `.specs/project/PROJECT.md`

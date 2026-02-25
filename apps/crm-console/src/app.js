@@ -1,5 +1,7 @@
 const VALID_LAYOUTS = ['fabio2', 'studio'];
 const VALID_PALETTES = ['ocean', 'forest', 'sunset'];
+const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
+const API_BASE_STORAGE_KEY = 'crm_console_api_base_v1';
 
 // Editar este mapa para definir tema padrao por cliente/tenant.
 const TENANT_THEME_PRESETS = {
@@ -68,8 +70,49 @@ function restoreVisualMode() {
   });
 }
 
+function isUnifiedUiRuntime() {
+  const pathname = window.location.pathname || '/';
+  return pathname.startsWith('/owner') || pathname.startsWith('/crm');
+}
+
+function deriveDefaultApiBase() {
+  if (isUnifiedUiRuntime()) {
+    return `${window.location.origin}/api`;
+  }
+  return LEGACY_DEFAULT_API_BASE;
+}
+
+function normalizeApiBase(value) {
+  const raw = String(value ?? '').trim();
+  if (raw.length === 0) {
+    return deriveDefaultApiBase();
+  }
+  return raw.replace(/\/+$/, '');
+}
+
+function loadApiBasePreference() {
+  try {
+    const stored = localStorage.getItem(API_BASE_STORAGE_KEY);
+    const normalized = normalizeApiBase(stored);
+    if (isUnifiedUiRuntime() && normalized === LEGACY_DEFAULT_API_BASE) {
+      return deriveDefaultApiBase();
+    }
+    return normalized;
+  } catch {
+    return deriveDefaultApiBase();
+  }
+}
+
+function persistApiBasePreference(value) {
+  try {
+    localStorage.setItem(API_BASE_STORAGE_KEY, normalizeApiBase(value));
+  } catch {
+    // no-op
+  }
+}
+
 function apiBase() {
-  return apiBaseInput.value.replace(/\/+$/, '');
+  return normalizeApiBase(apiBaseInput.value);
 }
 
 function tenantId() {
@@ -211,6 +254,15 @@ tenantIdInput.addEventListener('blur', () => {
 
 reloadBtn.addEventListener('click', loadLeads);
 leadForm.addEventListener('submit', createLead);
+apiBaseInput.addEventListener('change', () => {
+  apiBaseInput.value = normalizeApiBase(apiBaseInput.value);
+  persistApiBasePreference(apiBaseInput.value);
+});
+apiBaseInput.addEventListener('blur', () => {
+  apiBaseInput.value = normalizeApiBase(apiBaseInput.value);
+  persistApiBasePreference(apiBaseInput.value);
+});
 
 restoreVisualMode();
+apiBaseInput.value = loadApiBasePreference();
 loadLeads();

@@ -23,6 +23,7 @@ const MODULE_COST_LABELS = {
 const VALID_LAYOUTS = ['fabio2', 'studio'];
 const VALID_PALETTES = ['ocean', 'forest', 'sunset'];
 const CONFIG_STORAGE_KEY = 'owner_console_config_v1';
+const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const SETTINGS_ADMIN_PASSWORD = '191530';
 const SETTINGS_UNLOCK_SESSION_KEY = 'owner_console_settings_admin_unlock_v1';
 
@@ -206,10 +207,30 @@ function createDefaultMetrics() {
   };
 }
 
+function isUnifiedUiRuntime() {
+  const pathname = window.location.pathname || '/';
+  return pathname.startsWith('/owner') || pathname.startsWith('/crm');
+}
+
+function deriveDefaultApiBase() {
+  if (isUnifiedUiRuntime()) {
+    return `${window.location.origin}/api`;
+  }
+  return LEGACY_DEFAULT_API_BASE;
+}
+
+function normalizeApiBase(value) {
+  const raw = String(value ?? '').trim();
+  if (raw.length === 0) {
+    return deriveDefaultApiBase();
+  }
+  return raw.replace(/\/+$/, '');
+}
+
 function createDefaultConfig() {
   return {
     runtime: {
-      api_base_url: 'http://127.0.0.1:4300',
+      api_base_url: deriveDefaultApiBase(),
       tenant_id: 'tenant_automania',
       session_id: crypto.randomUUID(),
       layout: 'fabio2',
@@ -261,10 +282,19 @@ function safeNumber(value, fallback = 0) {
 
 function mergeConfig(raw) {
   const defaults = createDefaultConfig();
+  const configuredApiBase = normalizeApiBase(raw?.runtime?.api_base_url ?? defaults.runtime.api_base_url);
+  const migratedApiBase = (
+    isUnifiedUiRuntime() &&
+    configuredApiBase === LEGACY_DEFAULT_API_BASE
+  )
+    ? deriveDefaultApiBase()
+    : configuredApiBase;
+
   return {
     runtime: {
       ...defaults.runtime,
       ...(raw?.runtime ?? {}),
+      api_base_url: migratedApiBase,
       layout: normalizeLayout(raw?.runtime?.layout ?? defaults.runtime.layout),
       palette: normalizePalette(raw?.runtime?.palette ?? defaults.runtime.palette),
       session_id: raw?.runtime?.session_id || defaults.runtime.session_id
@@ -1212,7 +1242,7 @@ function setActiveModule(moduleId) {
 }
 
 function apiBase() {
-  return state.config.runtime.api_base_url.replace(/\/+$/, '');
+  return normalizeApiBase(state.config.runtime.api_base_url);
 }
 
 function tenantId() {
@@ -1295,7 +1325,7 @@ function populateConfigForm() {
 }
 
 function collectConfigForm() {
-  state.config.runtime.api_base_url = cfgApiBaseInput.value.trim();
+  state.config.runtime.api_base_url = normalizeApiBase(cfgApiBaseInput.value);
   state.config.runtime.tenant_id = cfgTenantIdInput.value.trim();
   state.config.runtime.session_id = cfgSessionIdInput.value.trim() || crypto.randomUUID();
   state.config.runtime.layout = normalizeLayout(cfgLayoutSelect.value);

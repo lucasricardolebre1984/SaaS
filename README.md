@@ -34,9 +34,19 @@ npm run end:day
 ```
 
 ## Validar o SaaS local
-Subir o SaaS completo (API + Owner + CRM) com um comando:
+Subir o SaaS completo unificado (recomendado: API + Owner + CRM no mesmo endpoint):
 ```powershell
-npm run serve:all
+npm run serve:saas
+```
+
+Endpoint unico:
+- `http://127.0.0.1:4001/owner/` (Owner Console)
+- `http://127.0.0.1:4001/crm/` (CRM Console)
+- `http://127.0.0.1:4001/api/*` (API)
+
+Modo split (legado, 3 portas/processos):
+```powershell
+npm run serve:split
 ```
 
 Endpoints:

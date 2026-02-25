@@ -124,3 +124,4 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-25,05:27,05:28,0.02,Specify,milestone-4-owner-console-approval-queue-ui-slice,M4UQ-SPEC-OPEN,pair,done,Opened owner console approval queue UX slice with approved spec design tasks
 2026-02-25,05:28,05:37,0.15,Implement,milestone-4-owner-console-approval-queue-ui-slice,M4UQ-001..002,pair,done,Implemented module 01 approval queue panel in owner console with list filter auto-refresh and approve reject operator actions
 2026-02-25,05:37,05:38,0.02,Governance,milestone-4-owner-console-approval-queue-ui-slice,M4UQ-003,pair,done,Validated owner-console build preprod gate and updated roadmap state agents readme and metrics logs
+2026-02-25,05:40,05:56,0.27,Implement,ops-unified-runtime-hotfix,OPS-HOTFIX-4001-CORS,pair,done,Unified runtime on 4001 with /owner /crm /api routing enabled CORS preflight and console default API auto-migration from legacy 4300
