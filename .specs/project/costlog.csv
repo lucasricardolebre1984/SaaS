@@ -98,3 +98,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3B-002..003 branch protection blocked by GitHub plan documented
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3B-002 branch protection apply and verification
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3B-003 branch protection completion governance updates
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3C-001-fix CI shell compatibility fix for preprod gate

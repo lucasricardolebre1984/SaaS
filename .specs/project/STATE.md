@@ -319,6 +319,7 @@ Active feature: milestone-3-branch-protection-slice (completed)
   - runtime CI workflow now executes `npm run preprod:validate` as unified gate
   - CI uploads `tools/reports/preprod-validate-*.log` as artifact (`if: always()`)
   - local dry run validated with `-SkipSmokePostgres` before CI push
+  - npm scripts switched from `powershell` to `pwsh` for Linux runner compatibility
 - Opened `milestone-3-branch-protection-slice`:
   - branch protection automation script published (`tools/enforce-branch-protection.ps1`)
   - first apply attempt failed with payload parse error (`HTTP 400`) and script was corrected (ascii payload encoding + compatible fields)
