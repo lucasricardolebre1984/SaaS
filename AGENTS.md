@@ -17,15 +17,36 @@ Raw PowerShell equivalents:
 - `.\tools\start-day.ps1 -Agent codex -SkipInstall`
 - `.\tools\end-day.ps1 -ShowPending`
 
+## Runtime Commands (SaaS Local)
+Run from `C:\projetos\fabio`.
+
+Recommended unified runtime (single endpoint):
+- `npm run serve:saas`
+- opens:
+  - `http://127.0.0.1:4001/owner/`
+  - `http://127.0.0.1:4001/crm/`
+  - API at `http://127.0.0.1:4001/api/*`
+
+Legacy split runtime (3 processes):
+- `npm run serve:split`
+- endpoints:
+  - API: `http://127.0.0.1:4300`
+  - Owner: `http://127.0.0.1:4401`
+  - CRM: `http://127.0.0.1:4402`
+
 ## Mandatory Load Order (Every Session)
 1. `.specs/project/CONTEXT.md`
 2. `.specs/project/PROJECT.md`
 3. `.specs/project/ROADMAP.md`
 4. `.specs/project/STATE.md`
-5. Active feature docs:
+5. `.specs/project/PROXIMO-PASSO.md` (unico proximo passo; memoria/aprendizado/RAG/contexto)
+6. `.specs/project/STATUS-ATUAL.md` (status e aprendizado; rastreabilidade)
+7. Active feature docs:
    - `.specs/features/<feature>/spec.md`
    - `.specs/features/<feature>/design.md`
    - `.specs/features/<feature>/tasks.md`
+
+Skills: cite the skill in use (proof). Catalog: `.specs/project/SKILLS-CATALOG.md`.
 
 ## Workflow Gate
 Phases are mandatory and sequential:
@@ -73,6 +94,8 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-3-branch-protection-slice` (blocked)
-- Active phase: `Implement blocked (external dependency)`
-- Immediate checkpoint: unblock GitHub plan/visibility and rerun `npm run github:protect-main`.
+- Active feature: `milestone-5-aws-production-bootstrap-slice` (implementado)
+- Active phase: Implement checkpoint closed
+
+### Produto: memoria/contexto/aprendizado
+- **Fonte:** `.specs/project/PROXIMO-PASSO.md` — memoria, contexto e aprendizado estao **fechados**. Eixo ativo agora: deploy dev AWS do SaaS matriz com Postgres, Evolution server-side e gates de producao.

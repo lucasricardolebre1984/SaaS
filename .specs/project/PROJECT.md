@@ -3,7 +3,7 @@
 Project: fabio (Automania AI institutional SaaS base)
 Owner: Lucas Ricardo Lebre
 Created: 2026-02-22
-Status: Planning (Milestone 3 stream)
+Status: Execution (AWS production bootstrap)
 
 ## Vision
 Build a reusable SaaS base that can be cloned for future products, with strict process discipline, module boundaries, and measurable engineering/financial performance from day 1.
@@ -20,7 +20,7 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 4. Keep production untouched until migration quality gates pass.
 
 ## Non-goals (for now)
-- No production deployment from this repo yet.
+- No direct deploy to final `prod` without dev/hml gate evidence.
 - No risky direct migration without specification and task gating.
 - No ad-hoc feature work outside the active phase.
 
@@ -30,7 +30,13 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 - Owner console settings/multimodal baseline.
 - Persona 1/2 optional prompt wiring in settings and interaction contracts.
 - SaaS starter generator and operational runbooks.
-- Milestone 3 planning kickoff (release/rollback/observability readiness).
+- Milestone 3 planning and production-readiness closure completed.
+- Milestone 4 memory/context/aprendizado closure completed.
+- Milestone 5 AWS bootstrap in progress (deploy dev + Postgres + operational gates).
+- Canonical standard lock:
+  - Persona 1 as full SaaS orchestrator (module-aware across 01..06).
+  - Persona 2 as WhatsApp CRM execution specialist (lead capture/follow-up/conversion).
+  - Continuous learning baseline with short/medium/long memory tiers and strict session boundaries.
 
 ## Success Criteria (Current Cycle)
 - .specs complete and reviewed.
@@ -44,6 +50,7 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 - Every decision documented in STATE.md.
 - Every feature must have spec/design/tasks before coding.
 - Prefer reversible changes and explicit rollback paths.
+- Root context (CONTEXT.md) is authoritative for product identity and dual-concierge behavior.
 
 ## Legacy Handling Rule
 Legacy implementation can be used only as behavior reference. New code in fabio must prioritize clean module boundaries, explicit contracts, and testable orchestration.

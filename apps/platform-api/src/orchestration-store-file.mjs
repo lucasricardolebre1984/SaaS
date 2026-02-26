@@ -75,12 +75,22 @@ export function createFileOrchestrationStore(options = {}) {
   const commandsFilePath = path.join(storageDir, 'commands.ndjson');
   const eventsFilePath = path.join(storageDir, 'events.ndjson');
   const queueFilePath = path.join(storageDir, 'module-task-queue.json');
+  const confirmationsFilePath = path.join(storageDir, 'task-confirmations.json');
   const commands = loadNdjson(commandsFilePath, logLimit);
   const events = loadNdjson(eventsFilePath, logLimit);
   const initialQueueState = readJsonFile(queueFilePath, { pending: [], history: [] });
+  const initialConfirmationsState = readJsonFile(confirmationsFilePath, { pending: [], history: [] });
   const queueState = {
     pending: Array.isArray(initialQueueState.pending) ? initialQueueState.pending : [],
     history: Array.isArray(initialQueueState.history) ? initialQueueState.history : []
+  };
+  const confirmationsState = {
+    pending: Array.isArray(initialConfirmationsState.pending)
+      ? initialConfirmationsState.pending
+      : [],
+    history: Array.isArray(initialConfirmationsState.history)
+      ? initialConfirmationsState.history
+      : []
   };
 
   function persistQueueState() {
@@ -90,12 +100,22 @@ export function createFileOrchestrationStore(options = {}) {
     writeJsonFile(queueFilePath, queueState);
   }
 
+  function persistConfirmationsState() {
+    if (confirmationsState.history.length > queueHistoryLimit) {
+      confirmationsState.history = confirmationsState.history.slice(
+        confirmationsState.history.length - queueHistoryLimit
+      );
+    }
+    writeJsonFile(confirmationsFilePath, confirmationsState);
+  }
+
   return {
     backend: 'file',
     storageDir,
     commandsFilePath,
     eventsFilePath,
     queueFilePath,
+    confirmationsFilePath,
     appendCommand(command) {
       appendNdjson(commandsFilePath, command);
       appendMemory(commands, command, logLimit);
@@ -163,6 +183,87 @@ export function createFileOrchestrationStore(options = {}) {
         pending: queueState.pending.map(clone),
         history: queueState.history.map(clone)
       };
+    },
+    createTaskConfirmation(input) {
+      const nowIso = new Date().toISOString();
+      const confirmation = {
+        confirmation_id: randomUUID(),
+        tenant_id: input.tenant_id,
+        status: 'pending',
+        reason_code: input.reason_code ?? null,
+        owner_command_ref: clone(input.owner_command_ref),
+        task_plan_ref: clone(input.task_plan_ref),
+        request_snapshot: clone(input.request_snapshot),
+        created_at: nowIso,
+        updated_at: nowIso,
+        resolved_at: null,
+        resolution: null,
+        module_task: null
+      };
+      confirmationsState.pending.push(confirmation);
+      persistConfirmationsState();
+      return clone(confirmation);
+    },
+    getTaskConfirmation(tenantId, confirmationId) {
+      const pending = confirmationsState.pending.find(
+        (item) => item.tenant_id === tenantId && item.confirmation_id === confirmationId
+      );
+      if (pending) return clone(pending);
+
+      const history = confirmationsState.history.find(
+        (item) => item.tenant_id === tenantId && item.confirmation_id === confirmationId
+      );
+      if (history) return clone(history);
+
+      return null;
+    },
+    countPendingTaskConfirmations(tenantId) {
+      return confirmationsState.pending.filter((item) => item.tenant_id === tenantId).length;
+    },
+    listTaskConfirmations(tenantId, options = {}) {
+      const status = typeof options.status === 'string' ? options.status : 'all';
+      const limit = Number.isFinite(Number(options.limit))
+        ? Math.max(1, Math.min(200, Math.floor(Number(options.limit))))
+        : 50;
+
+      let items = [
+        ...confirmationsState.pending,
+        ...confirmationsState.history
+      ].filter((item) => item.tenant_id === tenantId);
+
+      if (status !== 'all') {
+        items = items.filter((item) => item.status === status);
+      }
+
+      items.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      return items.slice(0, limit).map(clone);
+    },
+    resolveTaskConfirmation(tenantId, confirmationId, resolution) {
+      const index = confirmationsState.pending.findIndex(
+        (item) => item.tenant_id === tenantId && item.confirmation_id === confirmationId
+      );
+      if (index < 0) {
+        return null;
+      }
+
+      const nowIso = new Date().toISOString();
+      const item = confirmationsState.pending[index];
+      item.status = resolution.status;
+      item.updated_at = nowIso;
+      item.resolved_at = nowIso;
+      item.resolution = {
+        action: resolution.action,
+        actor_session_id: resolution.actor_session_id,
+        resolution_reason: resolution.resolution_reason ?? null
+      };
+      if (resolution.module_task) {
+        item.module_task = clone(resolution.module_task);
+      }
+
+      const finalized = confirmationsState.pending.splice(index, 1)[0];
+      confirmationsState.history.push(finalized);
+      persistConfirmationsState();
+      return clone(finalized);
     },
     async close() {}
   };

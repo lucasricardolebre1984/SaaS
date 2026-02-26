@@ -17,10 +17,18 @@ Any failure = block deploy.
 
 Report artifact:
 - `tools/reports/preprod-validate-<timestamp>.log`
+- `tools/reports/release-dry-run-<timestamp>.log`
+- `tools/reports/rollback-drill-<timestamp>.log`
 
 Optional local fast mode (without docker smoke):
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\preprod-validate.ps1 -SkipSmokePostgres
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\preprod-validate.ps1 -SkipSmokePostgres
+```
+
+Manual operational commands:
+```powershell
+npm run release:dry-run
+npm run rollback:drill
 ```
 
 ### 1.2 Release window checklist
@@ -51,6 +59,11 @@ powershell -ExecutionPolicy Bypass -File .\tools\preprod-validate.ps1 -SkipSmoke
    - `GET /health`
    - owner interaction + trace check
 4. Record incident and timeline in governance logs.
+
+Rollback drill command (pre-release):
+```powershell
+npm run rollback:drill
+```
 
 ## 3. Incident Response
 

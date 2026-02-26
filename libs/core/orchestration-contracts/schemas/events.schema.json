@@ -7,10 +7,15 @@
     "name": {
       "enum": [
         "owner.command.created",
+        "owner.confirmation.requested",
+        "owner.confirmation.approved",
+        "owner.confirmation.rejected",
         "owner.context.promoted",
         "owner.memory.reembed.started",
         "owner.memory.reembed.completed",
         "owner.memory.reembed.failed",
+        "memory.episode.created",
+        "memory.promoted.from_episode",
         "module.task.created",
         "module.task.accepted",
         "module.task.completed",
@@ -22,6 +27,8 @@
         "crm.followup.scheduled",
         "crm.followup.sent",
         "crm.followup.failed",
+        "crm.delegation.sent",
+        "crm.delegation.failed",
         "customer.created",
         "customer.updated",
         "agenda.reminder.scheduled",
@@ -51,6 +58,69 @@
               "mode": { "type": "string", "enum": ["one-shot", "continuous"] }
             },
             "required": ["owner_command_id", "mode"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.confirmation.requested" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "confirmation_id": { "type": "string", "format": "uuid" },
+              "task_type": { "type": "string", "minLength": 3 },
+              "target_module": { "$ref": "./base.schema.json#/$defs/moduleId" },
+              "reason_code": { "type": ["string", "null"] }
+            },
+            "required": ["confirmation_id", "task_type", "target_module", "reason_code"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.confirmation.approved" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "accepted" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "confirmation_id": { "type": "string", "format": "uuid" },
+              "task_id": { "type": "string", "format": "uuid" },
+              "task_type": { "type": "string", "minLength": 3 },
+              "target_module": { "$ref": "./base.schema.json#/$defs/moduleId" }
+            },
+            "required": ["confirmation_id", "task_id", "task_type", "target_module"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.confirmation.rejected" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "confirmation_id": { "type": "string", "format": "uuid" },
+              "task_type": { "type": "string", "minLength": 3 },
+              "target_module": { "$ref": "./base.schema.json#/$defs/moduleId" },
+              "reason_code": { "type": ["string", "null"] }
+            },
+            "required": ["confirmation_id", "task_type", "target_module", "reason_code"]
           }
         }
       }
@@ -148,6 +218,49 @@
               "error_message": { "type": "string", "minLength": 1 }
             },
             "required": ["run_id", "trigger", "dry_run", "error_code", "error_message"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "memory.episode.created" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "tenant_id": { "type": "string", "minLength": 1 },
+              "session_id": { "type": "string", "minLength": 1 },
+              "turn_count": { "type": "integer", "minimum": 1 },
+              "summary": { "type": ["string", "null"] }
+            },
+            "required": ["tenant_id", "session_id", "turn_count"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "memory.promoted.from_episode" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "tenant_id": { "type": "string", "minLength": 1 },
+              "session_id": { "type": "string", "minLength": 1 },
+              "turn_count": { "type": "integer", "minimum": 1 },
+              "memory_id": { "type": "string", "format": "uuid" },
+              "episode_event_id": { "type": ["string", "null"] }
+            },
+            "required": ["tenant_id", "session_id", "turn_count", "memory_id"]
           }
         }
       }
@@ -397,6 +510,45 @@
               "retryable": { "type": "boolean" }
             },
             "required": ["followup_id", "channel", "schedule_at", "phone_e164", "error_code", "retryable"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.delegation.sent" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "completed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "result_summary": { "type": "string" }
+            },
+            "required": ["task_id", "result_summary"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.delegation.failed" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-02-whatsapp-crm" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "failed" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "error_code": { "type": "string", "minLength": 1 },
+              "retryable": { "type": "boolean" }
+            },
+            "required": ["task_id", "error_code", "retryable"]
           }
         }
       }

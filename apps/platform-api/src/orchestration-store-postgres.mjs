@@ -29,6 +29,23 @@ function asQueueItem(row) {
   };
 }
 
+function asTaskConfirmation(row) {
+  return {
+    confirmation_id: row.confirmation_id,
+    tenant_id: row.tenant_id,
+    status: row.status,
+    reason_code: row.reason_code ?? null,
+    owner_command_ref: row.owner_command_ref_json,
+    task_plan_ref: row.task_plan_ref_json,
+    request_snapshot: row.request_snapshot_json,
+    created_at: row.created_at?.toISOString?.() ?? row.created_at,
+    updated_at: row.updated_at?.toISOString?.() ?? row.updated_at,
+    resolved_at: row.resolved_at?.toISOString?.() ?? row.resolved_at ?? null,
+    resolution: row.resolution_json ?? null,
+    module_task: row.module_task_json ?? null
+  };
+}
+
 export function createPostgresOrchestrationStore(options = {}) {
   const logLimit = Number(options.logLimit ?? DEFAULT_LOG_LIMIT);
   const queueHistoryLimit = Number(options.queueHistoryLimit ?? DEFAULT_QUEUE_HISTORY_LIMIT);
@@ -50,6 +67,7 @@ export function createPostgresOrchestrationStore(options = {}) {
   const commandsTable = tableName(schema, 'orchestration_commands');
   const eventsTable = tableName(schema, 'orchestration_events');
   const queueTable = tableName(schema, 'orchestration_module_task_queue');
+  const confirmationsTable = tableName(schema, 'orchestration_task_confirmations');
   const autoMigrate = options.pgAutoMigrate !== false;
 
   async function ensureSchema() {
@@ -108,6 +126,27 @@ export function createPostgresOrchestrationStore(options = {}) {
       CREATE INDEX IF NOT EXISTS orchestration_module_task_queue_status_idx
       ON ${queueTable} (status, enqueued_at)
     `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${confirmationsTable} (
+        confirmation_id UUID PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        reason_code TEXT NULL,
+        owner_command_ref_json JSONB NOT NULL,
+        task_plan_ref_json JSONB NOT NULL,
+        request_snapshot_json JSONB NOT NULL,
+        resolution_json JSONB NULL,
+        module_task_json JSONB NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        resolved_at TIMESTAMPTZ NULL
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS orchestration_task_confirmations_tenant_status_idx
+      ON ${confirmationsTable} (tenant_id, status, created_at)
+    `);
   }
 
   const ready = (async () => {
@@ -126,6 +165,7 @@ export function createPostgresOrchestrationStore(options = {}) {
     commandsFilePath: null,
     eventsFilePath: null,
     queueFilePath: null,
+    confirmationsFilePath: null,
     async appendCommand(command) {
       await query(
         `INSERT INTO ${commandsTable}
@@ -288,6 +328,119 @@ export function createPostgresOrchestrationStore(options = {}) {
         pending: pending.rows.map(asQueueItem),
         history: history.rows.map(asQueueItem)
       };
+    },
+    async createTaskConfirmation(input) {
+      const nowIso = new Date().toISOString();
+      const confirmationId = randomUUID();
+      const result = await query(
+        `INSERT INTO ${confirmationsTable}
+          (
+            confirmation_id,
+            tenant_id,
+            status,
+            reason_code,
+            owner_command_ref_json,
+            task_plan_ref_json,
+            request_snapshot_json,
+            created_at,
+            updated_at,
+            resolved_at
+          )
+         VALUES ($1, $2, 'pending', $3, $4::jsonb, $5::jsonb, $6::jsonb, $7, $7, NULL)
+         RETURNING *`,
+        [
+          confirmationId,
+          input.tenant_id,
+          input.reason_code ?? null,
+          JSON.stringify(input.owner_command_ref ?? {}),
+          JSON.stringify(input.task_plan_ref ?? {}),
+          JSON.stringify(input.request_snapshot ?? {}),
+          nowIso
+        ]
+      );
+      return asTaskConfirmation(result.rows[0]);
+    },
+    async getTaskConfirmation(tenantId, confirmationId) {
+      const result = await query(
+        `SELECT *
+         FROM ${confirmationsTable}
+         WHERE tenant_id = $1 AND confirmation_id = $2
+         LIMIT 1`,
+        [tenantId, confirmationId]
+      );
+      if (result.rowCount === 0) {
+        return null;
+      }
+      return asTaskConfirmation(result.rows[0]);
+    },
+    async countPendingTaskConfirmations(tenantId) {
+      const result = await query(
+        `SELECT COUNT(*)::integer AS count
+         FROM ${confirmationsTable}
+         WHERE tenant_id = $1 AND status = 'pending'`,
+        [tenantId]
+      );
+      return result.rows[0]?.count ?? 0;
+    },
+    async listTaskConfirmations(tenantId, options = {}) {
+      const status = typeof options.status === 'string' ? options.status : 'all';
+      const limit = Number.isFinite(Number(options.limit))
+        ? Math.max(1, Math.min(200, Math.floor(Number(options.limit))))
+        : 50;
+
+      if (status === 'all') {
+        const result = await query(
+          `SELECT *
+           FROM ${confirmationsTable}
+           WHERE tenant_id = $1
+           ORDER BY created_at DESC
+           LIMIT $2`,
+          [tenantId, limit]
+        );
+        return result.rows.map(asTaskConfirmation);
+      }
+
+      const result = await query(
+        `SELECT *
+         FROM ${confirmationsTable}
+         WHERE tenant_id = $1
+           AND status = $2
+         ORDER BY created_at DESC
+         LIMIT $3`,
+        [tenantId, status, limit]
+      );
+      return result.rows.map(asTaskConfirmation);
+    },
+    async resolveTaskConfirmation(tenantId, confirmationId, resolution) {
+      const nowIso = new Date().toISOString();
+      const result = await query(
+        `UPDATE ${confirmationsTable}
+         SET status = $3,
+             resolution_json = $4::jsonb,
+             module_task_json = $5::jsonb,
+             updated_at = $6,
+             resolved_at = $6
+         WHERE tenant_id = $1
+           AND confirmation_id = $2
+           AND status = 'pending'
+         RETURNING *`,
+        [
+          tenantId,
+          confirmationId,
+          resolution.status,
+          JSON.stringify({
+            action: resolution.action,
+            actor_session_id: resolution.actor_session_id,
+            resolution_reason: resolution.resolution_reason ?? null
+          }),
+          resolution.module_task ? JSON.stringify(resolution.module_task) : null,
+          nowIso
+        ]
+      );
+      if (result.rowCount === 0) {
+        return null;
+      }
+      return asTaskConfirmation(result.rows[0]);
     },
     async close() {
       await ready;

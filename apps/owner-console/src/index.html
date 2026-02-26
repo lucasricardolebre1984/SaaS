@@ -8,6 +8,7 @@
   </head>
   <body>
     <div class="shell-bg"></div>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <div class="app-shell">
       <aside class="sidebar" id="sidebar">
         <div class="brand">
@@ -36,6 +37,7 @@
           <div class="topbar__right">
             <button id="openSettingsBtn" class="btn btn--ghost" type="button">Configuracoes</button>
             <span id="settingsLockStatus" class="status-pill is-locked">admin: bloqueado</span>
+            <span id="assistantProviderStatus" class="status-pill is-provider-none">provider: idle</span>
             <button id="healthBtn" class="btn btn--ghost" type="button">Health</button>
             <span id="healthStatus" class="status-pill">idle</span>
           </div>
@@ -57,25 +59,71 @@
               </article>
             </div>
 
-            <form id="chatForm" class="composer">
-              <div class="composer-tools">
-                <button id="audioRecordBtn" class="btn btn--ghost" type="button">Audio</button>
-                <button id="photoPickBtn" class="btn btn--ghost" type="button">Foto</button>
-                <button id="filePickBtn" class="btn btn--ghost" type="button">Arquivo</button>
-                <input id="photoInput" type="file" accept="image/*" class="hidden" />
-                <input id="fileInput" type="file" class="hidden" />
-              </div>
+            <section class="approval-queue">
+              <header class="approval-queue__header">
+                <h4>Fila de Aprovacoes</h4>
+                <div class="approval-queue__controls">
+                  <label>
+                    Status
+                    <select id="confirmationsStatusFilter">
+                      <option value="pending">pending</option>
+                      <option value="all">all</option>
+                      <option value="approved">approved</option>
+                      <option value="rejected">rejected</option>
+                    </select>
+                  </label>
+                  <label>
+                    Limite
+                    <input id="confirmationsLimit" type="number" min="1" max="200" value="20" />
+                  </label>
+                  <button id="confirmationsRefreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+                </div>
+              </header>
 
+              <p id="confirmationsStatus" class="module-status">Fila ainda nao carregada.</p>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Criado</th>
+                      <th>Task</th>
+                      <th>Status</th>
+                      <th>Motivo</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="confirmationsRows"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <form id="chatForm" class="composer">
               <div id="pendingAttachments" class="pending-attachments"></div>
 
               <div class="composer-row">
-                <input id="messageInput" placeholder="Ex.: criar cobranca e avisar no WhatsApp" autocomplete="off" />
-                <button class="btn" type="submit">Enviar</button>
+                <div class="composer-tools composer-tools--compact">
+                  <button id="audioRecordBtn" class="btn btn--ghost" type="button">Audio</button>
+                  <button id="photoPickBtn" class="btn btn--ghost" type="button">Foto</button>
+                  <button id="filePickBtn" class="btn btn--ghost" type="button">Arquivo</button>
+                  <input id="photoInput" type="file" accept="image/*" class="hidden" />
+                  <input id="fileInput" type="file" class="hidden" />
+                </div>
+                <textarea
+                  id="messageInput"
+                  class="composer-input"
+                  rows="2"
+                  placeholder="Ex.: criar cobranca e avisar no WhatsApp"
+                ></textarea>
+                <button class="btn composer-send-btn" type="submit">Enviar</button>
               </div>
             </form>
           </section>
 
           <aside class="voice-panel card" id="voicePanel">
+            <button id="continuousBackBtn" class="continuous-back-btn" type="button" aria-label="Voltar">
+              Voltar
+            </button>
             <header class="card__header">
               <h3>Avatar Continuo</h3>
               <button id="simulateVoiceBtn" class="btn btn--ghost" type="button">Simular Voz</button>
@@ -84,19 +132,21 @@
             <div class="avatar" id="avatar" data-state="idle">
               <video
                 class="avatar__video avatar__video--idle"
-                src="./avatar/assets/brain-idle.webm"
+                src="./avatar/assets/avatar-fullscreen.mp4"
                 autoplay
                 loop
                 muted
                 playsinline
+                preload="auto"
               ></video>
               <video
                 class="avatar__video avatar__video--speaking"
-                src="./avatar/assets/brain-speaking.webm"
+                src="./avatar/assets/avatar-fullscreen.mp4"
                 autoplay
                 loop
                 muted
                 playsinline
+                preload="auto"
               ></video>
             </div>
 
@@ -106,6 +156,306 @@
             </div>
           </aside>
         </main>
+
+        <section class="module-workspace hidden" id="moduleWorkspace">
+          <section class="module-view hidden" id="moduleCrmView">
+            <section class="card module-embed-card">
+              <header class="card__header">
+                <h3>CRM WhatsApp (Modulo 02)</h3>
+              </header>
+              <div class="module-embed-wrap">
+                <iframe
+                  id="crmEmbeddedFrame"
+                  class="module-embed-frame"
+                  title="CRM WhatsApp Embedded"
+                  src="/crm/"
+                  loading="lazy"
+                ></iframe>
+              </div>
+            </section>
+          </section>
+
+          <section class="module-view hidden" id="moduleClientesView">
+            <section class="card">
+              <header class="card__header">
+                <h3>Clientes - Cadastro</h3>
+                <button id="customersRefreshBtn" class="btn btn--ghost" type="button">Atualizar Lista</button>
+              </header>
+              <form id="customerCreateForm" class="module-form">
+                <div class="module-grid">
+                  <label>Nome<input id="customerName" required /></label>
+                  <label>Telefone (E164)<input id="customerPhone" placeholder="+5511999999999" /></label>
+                  <label>Email<input id="customerEmail" type="email" placeholder="cliente@empresa.com" /></label>
+                  <label>Origem
+                    <select id="customerOrigin">
+                      <option value="manual_owner">manual_owner</option>
+                      <option value="lead_conversion">lead_conversion</option>
+                    </select>
+                  </label>
+                  <label>Lead ID (se conversao)<input id="customerLeadId" placeholder="uuid do lead" /></label>
+                </div>
+                <div class="module-actions">
+                  <button class="btn" type="submit">Criar Cliente</button>
+                </div>
+              </form>
+              <p id="customersStatus" class="module-status">Pronto para operar modulo 03.</p>
+            </section>
+
+            <section class="card">
+              <header class="card__header">
+                <h3>Clientes - Listagem</h3>
+              </header>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Telefone</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                      <th>ID</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customersRows"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card">
+              <header class="card__header">
+                <h3>Cliente - Detalhe</h3>
+              </header>
+              <div class="module-inline">
+                <input id="customerDetailId" list="customerIdOptions" placeholder="customer_id" />
+                <button id="customerDetailBtn" class="btn btn--ghost" type="button">Consultar</button>
+              </div>
+              <pre id="customerDetailOutput" class="module-code">{}</pre>
+            </section>
+          </section>
+
+          <section class="module-view hidden" id="moduleAgendaView">
+            <section class="card">
+              <header class="card__header">
+                <h3>Agenda - Appointment</h3>
+              </header>
+              <form id="appointmentCreateForm" class="module-form">
+                <div class="module-grid">
+                  <label>Titulo<input id="appointmentTitle" required /></label>
+                  <label>Descricao<input id="appointmentDescription" /></label>
+                  <label>Inicio<input id="appointmentStart" type="datetime-local" required /></label>
+                  <label>Fim<input id="appointmentEnd" type="datetime-local" /></label>
+                  <label>Timezone<input id="appointmentTimezone" value="America/Sao_Paulo" /></label>
+                  <label>Status
+                    <select id="appointmentStatus">
+                      <option value="scheduled">scheduled</option>
+                      <option value="confirmed">confirmed</option>
+                      <option value="completed">completed</option>
+                      <option value="canceled">canceled</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="module-actions">
+                  <button class="btn" type="submit">Criar Appointment</button>
+                </div>
+              </form>
+
+              <form id="appointmentUpdateForm" class="module-form module-form--compact">
+                <div class="module-grid">
+                  <label>Appointment ID<input id="appointmentUpdateId" list="appointmentIdOptions" required /></label>
+                  <label>Novo Titulo<input id="appointmentUpdateTitle" /></label>
+                  <label>Novo Status
+                    <select id="appointmentUpdateStatus">
+                      <option value="">(sem alteracao)</option>
+                      <option value="scheduled">scheduled</option>
+                      <option value="confirmed">confirmed</option>
+                      <option value="completed">completed</option>
+                      <option value="canceled">canceled</option>
+                    </select>
+                  </label>
+                  <label>Novo Inicio<input id="appointmentUpdateStart" type="datetime-local" /></label>
+                  <label>Novo Fim<input id="appointmentUpdateEnd" type="datetime-local" /></label>
+                </div>
+                <div class="module-actions">
+                  <button class="btn btn--ghost" type="submit">Atualizar Appointment</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="card">
+              <header class="card__header">
+                <h3>Agenda - Reminder</h3>
+                <button id="remindersRefreshBtn" class="btn btn--ghost" type="button">Atualizar Reminders</button>
+              </header>
+              <form id="reminderCreateForm" class="module-form">
+                <div class="module-grid">
+                  <label>Appointment ID<input id="reminderAppointmentId" list="appointmentIdOptions" required /></label>
+                  <label>Disparar em<input id="reminderSchedule" type="datetime-local" required /></label>
+                  <label>Canal
+                    <select id="reminderChannel">
+                      <option value="whatsapp">whatsapp</option>
+                      <option value="ui-chat">ui-chat</option>
+                    </select>
+                  </label>
+                  <label>Mensagem<input id="reminderMessage" required /></label>
+                  <label>Telefone destino (E164)<input id="reminderRecipient" placeholder="+5511999999999" /></label>
+                </div>
+                <div class="module-actions">
+                  <button class="btn" type="submit">Criar Reminder</button>
+                </div>
+              </form>
+              <p id="agendaStatus" class="module-status">Pronto para operar modulo 04.</p>
+            </section>
+
+            <section class="card">
+              <header class="card__header">
+                <h3>Agenda - Appointments (sessao)</h3>
+              </header>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Titulo</th>
+                      <th>Inicio</th>
+                      <th>Status</th>
+                      <th>Timezone</th>
+                      <th>ID</th>
+                    </tr>
+                  </thead>
+                  <tbody id="appointmentsRows"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card">
+              <header class="card__header">
+                <h3>Agenda - Reminders</h3>
+              </header>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Reminder ID</th>
+                      <th>Appointment ID</th>
+                      <th>Canal</th>
+                      <th>Status</th>
+                      <th>Schedule</th>
+                      <th>Destino</th>
+                    </tr>
+                  </thead>
+                  <tbody id="remindersRows"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section class="module-view hidden" id="moduleBillingView">
+            <section class="card">
+              <header class="card__header">
+                <h3>Cobranca - Charge</h3>
+                <button id="chargesRefreshBtn" class="btn btn--ghost" type="button">Atualizar Cobrancas</button>
+              </header>
+              <form id="chargeCreateForm" class="module-form">
+                <div class="module-grid">
+                  <label>Customer ID<input id="chargeCustomerId" list="customerIdOptions" required /></label>
+                  <label>Valor<input id="chargeAmount" type="number" step="0.01" min="0.01" required /></label>
+                  <label>Moeda<input id="chargeCurrency" value="BRL" /></label>
+                  <label>Vencimento<input id="chargeDueDate" type="date" /></label>
+                  <label>Status
+                    <select id="chargeStatus">
+                      <option value="open">open</option>
+                      <option value="draft">draft</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="module-actions">
+                  <button class="btn" type="submit">Criar Cobranca</button>
+                </div>
+              </form>
+
+              <form id="chargeUpdateForm" class="module-form module-form--compact">
+                <div class="module-grid">
+                  <label>Charge ID<input id="chargeUpdateId" list="chargeIdOptions" required /></label>
+                  <label>Novo Valor<input id="chargeUpdateAmount" type="number" step="0.01" min="0.01" /></label>
+                  <label>Novo Vencimento<input id="chargeUpdateDueDate" type="date" /></label>
+                  <label>Novo Status
+                    <select id="chargeUpdateStatus">
+                      <option value="">(sem alteracao)</option>
+                      <option value="open">open</option>
+                      <option value="collection_requested">collection_requested</option>
+                      <option value="paid">paid</option>
+                      <option value="canceled">canceled</option>
+                      <option value="failed">failed</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="module-actions">
+                  <button class="btn btn--ghost" type="submit">Atualizar Cobranca</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="card">
+              <header class="card__header">
+                <h3>Cobranca - Collection e Payment</h3>
+              </header>
+
+              <form id="collectionRequestForm" class="module-form module-form--compact">
+                <div class="module-grid">
+                  <label>Charge ID<input id="collectionChargeId" list="chargeIdOptions" required /></label>
+                  <label>Telefone E164<input id="collectionPhone" placeholder="+5511999999999" required /></label>
+                  <label>Mensagem<input id="collectionMessage" placeholder="Lembrete de pagamento" /></label>
+                </div>
+                <div class="module-actions">
+                  <button class="btn btn--ghost" type="submit">Solicitar Collection</button>
+                </div>
+              </form>
+
+              <form id="paymentCreateForm" class="module-form module-form--compact">
+                <div class="module-grid">
+                  <label>Charge ID<input id="paymentChargeId" list="chargeIdOptions" required /></label>
+                  <label>Valor<input id="paymentAmount" type="number" step="0.01" min="0.01" required /></label>
+                  <label>Moeda<input id="paymentCurrency" value="BRL" /></label>
+                  <label>Status
+                    <select id="paymentStatus">
+                      <option value="confirmed">confirmed</option>
+                      <option value="failed">failed</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="module-actions">
+                  <button class="btn" type="submit">Registrar Pagamento</button>
+                </div>
+              </form>
+
+              <p id="billingStatus" class="module-status">Pronto para operar modulo 05.</p>
+            </section>
+
+            <section class="card">
+              <header class="card__header">
+                <h3>Cobranca - Listagem</h3>
+              </header>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Charge ID</th>
+                      <th>Customer ID</th>
+                      <th>Valor</th>
+                      <th>Status</th>
+                      <th>Vencimento</th>
+                      <th>Moeda</th>
+                    </tr>
+                  </thead>
+                  <tbody id="chargesRows"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <datalist id="customerIdOptions"></datalist>
+          <datalist id="appointmentIdOptions"></datalist>
+          <datalist id="chargeIdOptions"></datalist>
+        </section>
 
         <section class="workspace hidden" id="modulePlaceholderWorkspace">
           <section class="card placeholder-card">
@@ -170,7 +520,7 @@
               <label class="toggle-label"><input id="cfgOpenAiImageRead" type="checkbox" /> Analise de imagem</label>
             </div>
             <p class="settings-note">
-              Neste slice os dados ficam no navegador/localStorage. Vault seguro no backend entra no proximo ciclo.
+              Ao salvar, OpenAI/personas sao sincronizados com o backend por tenant e aplicados no runtime.
             </p>
           </section>
 
@@ -216,8 +566,9 @@
               <label>Agenda / Google Client ID<input id="cfgGoogleClientId" /></label>
               <label>Agenda / Google Client Secret<input id="cfgGoogleClientSecret" type="password" /></label>
               <label>Agenda / Google Refresh Token<input id="cfgGoogleRefreshToken" type="password" /></label>
-              <label>CRM / Evolution Base URL<input id="cfgEvolutionBaseUrl" placeholder="https://evolution.local" /></label>
+              <label>CRM / Evolution Base URL<input id="cfgEvolutionBaseUrl" placeholder="http://localhost:8080" /></label>
               <label>CRM / Evolution API Key<input id="cfgEvolutionApiKey" type="password" /></label>
+              <label>CRM / Evolution Instance ID<input id="cfgEvolutionInstanceId" placeholder="fabio" title="Nome da instancia na Evolution (ex: fabio para nao conflitar com fabio2)" /></label>
               <label>Billing Provider<input id="cfgBillingProvider" placeholder="stripe, asaas, etc" /></label>
               <label>Billing API Key<input id="cfgBillingApiKey" type="password" /></label>
             </div>

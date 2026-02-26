@@ -8,6 +8,7 @@ Date: 2026-02-25
 - Output:
   - update `.github/workflows/runtime-ci.yml` to run `npm run preprod:validate`
   - upload preprod report artifact
+  - ensure npm scripts use `pwsh` for Linux runner compatibility
 - Evidence:
   - `.github/workflows/runtime-ci.yml`
   - local dry validation report: `tools/reports/preprod-validate-*.log`

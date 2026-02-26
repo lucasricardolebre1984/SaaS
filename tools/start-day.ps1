@@ -67,12 +67,15 @@ git status --short
 
 $activeFeature = ''
 $activePhase = ''
+$tasksDocStatus = ''
+$pendingTaskCount = 0
 $statePath = Join-Path $repoRoot '.specs/project/STATE.md'
 if (Test-Path $statePath) {
   $stateRaw = Get-Content $statePath -Raw
   $featureMatch = [regex]::Match($stateRaw, '(?m)^Active feature:\s*(.+)$')
   if ($featureMatch.Success) {
     $activeFeature = $featureMatch.Groups[1].Value.Trim()
+    $activeFeature = [regex]::Replace($activeFeature, '\s+\([^)]+\)\s*$', '')
   }
   $phaseMatch = [regex]::Match($stateRaw, '(?m)^Active phase:\s*(.+)$')
   if ($phaseMatch.Success) {
@@ -101,6 +104,16 @@ if (-not [string]::IsNullOrWhiteSpace($activeFeature)) {
   foreach ($file in $featureFiles) {
     Show-ContextFile -RelativePath $file
   }
+
+  $tasksPath = Join-Path $repoRoot ".specs/features/$activeFeature/tasks.md"
+  if (Test-Path $tasksPath) {
+    $tasksRaw = Get-Content $tasksPath -Raw
+    $tasksStatusMatch = [regex]::Match($tasksRaw, '(?m)^Status:\s*(.+)$')
+    if ($tasksStatusMatch.Success) {
+      $tasksDocStatus = $tasksStatusMatch.Groups[1].Value.Trim()
+    }
+    $pendingTaskCount = ([regex]::Matches($tasksRaw, '(?im)^\s*-\s*Status:\s*pending\b')).Count
+  }
 } else {
   Write-Step "Active feature not found in STATE.md"
 }
@@ -111,5 +124,11 @@ if ([string]::IsNullOrWhiteSpace($activeFeature)) {
   Write-Host "Retomar do ultimo checkpoint em .specs/project/STATE.md e seguir pelo task ativo."
 } else {
   Write-Host "Use this prompt in the next message:"
-  Write-Host "Retomar feature $activeFeature na fase '$activePhase' e continuar do proximo task pendente."
+  if ($pendingTaskCount -gt 0) {
+    Write-Host "Retomar feature $activeFeature na fase '$activePhase' e continuar do proximo task pendente."
+  } elseif ($tasksDocStatus -match '(?i)^(completed|done)\b') {
+    Write-Host "Feature $activeFeature esta concluida na fase '$activePhase'; abrir proximo slice em Specify e atualizar STATE.md antes de implementar."
+  } else {
+    Write-Host "Retomar feature $activeFeature na fase '$activePhase' e validar/alinhar status em tasks.md antes de implementar."
+  }
 }

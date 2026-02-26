@@ -1,5 +1,6 @@
 param(
-  [switch]$SkipSmokePostgres
+  [switch]$SkipSmokePostgres,
+  [switch]$SkipOperationalDrills
 )
 
 $ErrorActionPreference = 'Stop'
@@ -51,6 +52,7 @@ try {
   Write-Report ("Preprod validate run at {0}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
   Write-Report ("Repo root: {0}" -f $repoRoot)
   Write-Report ("SkipSmokePostgres: {0}" -f [bool]$SkipSmokePostgres)
+  Write-Report ("SkipOperationalDrills: {0}" -f [bool]$SkipOperationalDrills)
 
   $gates = @(
     @{ Name = 'runtime-tests'; Command = @('npx', 'nx', 'run', 'app-platform-api:test') },
@@ -62,6 +64,32 @@ try {
 
   if (-not $SkipSmokePostgres) {
     $gates += @{ Name = 'smoke-postgres'; Command = @('npm', 'run', 'smoke:postgres') }
+  }
+
+  if (-not $SkipOperationalDrills) {
+    $releaseDryRunCommand = @(
+      'npm',
+      'run',
+      'release:dry-run',
+      '--',
+      '-SkipPreprodValidate',
+      '-SkipBranchProtectionCheck'
+    )
+    if ($SkipSmokePostgres) {
+      $releaseDryRunCommand += '-SkipSmokePostgres'
+    }
+
+    $gates += @{ Name = 'release-dry-run'; Command = $releaseDryRunCommand }
+    $gates += @{
+      Name = 'rollback-drill'
+      Command = @(
+        'npm',
+        'run',
+        'rollback:drill',
+        '--',
+        '-SkipPostgresSmoke'
+      )
+    }
   }
 
   foreach ($gate in $gates) {

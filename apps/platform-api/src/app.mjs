@@ -19,6 +19,9 @@ import {
   evolutionWebhookValid,
   followupCreateValid,
   followupListValid,
+  interactionConfirmationActionResponseValid,
+  interactionConfirmationActionValid,
+  interactionConfirmationListResponseValid,
   leadCreateValid,
   leadListValid,
   leadStageUpdateValid,
@@ -28,6 +31,7 @@ import {
   orchestrationCommandValid,
   orchestrationEventValid,
   ownerInteractionValid,
+  ownerInteractionResponseValid,
   paymentCreateValid,
   reminderCreateValid,
   reminderLifecycleEventPayloadValid,
@@ -43,7 +47,11 @@ import { createLeadStore } from './lead-store.mjs';
 import { createCrmAutomationStore } from './crm-automation-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
 import { createOwnerMemoryMaintenanceStore } from './owner-memory-maintenance-store.mjs';
+import { createOwnerShortMemoryStore } from './owner-short-memory-store.mjs';
+import { createOwnerEpisodeStore } from './owner-episode-store.mjs';
+import { createTenantRuntimeConfigStore } from './tenant-runtime-config-store.mjs';
 import { createEmbeddingProvider } from './embedding-provider.mjs';
+import { createOwnerResponseProvider } from './owner-response-provider.mjs';
 import {
   mapCustomerCreateRequestToCommandPayload,
   mapCustomerCreateRequestToStoreRecord
@@ -51,10 +59,30 @@ import {
 
 const ORCHESTRATION_SCHEMA_VERSION = '1.0.0';
 const ORCHESTRATION_LOG_LIMIT = 200;
+const DEFAULT_CORS_ALLOW_METHODS = 'GET,POST,PATCH,PUT,DELETE,OPTIONS';
+const DEFAULT_CORS_ALLOW_HEADERS = 'content-type,authorization,x-requested-with';
+const DEFAULT_CORS_MAX_AGE = '86400';
 
 function json(res, statusCode, payload) {
   res.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(payload));
+}
+
+function parseCorsAllowOrigins(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter((item) => item.length > 0);
+  }
+  const raw = String(value ?? '*').trim();
+  if (raw === '*' || raw.length === 0) return ['*'];
+  return raw.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+}
+
+function resolveCorsOrigin(originHeader, allowOrigins) {
+  if (allowOrigins.includes('*')) return '*';
+  if (!originHeader) return null;
+  const origin = String(originHeader).trim();
+  if (allowOrigins.includes(origin)) return origin;
+  return null;
 }
 
 async function readJsonBody(req) {
@@ -136,7 +164,324 @@ function sanitizePersonaOverrides(raw) {
   return Object.keys(sanitized).length > 0 ? sanitized : undefined;
 }
 
-function createOwnerCommandEnvelope(request, correlationId, traceId) {
+function mergePersonaOverrides(requestOverrides, tenantRuntimeConfig) {
+  const fromRequest = sanitizePersonaOverrides(requestOverrides);
+  if (fromRequest) return fromRequest;
+
+  const tenantPersonas = tenantRuntimeConfig?.personas;
+  if (!tenantPersonas || typeof tenantPersonas !== 'object') {
+    return undefined;
+  }
+  return sanitizePersonaOverrides({
+    owner_concierge_prompt: tenantPersonas.owner_concierge_prompt,
+    whatsapp_agent_prompt: tenantPersonas.whatsapp_agent_prompt
+  });
+}
+
+function sanitizeTenantRuntimeConfigInput(rawConfig) {
+  const raw = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
+  const openaiRaw = raw.openai && typeof raw.openai === 'object' ? raw.openai : {};
+  const personasRaw = raw.personas && typeof raw.personas === 'object' ? raw.personas : {};
+  const executionRaw = raw.execution && typeof raw.execution === 'object' ? raw.execution : {};
+  const integrationsRaw = raw.integrations && typeof raw.integrations === 'object' ? raw.integrations : {};
+  const crmEvolutionRaw = integrationsRaw.crm_evolution && typeof integrationsRaw.crm_evolution === 'object' ? integrationsRaw.crm_evolution : {};
+
+  const normalizeApiKey = (value) => {
+    const rawValue = typeof value === 'string' ? value.trim() : '';
+    if (rawValue.length === 0) return '';
+    // Prevent accidental multi-secret paste (e.g. "sk-... API_KEY=...").
+    return rawValue.split(/\s+/)[0];
+  };
+
+  const config = {
+    openai: {
+      api_key: normalizeApiKey(openaiRaw.api_key),
+      model: typeof openaiRaw.model === 'string' && openaiRaw.model.trim().length > 0
+        ? openaiRaw.model.trim()
+        : 'gpt-5.1',
+      vision_enabled: openaiRaw.vision_enabled !== false,
+      voice_enabled: openaiRaw.voice_enabled !== false,
+      image_generation_enabled: openaiRaw.image_generation_enabled !== false,
+      image_read_enabled: openaiRaw.image_read_enabled !== false
+    },
+    personas: {
+      owner_concierge_prompt: typeof personasRaw.owner_concierge_prompt === 'string'
+        ? personasRaw.owner_concierge_prompt.trim()
+        : '',
+      whatsapp_agent_prompt: typeof personasRaw.whatsapp_agent_prompt === 'string'
+        ? personasRaw.whatsapp_agent_prompt.trim()
+        : ''
+    },
+    execution: {
+      confirmations_enabled: executionRaw.confirmations_enabled === true
+    },
+    integrations: {
+      crm_evolution: {
+        base_url: typeof crmEvolutionRaw.base_url === 'string' ? crmEvolutionRaw.base_url.trim() : '',
+        api_key: typeof crmEvolutionRaw.api_key === 'string' ? crmEvolutionRaw.api_key.trim() : '',
+        instance_id: typeof crmEvolutionRaw.instance_id === 'string' && crmEvolutionRaw.instance_id.trim().length > 0
+          ? crmEvolutionRaw.instance_id.trim()
+          : 'fabio'
+      }
+    }
+  };
+
+  return config;
+}
+
+function validateTenantRuntimeConfigRequest(body) {
+  const request = body?.request;
+  const errors = [];
+
+  if (!request || typeof request !== 'object') {
+    errors.push({ instancePath: '/request', message: 'must be an object' });
+    return { ok: false, errors };
+  }
+
+  if (typeof request.request_id !== 'string' || request.request_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/request_id', message: 'must be a non-empty string' });
+  }
+
+  if (typeof request.tenant_id !== 'string' || request.tenant_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/tenant_id', message: 'must be a non-empty string' });
+  }
+
+  if (!request.config || typeof request.config !== 'object' || Array.isArray(request.config)) {
+    errors.push({ instancePath: '/request/config', message: 'must be an object' });
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+function validateOwnerAudioTranscriptionRequest(body) {
+  const request = body?.request;
+  const errors = [];
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    errors.push({ instancePath: '/request', message: 'must be an object' });
+    return { ok: false, errors };
+  }
+
+  if (typeof request.request_id !== 'string' || request.request_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/request_id', message: 'must be a non-empty string' });
+  }
+  if (typeof request.tenant_id !== 'string' || request.tenant_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/tenant_id', message: 'must be a non-empty string' });
+  }
+  if (typeof request.audio_base64 !== 'string' || request.audio_base64.trim().length === 0) {
+    errors.push({ instancePath: '/request/audio_base64', message: 'must be a non-empty string' });
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+function validateOwnerAudioSpeechRequest(body) {
+  const request = body?.request;
+  const errors = [];
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    errors.push({ instancePath: '/request', message: 'must be an object' });
+    return { ok: false, errors };
+  }
+
+  if (typeof request.request_id !== 'string' || request.request_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/request_id', message: 'must be a non-empty string' });
+  }
+  if (typeof request.tenant_id !== 'string' || request.tenant_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/tenant_id', message: 'must be a non-empty string' });
+  }
+  if (typeof request.text !== 'string' || request.text.trim().length === 0) {
+    errors.push({ instancePath: '/request/text', message: 'must be a non-empty string' });
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+async function transcribeAudioWithOpenAi(input) {
+  const startedAt = Date.now();
+  const baseUrl = String(input.baseUrl ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const fileName = String(input.fileName ?? 'audio.webm').trim() || 'audio.webm';
+  const mimeType = String(input.mimeType ?? 'audio/webm').trim() || 'audio/webm';
+  const language = typeof input.language === 'string' ? input.language.trim() : '';
+  const model = typeof input.model === 'string' && input.model.trim().length > 0
+    ? input.model.trim()
+    : 'whisper-1';
+
+  let audioBytes;
+  try {
+    audioBytes = Buffer.from(String(input.audioBase64 ?? '').trim(), 'base64');
+  } catch {
+    throw new Error('invalid_audio_base64');
+  }
+  if (!audioBytes || audioBytes.length === 0) {
+    throw new Error('invalid_audio_base64');
+  }
+
+  const formData = new FormData();
+  formData.append('model', model);
+  if (language.length > 0) {
+    formData.append('language', language);
+  }
+  formData.append('file', new Blob([audioBytes], { type: mimeType }), fileName);
+
+  const response = await fetch(`${baseUrl}/audio/transcriptions`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${input.apiKey}`
+    },
+    body: formData
+  });
+  if (!response.ok) {
+    const raw = await response.text();
+    throw new Error(`openai_transcription_http_${response.status}:${raw.slice(0, 500)}`);
+  }
+
+  const body = await response.json();
+  const text = typeof body?.text === 'string' ? body.text.trim() : '';
+  if (!text) {
+    throw new Error('openai_transcription_invalid_payload');
+  }
+
+  return {
+    text,
+    provider: 'openai',
+    model: typeof body?.model === 'string' && body.model.trim().length > 0 ? body.model.trim() : model,
+    latency_ms: Math.max(0, Date.now() - startedAt)
+  };
+}
+
+function mimeTypeFromAudioFormat(format) {
+  const normalized = String(format ?? '').toLowerCase();
+  if (normalized === 'wav') return 'audio/wav';
+  if (normalized === 'opus') return 'audio/ogg';
+  if (normalized === 'aac') return 'audio/aac';
+  if (normalized === 'flac') return 'audio/flac';
+  if (normalized === 'pcm') return 'audio/wav';
+  return 'audio/mpeg';
+}
+
+function parseSpeechSpeed(rawValue, fallback = 1.12) {
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < 0.25) return 0.25;
+  if (parsed > 4) return 4;
+  return parsed;
+}
+
+async function synthesizeSpeechWithOpenAi(input) {
+  const startedAt = Date.now();
+  const baseUrl = String(input.baseUrl ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const model = typeof input.model === 'string' && input.model.trim().length > 0
+    ? input.model.trim()
+    : 'gpt-4o-mini-tts';
+  const voice = typeof input.voice === 'string' && input.voice.trim().length > 0
+    ? input.voice.trim()
+    : 'shimmer';
+  const text = String(input.text ?? '').trim();
+  if (!text) {
+    throw new Error('speech_text_required');
+  }
+  const responseFormat = typeof input.responseFormat === 'string' && input.responseFormat.trim().length > 0
+    ? input.responseFormat.trim().toLowerCase()
+    : 'mp3';
+  const speed = parseSpeechSpeed(input.speed);
+
+  const response = await fetch(`${baseUrl}/audio/speech`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${input.apiKey}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      voice,
+      input: text,
+      response_format: responseFormat,
+      speed
+    })
+  });
+
+  if (!response.ok) {
+    const raw = await response.text();
+    throw new Error(`openai_speech_http_${response.status}:${raw.slice(0, 500)}`);
+  }
+
+  const audioBytes = Buffer.from(await response.arrayBuffer());
+  if (audioBytes.length === 0) {
+    throw new Error('openai_speech_empty_audio');
+  }
+
+  const contentType = String(response.headers.get('content-type') ?? '').trim()
+    || mimeTypeFromAudioFormat(responseFormat);
+
+  return {
+    audioBytes,
+    contentType,
+    provider: 'openai',
+    model,
+    voice,
+    speed,
+    latency_ms: Math.max(0, Date.now() - startedAt)
+  };
+}
+
+function createRuntimeConfigSummary(tenantId, configRecord) {
+  const normalized = sanitizeTenantRuntimeConfigInput(configRecord ?? {});
+  const apiKey = normalized.openai.api_key;
+  return {
+    tenant_id: tenantId,
+    status: 'ok',
+    runtime: {
+      owner_response_mode: apiKey.length > 0 ? 'openai' : 'auto',
+      openai_configured: apiKey.length > 0,
+      model: normalized.openai.model
+    },
+    openai: {
+      api_key_configured: apiKey.length > 0,
+      vision_enabled: normalized.openai.vision_enabled,
+      voice_enabled: normalized.openai.voice_enabled,
+      image_generation_enabled: normalized.openai.image_generation_enabled,
+      image_read_enabled: normalized.openai.image_read_enabled
+    },
+    personas: {
+      owner_concierge_prompt: normalized.personas.owner_concierge_prompt,
+      whatsapp_agent_prompt: normalized.personas.whatsapp_agent_prompt
+    },
+    execution: {
+      confirmations_enabled: normalized.execution.confirmations_enabled
+    },
+    integrations: {
+      crm_evolution: {
+        base_url: normalized.integrations.crm_evolution.base_url,
+        api_key: normalized.integrations.crm_evolution.api_key ? '(configured)' : '',
+        instance_id: normalized.integrations.crm_evolution.instance_id
+      }
+    },
+    updated_at: typeof configRecord?.updated_at === 'string' ? configRecord.updated_at : null
+  };
+}
+
+function resolveTenantExecutionPlan(taskPlan, tenantRuntimeConfig) {
+  if (!taskPlan) return taskPlan;
+
+  const hasExecutionOverride = (
+    tenantRuntimeConfig &&
+    tenantRuntimeConfig.execution &&
+    typeof tenantRuntimeConfig.execution.confirmations_enabled === 'boolean'
+  );
+  const confirmationsEnabled = hasExecutionOverride &&
+    tenantRuntimeConfig.execution.confirmations_enabled === true;
+  if (!hasExecutionOverride || confirmationsEnabled || taskPlan.execution_decision !== 'confirm_required') {
+    return taskPlan;
+  }
+
+  return {
+    ...taskPlan,
+    execution_decision: 'allow',
+    requires_confirmation: false,
+    policy_reason_code: 'tenant_runtime_confirmations_disabled'
+  };
+}
+
+function createOwnerCommandEnvelope(request, correlationId, traceId, personaOverridesInput = undefined) {
   const mode = modeFromRequest(request);
   const text =
     request.operation === 'send_message'
@@ -148,7 +493,7 @@ function createOwnerCommandEnvelope(request, correlationId, traceId) {
       uri: item.uri
     }))
     : undefined;
-  const personaOverrides = sanitizePersonaOverrides(request.payload?.persona_overrides);
+  const personaOverrides = personaOverridesInput ?? sanitizePersonaOverrides(request.payload?.persona_overrides);
 
   const payload = {
     owner_command_id: request.request_id,
@@ -290,6 +635,149 @@ function createModuleTaskCommand(request, ownerCommand, taskPlan) {
   return command;
 }
 
+function createPolicyDecision(taskPlan) {
+  if (!taskPlan || typeof taskPlan !== 'object') {
+    return {
+      route_rule_id: null,
+      policy_rule_id: null,
+      execution_decision: 'none',
+      requires_confirmation: false,
+      reason_code: null
+    };
+  }
+
+  return {
+    route_rule_id: taskPlan.rule_id ?? null,
+    policy_rule_id: taskPlan.policy_rule_id ?? null,
+    execution_decision: taskPlan.execution_decision ?? 'none',
+    requires_confirmation: taskPlan.requires_confirmation === true,
+    reason_code: taskPlan.policy_reason_code ?? null
+  };
+}
+
+function createConfirmationSummary(record) {
+  if (!record) return undefined;
+  return {
+    confirmation_id: record.confirmation_id,
+    status: record.status,
+    task_type: record.task_plan_ref?.task_type ?? 'unknown.task',
+    target_module: record.task_plan_ref?.target_module ?? 'mod-02-whatsapp-crm',
+    reason_code: record.reason_code ?? null,
+    created_at: record.created_at,
+    resolved_at: record.resolved_at ?? null
+  };
+}
+
+function createOwnerConfirmationRequestedEvent(record) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'owner.confirmation.requested',
+    tenant_id: record.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: record.owner_command_ref.correlation_id,
+    causation_id: record.owner_command_ref.command_id,
+    trace_id: record.owner_command_ref.trace_id,
+    status: 'info',
+    payload: {
+      confirmation_id: record.confirmation_id,
+      task_type: record.task_plan_ref.task_type,
+      target_module: record.task_plan_ref.target_module,
+      reason_code: record.reason_code ?? null
+    }
+  };
+}
+
+function createOwnerConfirmationApprovedEvent(record, moduleTaskCommand) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'owner.confirmation.approved',
+    tenant_id: record.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: record.owner_command_ref.correlation_id,
+    causation_id: record.owner_command_ref.command_id,
+    trace_id: record.owner_command_ref.trace_id,
+    status: 'accepted',
+    payload: {
+      confirmation_id: record.confirmation_id,
+      task_id: moduleTaskCommand.payload.task_id,
+      task_type: moduleTaskCommand.payload.task_type,
+      target_module: moduleTaskCommand.target_module
+    }
+  };
+}
+
+function createOwnerConfirmationRejectedEvent(record) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'owner.confirmation.rejected',
+    tenant_id: record.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: record.owner_command_ref.correlation_id,
+    causation_id: record.owner_command_ref.command_id,
+    trace_id: record.owner_command_ref.trace_id,
+    status: 'info',
+    payload: {
+      confirmation_id: record.confirmation_id,
+      task_type: record.task_plan_ref.task_type,
+      target_module: record.task_plan_ref.target_module,
+      reason_code: record.reason_code ?? null
+    }
+  };
+}
+
+function createModuleTaskCommandFromConfirmation(record, actorSessionId) {
+  const taskId = randomUUID();
+  const snapshot = record.request_snapshot ?? {};
+  const command = {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'command',
+    command_id: randomUUID(),
+    name: 'module.task.create',
+    tenant_id: record.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: record.task_plan_ref.target_module,
+    created_at: new Date().toISOString(),
+    correlation_id: record.owner_command_ref.correlation_id,
+    causation_id: record.owner_command_ref.command_id,
+    trace_id: record.owner_command_ref.trace_id,
+    actor: {
+      actor_id: actorSessionId,
+      actor_type: 'owner',
+      channel: snapshot.channel ?? 'ui-chat'
+    },
+    payload: {
+      task_id: taskId,
+      task_type: record.task_plan_ref.task_type,
+      priority: record.task_plan_ref.priority,
+      input: {
+        request_id: snapshot.request_id,
+        session_id: snapshot.session_id,
+        text: snapshot.text ?? '',
+        attachments_count: Number(snapshot.attachments_count ?? 0),
+        planning_rule: record.task_plan_ref.route_rule_id ?? 'confirmation_resume'
+      }
+    }
+  };
+
+  if (snapshot.persona_overrides) {
+    command.payload.input.persona_overrides = snapshot.persona_overrides;
+  }
+
+  return command;
+}
+
 function createModuleTaskCreatedEvent(moduleTaskCommand) {
   const targetModule = moduleTaskCommand.target_module;
   return {
@@ -372,6 +860,91 @@ function createModuleTaskTerminalEvent(queueItem) {
       task_id: command.payload.task_id,
       result_summary: 'Task executed in runtime worker stub.',
       output_ref: `memory://task/${command.payload.task_id}`
+    }
+  };
+}
+
+function createMemoryEpisodeCreatedEvent(tenantId, sessionId, turnCount, causationId, summary = null) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'memory.episode.created',
+    tenant_id: tenantId,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: randomUUID(),
+    causation_id: causationId,
+    trace_id: randomUUID().slice(0, 8),
+    status: 'info',
+    payload: {
+      tenant_id: tenantId,
+      session_id: sessionId,
+      turn_count: turnCount,
+      summary: summary ?? null
+    }
+  };
+}
+
+function createMemoryPromotedFromEpisodeEvent(tenantId, sessionId, turnCount, memoryId, episodeEventId = null) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'memory.promoted.from_episode',
+    tenant_id: tenantId,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: randomUUID(),
+    trace_id: randomUUID().slice(0, 8),
+    status: 'info',
+    payload: {
+      tenant_id: tenantId,
+      session_id: sessionId,
+      turn_count: turnCount,
+      memory_id: memoryId,
+      episode_event_id: episodeEventId ?? null
+    }
+  };
+}
+
+function createCrmDelegationEvent(queueItem, terminalEvent) {
+  const command = queueItem.command;
+  if (command.target_module !== 'mod-02-whatsapp-crm') return null;
+  const base = {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    tenant_id: command.tenant_id,
+    source_module: 'mod-02-whatsapp-crm',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: command.correlation_id,
+    causation_id: command.command_id,
+    trace_id: command.trace_id,
+    payload: { task_id: command.payload.task_id }
+  };
+  if (terminalEvent.name === 'module.task.completed') {
+    return {
+      ...base,
+      name: 'crm.delegation.sent',
+      status: 'completed',
+      payload: {
+        ...base.payload,
+        result_summary: terminalEvent.payload?.result_summary ?? 'Delegation executed.'
+      }
+    };
+  }
+  return {
+    ...base,
+    name: 'crm.delegation.failed',
+    status: 'failed',
+    payload: {
+      ...base.payload,
+      error_code: terminalEvent.payload?.error_code ?? 'DELEGATION_FAILED',
+      retryable: Boolean(terminalEvent.payload?.retryable)
     }
   };
 }
@@ -762,13 +1335,14 @@ async function validateAndPersistEvent(store, event) {
   return { ok: true };
 }
 
-function orchestrationInfo(store, policyPath) {
+function orchestrationInfo(store, policyPath, executionPolicyPath) {
   if (store.backend === 'postgres') {
     return {
       backend: 'postgres',
       storage_dir: null,
       queue_file: null,
-      policy_path: policyPath
+      policy_path: policyPath,
+      execution_policy_path: executionPolicyPath
     };
   }
 
@@ -776,7 +1350,8 @@ function orchestrationInfo(store, policyPath) {
     backend: 'file',
     storage_dir: store.storageDir,
     queue_file: store.queueFilePath,
-    policy_path: policyPath
+    policy_path: policyPath,
+    execution_policy_path: executionPolicyPath
   };
 }
 
@@ -882,6 +1457,28 @@ function ownerMemoryMaintenanceInfo(store) {
   };
 }
 
+function tenantRuntimeConfigInfo(store) {
+  return {
+    backend: store?.backend ?? 'file',
+    storage_dir: store?.storageDir ?? null,
+    config_path: store?.configFilePath ?? null
+  };
+}
+
+function ownerResponseInfo(provider) {
+  return {
+    mode: provider?.mode ?? 'auto',
+    openai_available: provider?.canUseOpenAi === true
+  };
+}
+
+function ownerConfirmationInfo(config) {
+  return {
+    max_pending_per_tenant: config.maxPendingPerTenant,
+    ttl_seconds: config.ttlSeconds
+  };
+}
+
 function parseMaintenanceEmbeddingMode(value) {
   if (value == null) return null;
   const mode = String(value).toLowerCase();
@@ -924,6 +1521,47 @@ function parseMaintenanceRunsLimit(value, fallback = 50) {
     return null;
   }
   return Math.min(Math.floor(parsed), 200);
+}
+
+function parseConfirmationStatusFilter(value) {
+  if (value == null || value === '') return 'all';
+  const normalized = String(value).toLowerCase();
+  if (normalized === 'all' || normalized === 'pending' || normalized === 'approved' || normalized === 'rejected') {
+    return normalized;
+  }
+  return null;
+}
+
+function parseConfirmationListLimit(value, fallback = 50) {
+  if (value == null) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return Math.min(Math.floor(parsed), 200);
+}
+
+function parseConfirmationMaxPending(value, fallback = 20) {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.min(Math.floor(parsed), 500);
+}
+
+function parseConfirmationTtlSeconds(value, fallback = 900) {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+  return Math.min(Math.floor(parsed), 7 * 24 * 3600);
+}
+
+function isConfirmationExpired(record, ttlSeconds) {
+  const createdAtMs = Date.parse(record.created_at);
+  if (!Number.isFinite(createdAtMs)) return false;
+  const nowMs = Date.now();
+  return nowMs - createdAtMs > ttlSeconds * 1000;
 }
 
 export function createApp(options = {}) {
@@ -989,6 +1627,17 @@ export function createApp(options = {}) {
     pgSchema,
     pgAutoMigrate
   });
+  const tenantRuntimeConfigStore = createTenantRuntimeConfigStore({
+    storageDir: options.tenantRuntimeConfigStorageDir ?? options.orchestrationStorageDir
+  });
+  const shortMemoryStore = createOwnerShortMemoryStore({
+    storageDir: options.ownerShortMemoryStorageDir ?? options.orchestrationStorageDir,
+    maxTurnsPerSession: options.ownerShortMemoryMaxTurns ?? 20
+  });
+  const episodeStore = createOwnerEpisodeStore({
+    storageDir: options.ownerEpisodeStorageDir ?? options.orchestrationStorageDir,
+    maxEpisodesPerTenant: options.ownerEpisodeMaxPerTenant ?? 500
+  });
   const ownerEmbeddingProviderConfig = {
     mode: options.ownerEmbeddingMode,
     openaiApiKey: options.openaiApiKey,
@@ -996,6 +1645,38 @@ export function createApp(options = {}) {
     openaiBaseUrl: options.openaiBaseUrl
   };
   const ownerEmbeddingProvider = createEmbeddingProvider(ownerEmbeddingProviderConfig);
+  const ownerResponseProviderConfig = {
+    mode: options.ownerResponseMode,
+    openaiApiKey: options.openaiApiKey,
+    openaiModel: options.ownerResponseModel,
+    openaiBaseUrl: options.openaiBaseUrl
+  };
+  const ownerResponseProvider = createOwnerResponseProvider(ownerResponseProviderConfig);
+  async function resolveTenantRuntimeConfig(tenantId) {
+    const normalizedTenantId = String(tenantId ?? '').trim();
+    if (!normalizedTenantId) return null;
+    return tenantRuntimeConfigStore.getTenantRuntimeConfig(normalizedTenantId);
+  }
+
+  function getOwnerResponseProviderForTenant(tenantRuntimeConfig) {
+    const tenantApiKey = String(tenantRuntimeConfig?.openai?.api_key ?? '').trim();
+    const tenantModel = String(tenantRuntimeConfig?.openai?.model ?? '').trim();
+
+    if (tenantApiKey.length === 0 && tenantModel.length === 0) {
+      return ownerResponseProvider;
+    }
+
+    return createOwnerResponseProvider({
+      ...ownerResponseProviderConfig,
+      mode: tenantApiKey.length > 0 ? 'openai' : ownerResponseProvider.mode,
+      openaiApiKey: tenantApiKey.length > 0
+        ? tenantApiKey
+        : ownerResponseProviderConfig.openaiApiKey,
+      openaiModel: tenantModel.length > 0
+        ? tenantModel
+        : ownerResponseProviderConfig.openaiModel
+    });
+  }
   function getOwnerEmbeddingProvider(modeOverride = null) {
     if (!modeOverride) {
       return ownerEmbeddingProvider;
@@ -1006,8 +1687,80 @@ export function createApp(options = {}) {
     });
   }
   const taskPlanner = createTaskPlanner({
-    policyPath: options.taskRoutingPolicyPath
+    policyPath: options.taskRoutingPolicyPath,
+    executionPolicyPath: options.taskExecutionPolicyPath
   });
+
+  const LIST_LIMIT = 20;
+  async function buildOperationalContextForOwner(tenantId, userText) {
+    const t = String(userText ?? '').toLowerCase().trim();
+    if (t.length < 2) return null;
+    const parts = [];
+    const wantClientes = /\b(clientes?|lista de clientes|quantos clientes|cadastro de clientes)\b/.test(t) || (/\b(listar|mostre|quais|o que tem)\b/.test(t) && /\b(cliente|contato)\b/.test(t));
+    const wantAgenda = /\b(agenda|lembretes?|compromissos?|reuni[oó]es?)\b/.test(t) || (/\b(listar|mostre|quais|o que tem)\b/.test(t) && /\b(agenda|lembrete)\b/.test(t));
+    const wantLeads = /\b(leads?|crm|qualifica[cç][aã]o)\b/.test(t) || (/\b(listar|mostre|quais|o que tem)\b/.test(t) && /\b(lead|crm)\b/.test(t));
+    const wantCobranca = /\b(cobran[cç]as?|faturas?|faturamento|pagamentos?)\b/.test(t) || (/\b(listar|mostre|quais|o que tem)\b/.test(t) && /\b(cobrança|fatura)\b/.test(t));
+    const wantAny = /\b(listar|mostre|quais|o que tem|navegar|saber o que|entender)\b/.test(t) && (wantClientes || wantAgenda || wantLeads || wantCobranca);
+    if (!wantClientes && !wantAgenda && !wantLeads && !wantCobranca && !wantAny) return null;
+    try {
+      if (wantClientes || wantAny) {
+        const raw = await customerStore.listCustomers(tenantId);
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const list = items.slice(0, LIST_LIMIT).map((c) => `${c.full_name ?? c.customer_id}${c.phone_e164 ? ` (${c.phone_e164})` : ''}`);
+        parts.push(`Clientes (${items.length}): ${list.length ? list.join('; ') : 'nenhum cadastrado'}.`);
+      }
+      if (wantLeads || wantAny) {
+        const raw = await leadStore.listLeads(tenantId);
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const list = items.slice(0, LIST_LIMIT).map((l) => `${(l.lead_id ?? '').slice(0, 8)} ${l.stage ?? '?'}`);
+        parts.push(`Leads CRM (${items.length}): ${list.length ? list.join('; ') : 'nenhum'}.`);
+      }
+      if (wantAgenda || wantAny) {
+        const raw = await agendaStore.listReminders(tenantId);
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const list = items.slice(0, LIST_LIMIT).map((r) => `${r.title ?? (r.reminder_id ?? '').slice(0, 8)} ${r.schedule_at ?? ''}`).filter(Boolean);
+        parts.push(`Lembretes agenda (${items.length}): ${list.length ? list.join('; ') : 'nenhum'}.`);
+      }
+      if (wantCobranca || wantAny) {
+        const raw = await billingStore.listCharges(tenantId);
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const list = items.slice(0, LIST_LIMIT).map((c) => `${(c.charge_id ?? '').slice(0, 8)} ${c.status ?? '?'} ${c.amount ?? ''}`).filter(Boolean);
+        parts.push(`Cobranças (${items.length}): ${list.length ? list.join('; ') : 'nenhuma'}.`);
+      }
+      if (parts.length === 0) return null;
+      return `Dados atuais do SaaS (para responder com precisão):\n${parts.join('\n')}`;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  const ownerConfirmationConfig = {
+    maxPendingPerTenant: parseConfirmationMaxPending(
+      options.ownerConfirmationMaxPendingPerTenant ??
+      process.env.OWNER_CONFIRMATION_MAX_PENDING_PER_TENANT,
+      20
+    ),
+    ttlSeconds: parseConfirmationTtlSeconds(
+      options.ownerConfirmationTtlSeconds ??
+      process.env.OWNER_CONFIRMATION_TTL_SECONDS,
+      900
+    )
+  };
+  const ownerEpisodeThreshold = Number(
+    options.ownerEpisodeThreshold ?? process.env.OWNER_EPISODE_THRESHOLD ?? 10
+  ) || 10;
+  const corsAllowOrigins = parseCorsAllowOrigins(
+    options.corsAllowOrigins ?? process.env.CORS_ALLOW_ORIGINS ?? '*'
+  );
+  const corsAllowMethods = String(
+    options.corsAllowMethods ?? process.env.CORS_ALLOW_METHODS ?? DEFAULT_CORS_ALLOW_METHODS
+  );
+  const corsAllowHeaders = String(
+    options.corsAllowHeaders ?? process.env.CORS_ALLOW_HEADERS ?? DEFAULT_CORS_ALLOW_HEADERS
+  );
+  const corsMaxAge = String(
+    options.corsMaxAge ?? process.env.CORS_MAX_AGE ?? DEFAULT_CORS_MAX_AGE
+  );
 
   async function runOwnerMemoryReembedBatch(input = {}) {
     const tenantId = String(input.tenant_id ?? '').trim();
@@ -1120,6 +1873,23 @@ export function createApp(options = {}) {
 
   const handler = async function app(req, res) {
     const { method, url } = req;
+    const corsOrigin = resolveCorsOrigin(req.headers.origin, corsAllowOrigins);
+    if (corsOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+      res.setHeader('Access-Control-Allow-Methods', corsAllowMethods);
+      res.setHeader('Access-Control-Allow-Headers', corsAllowHeaders);
+      res.setHeader('Access-Control-Max-Age', corsMaxAge);
+      if (corsOrigin !== '*') {
+        res.setHeader('Vary', 'Origin');
+      }
+    }
+
+    if (method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     const parsedUrl = new URL(url ?? '/', 'http://localhost');
     const path = parsedUrl.pathname;
 
@@ -1128,15 +1898,190 @@ export function createApp(options = {}) {
         return json(res, 200, {
           status: 'ok',
           service: 'app-platform-api',
-          orchestration: orchestrationInfo(store, taskPlanner.policyPath),
+          orchestration: orchestrationInfo(store, taskPlanner.policyPath, taskPlanner.executionPolicyPath),
           customers: customerInfo(customerStore),
           agenda: agendaInfo(agendaStore),
           billing: billingInfo(billingStore),
           crm_leads: leadInfo(leadStore),
           crm_automation: crmAutomationInfo(crmAutomationStore),
           owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider),
-          owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore)
+          owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore),
+          tenant_runtime_config: tenantRuntimeConfigInfo(tenantRuntimeConfigStore),
+          owner_confirmation: ownerConfirmationInfo(ownerConfirmationConfig),
+          owner_response: ownerResponseInfo(ownerResponseProvider)
         });
+      }
+
+      if (method === 'GET' && path === '/v1/owner-concierge/runtime-config') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        let configRecord;
+        try {
+          configRecord = await resolveTenantRuntimeConfig(tenantId);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const response = createRuntimeConfigSummary(tenantId, configRecord);
+        return json(res, 200, response);
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/runtime-config') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = validateTenantRuntimeConfigRequest(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id).trim();
+        const normalizedConfig = sanitizeTenantRuntimeConfigInput(request.config);
+
+        let updated;
+        try {
+          updated = await tenantRuntimeConfigStore.upsertTenantRuntimeConfig(tenantId, normalizedConfig);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const response = {
+          request_id: String(request.request_id),
+          ...createRuntimeConfigSummary(tenantId, updated),
+          status: 'accepted'
+        };
+        return json(res, 200, { response });
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/audio/transcribe') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = validateOwnerAudioTranscriptionRequest(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id).trim();
+        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
+        const tenantApiKey = String(tenantRuntimeConfig?.openai?.api_key ?? '').trim();
+
+        if (tenantApiKey.length === 0) {
+          return json(res, 400, { error: 'openai_not_configured' });
+        }
+
+        const mimeType = typeof request.mime_type === 'string'
+          ? request.mime_type.trim()
+          : 'audio/webm';
+        const fileName = typeof request.filename === 'string' && request.filename.trim().length > 0
+          ? request.filename.trim()
+          : 'audio.webm';
+        const language = typeof request.language === 'string' ? request.language.trim() : '';
+        const model = typeof request.model === 'string' ? request.model.trim() : '';
+
+        try {
+          const transcription = await transcribeAudioWithOpenAi({
+            apiKey: tenantApiKey,
+            baseUrl: options.openaiBaseUrl ?? process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
+            audioBase64: request.audio_base64,
+            mimeType,
+            fileName,
+            language,
+            model
+          });
+          return json(res, 200, {
+            response: {
+              request_id: String(request.request_id),
+              status: 'accepted',
+              transcription
+            }
+          });
+        } catch (error) {
+          return json(res, 502, {
+            error: 'owner_audio_transcription_error',
+            details: String(error.message ?? error)
+          });
+        }
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/audio/speech') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = validateOwnerAudioSpeechRequest(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id).trim();
+        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
+        const tenantApiKey = String(tenantRuntimeConfig?.openai?.api_key ?? '').trim();
+
+        if (tenantApiKey.length === 0) {
+          return json(res, 400, { error: 'openai_not_configured' });
+        }
+
+        if (tenantRuntimeConfig?.openai?.voice_enabled === false) {
+          return json(res, 400, { error: 'voice_disabled_by_tenant' });
+        }
+
+        try {
+          const speech = await synthesizeSpeechWithOpenAi({
+            apiKey: tenantApiKey,
+            baseUrl: options.openaiBaseUrl ?? process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
+            text: String(request.text),
+            model: typeof request.model === 'string' ? request.model.trim() : '',
+            voice: typeof request.voice === 'string' ? request.voice.trim() : '',
+            speed: request.speed,
+            responseFormat: typeof request.response_format === 'string'
+              ? request.response_format.trim()
+              : ''
+          });
+          res.writeHead(200, {
+            'content-type': speech.contentType,
+            'cache-control': 'no-store',
+            'x-owner-speech-provider': speech.provider,
+            'x-owner-speech-model': speech.model,
+            'x-owner-speech-voice': speech.voice,
+            'x-owner-speech-speed': String(speech.speed),
+            'x-owner-speech-latency-ms': String(speech.latency_ms),
+            'x-owner-speech-request-id': String(request.request_id)
+          });
+          res.end(speech.audioBytes);
+          return;
+        } catch (error) {
+          return json(res, 502, {
+            error: 'owner_audio_speech_error',
+            details: String(error.message ?? error)
+          });
+        }
       }
 
       if (method === 'GET' && path === '/internal/orchestration/commands') {
@@ -1213,6 +2158,17 @@ export function createApp(options = {}) {
               error: terminalResult.type,
               details: terminalResult.details
             });
+          }
+
+          const delegationEvent = createCrmDelegationEvent(queueItem, terminalEvent);
+          if (delegationEvent) {
+            const delegationResult = await validateAndPersistEvent(store, delegationEvent);
+            if (!delegationResult.ok) {
+              return json(res, 500, {
+                error: delegationResult.type,
+                details: delegationResult.details
+              });
+            }
           }
 
           const completionStatus = terminalEvent.name === 'module.task.failed' ? 'failed' : 'completed';
@@ -3463,9 +4419,55 @@ export function createApp(options = {}) {
         }
 
         const request = body.request;
+        let tenantRuntimeConfig;
+        try {
+          tenantRuntimeConfig = await resolveTenantRuntimeConfig(request.tenant_id);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const personaOverrides = mergePersonaOverrides(
+          request.payload?.persona_overrides,
+          tenantRuntimeConfig
+        );
+        const taskPlan = resolveTenantExecutionPlan(taskPlanner.plan(request), tenantRuntimeConfig);
+        const policyDecision = createPolicyDecision(taskPlan);
+        const requiresConfirmation = taskPlan?.execution_decision === 'confirm_required';
+        if (requiresConfirmation) {
+          let pendingCount = 0;
+          try {
+            pendingCount = await store.countPendingTaskConfirmations(request.tenant_id);
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+
+          if (pendingCount >= ownerConfirmationConfig.maxPendingPerTenant) {
+            return json(res, 429, {
+              error: 'confirmation_queue_limit_reached',
+              details: {
+                tenant_id: request.tenant_id,
+                pending_count: pendingCount,
+                max_pending_per_tenant: ownerConfirmationConfig.maxPendingPerTenant,
+                policy_decision: policyDecision
+              }
+            });
+          }
+        }
+
         const correlationId = randomUUID();
         const traceId = randomUUID();
-        const ownerCommand = createOwnerCommandEnvelope(request, correlationId, traceId);
+        const ownerCommand = createOwnerCommandEnvelope(
+          request,
+          correlationId,
+          traceId,
+          personaOverrides
+        );
         const ownerCommandValidation = orchestrationCommandValid(ownerCommand);
         if (!ownerCommandValidation.ok) {
           return json(res, 500, {
@@ -3490,8 +4492,63 @@ export function createApp(options = {}) {
           });
         }
 
-        const taskPlan = taskPlanner.plan(request);
-        const moduleTaskCommand = createModuleTaskCommand(request, ownerCommand, taskPlan);
+        const shouldCreateModuleTask = taskPlan?.execution_decision === 'allow';
+        const moduleTaskCommand = shouldCreateModuleTask
+          ? createModuleTaskCommand(request, ownerCommand, taskPlan)
+          : null;
+        let confirmationSummary;
+
+        if (requiresConfirmation && taskPlan) {
+          const confirmationInput = {
+            tenant_id: request.tenant_id,
+            reason_code: taskPlan.policy_reason_code ?? null,
+            owner_command_ref: {
+              command_id: ownerCommand.command_id,
+              correlation_id: ownerCommand.correlation_id,
+              trace_id: ownerCommand.trace_id
+            },
+            task_plan_ref: {
+              target_module: taskPlan.target_module,
+              task_type: taskPlan.task_type,
+              priority: taskPlan.priority,
+              simulate_failure: taskPlan.simulate_failure === true,
+              route_rule_id: taskPlan.rule_id ?? null,
+              policy_rule_id: taskPlan.policy_rule_id ?? null
+            },
+            request_snapshot: {
+              request_id: request.request_id,
+              session_id: request.session_id,
+              channel: request.channel,
+              text: String(request.payload?.text ?? ''),
+              attachments_count: Array.isArray(request.payload?.attachments)
+                ? request.payload.attachments.length
+                : 0,
+              persona_overrides: personaOverrides ?? null
+            }
+          };
+
+          let confirmationRecord;
+          try {
+            confirmationRecord = await store.createTaskConfirmation(confirmationInput);
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+
+          const requestedEvent = createOwnerConfirmationRequestedEvent(confirmationRecord);
+          const requestedEventResult = await validateAndPersistEvent(store, requestedEvent);
+          if (!requestedEventResult.ok) {
+            return json(res, 500, {
+              error: requestedEventResult.type,
+              details: requestedEventResult.details
+            });
+          }
+
+          confirmationSummary = createConfirmationSummary(confirmationRecord);
+        }
+
         if (moduleTaskCommand) {
           const moduleTaskCommandValidation = orchestrationCommandValid(moduleTaskCommand);
           if (!moduleTaskCommandValidation.ok) {
@@ -3540,6 +4597,149 @@ export function createApp(options = {}) {
           }]
           : undefined;
 
+        let assistantOutput;
+        if (request.operation === 'send_message') {
+          try {
+            const userText = String(request.payload?.text ?? '');
+            let operationalContext = null;
+            try {
+              operationalContext = await buildOperationalContextForOwner(request.tenant_id, userText);
+            } catch (_) {
+              operationalContext = null;
+            }
+            let shortMemory = [];
+            try {
+              shortMemory = shortMemoryStore.getLastTurns(request.tenant_id, request.session_id, 20);
+            } catch (_) {
+              shortMemory = [];
+            }
+            let retrievedContext = null;
+            try {
+              const retrieval = await ownerMemoryStore.retrieveContext(request.tenant_id, {
+                text: userText,
+                top_k: 5
+              });
+              const items = retrieval?.items ?? [];
+              if (items.length > 0) {
+                const parts = items
+                  .filter((it) => typeof it?.content === 'string' && it.content.trim().length > 0)
+                  .map((it, i) => `[${i + 1}] ${it.content.trim()}`)
+                  .slice(0, 5);
+                if (parts.length > 0) {
+                  retrievedContext = parts.join('\n\n');
+                }
+              }
+            } catch (_) {
+              retrievedContext = null;
+            }
+            let episodeContext = null;
+            try {
+              const episodes = episodeStore.listEpisodes(request.tenant_id, {
+                session_id: request.session_id,
+                limit: 5
+              });
+              if (Array.isArray(episodes) && episodes.length > 0) {
+                const lines = episodes.map((e) => {
+                  const at = e.created_at ? ` at ${e.created_at}` : '';
+                  const sum = typeof e.summary === 'string' && e.summary.trim() ? `: ${e.summary.trim().slice(0, 100)}` : '';
+                  return `- Turn ${e.turn_count ?? '?'}${at}${sum}`;
+                });
+                episodeContext = lines.join('\n');
+              }
+            } catch (_) {
+              episodeContext = null;
+            }
+            const tenantResponseProvider = getOwnerResponseProviderForTenant(tenantRuntimeConfig);
+            assistantOutput = await tenantResponseProvider.generateAssistantOutput({
+              text: userText,
+              tenant_id: request.tenant_id,
+              session_id: request.session_id,
+              persona_overrides: personaOverrides,
+              attachments: Array.isArray(request.payload?.attachments)
+                ? request.payload.attachments
+                : [],
+              operational_context: operationalContext ?? undefined,
+              short_memory: shortMemory.length > 0 ? shortMemory : undefined,
+              retrieved_context: retrievedContext ?? undefined,
+              episode_context: episodeContext ?? undefined
+            });
+            try {
+              shortMemoryStore.appendTurn(request.tenant_id, request.session_id, { role: 'user', content: userText });
+              shortMemoryStore.appendTurn(request.tenant_id, request.session_id, { role: 'assistant', content: assistantOutput?.text ?? '' });
+              const episodeThreshold = Number(ownerEpisodeThreshold ?? 10) || 10;
+              const turnCount = shortMemoryStore.getTurnCount(request.tenant_id, request.session_id);
+              if (turnCount >= episodeThreshold && turnCount % episodeThreshold === 0) {
+                const episodeEvent = createMemoryEpisodeCreatedEvent(
+                  request.tenant_id,
+                  request.session_id,
+                  turnCount,
+                  ownerCommand.command_id,
+                  null
+                );
+                const episodeResult = await validateAndPersistEvent(store, episodeEvent);
+                if (episodeResult.ok) {
+                  try {
+                    episodeStore.appendEpisode(request.tenant_id, request.session_id, {
+                      turn_count: turnCount,
+                      summary: null,
+                      event_id: episodeEvent.event_id,
+                      created_at: episodeEvent.emitted_at
+                    });
+                  } catch (_) {}
+                  try {
+                    const promotionContent = `Session milestone at turn ${turnCount} (session ${request.session_id}).`;
+                    const embeddingResult = await ownerEmbeddingProvider.resolveMemoryEmbedding({
+                      tenant_id: request.tenant_id,
+                      session_id: request.session_id,
+                      memory_id: null,
+                      content: promotionContent,
+                      tags: ['episode', 'milestone']
+                    });
+                    const externalKey = `episode_${request.tenant_id}_${request.session_id}_${turnCount}`;
+                    const memoryId = randomUUID();
+                    const createResult = await ownerMemoryStore.createEntry({
+                      memory_id: memoryId,
+                      tenant_id: request.tenant_id,
+                      session_id: request.session_id,
+                      external_key: externalKey,
+                      source: 'episode_promotion',
+                      content: promotionContent,
+                      tags: ['episode', 'milestone'],
+                      salience_score: 0.5,
+                      embedding_ref: embeddingResult.embedding_ref,
+                      embedding_vector: embeddingResult.embedding_vector,
+                      metadata: { episode_event_id: episodeEvent.event_id }
+                    });
+                    if (createResult?.entry?.memory_id) {
+                      const promotedEvent = createMemoryPromotedFromEpisodeEvent(
+                        request.tenant_id,
+                        request.session_id,
+                        turnCount,
+                        createResult.entry.memory_id,
+                        episodeEvent.event_id
+                      );
+                      await validateAndPersistEvent(store, promotedEvent);
+                    }
+                  } catch (_) {}
+                }
+              }
+            } catch (_) {}
+          } catch (error) {
+            return json(res, 502, {
+              error: 'owner_response_provider_error',
+              details: String(error.message ?? error)
+            });
+          }
+        } else {
+          assistantOutput = {
+            text: 'Operation accepted.',
+            provider: 'none',
+            model: null,
+            latency_ms: 0,
+            fallback_reason: 'non_message_operation'
+          };
+        }
+
         const response = {
           request_id: request.request_id,
           status: 'accepted',
@@ -3550,17 +4750,262 @@ export function createApp(options = {}) {
           },
           session_state,
           avatar_state,
-          assistant_output: {
-            text: request.operation === 'send_message'
-              ? 'Interaction accepted and task queued for worker processing.'
-              : 'Operation accepted.'
-          }
+          assistant_output: assistantOutput,
+          policy_decision: policyDecision
         };
 
+        if (confirmationSummary) {
+          response.confirmation = confirmationSummary;
+        }
         if (downstreamTasks) {
           response.downstream_tasks = downstreamTasks;
         }
 
+        const responseValidation = ownerInteractionResponseValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: responseValidation.errors
+          });
+        }
+
+        return json(res, 200, { response });
+      }
+
+      if (method === 'GET' && path === '/v1/owner-concierge/interaction-confirmations') {
+        const tenantId = parsedUrl.searchParams.get('tenant_id');
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const statusFilter = parseConfirmationStatusFilter(parsedUrl.searchParams.get('status'));
+        if (!statusFilter) {
+          return json(res, 400, { error: 'invalid_status_filter' });
+        }
+        const listLimit = parseConfirmationListLimit(parsedUrl.searchParams.get('limit'), 50);
+        if (!listLimit) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+
+        let items;
+        try {
+          items = await store.listTaskConfirmations(tenantId, {
+            status: statusFilter,
+            limit: listLimit
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        const response = {
+          tenant_id: tenantId,
+          status_filter: statusFilter,
+          count: items.length,
+          items: items.map((item) => createConfirmationSummary(item))
+        };
+        const responseValidation = interactionConfirmationListResponseValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: responseValidation.errors
+          });
+        }
+
+        return json(res, 200, response);
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/interaction-confirmations') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = interactionConfirmationActionValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const existing = await store.getTaskConfirmation(request.tenant_id, request.confirmation_id);
+        if (!existing) {
+          return json(res, 404, { error: 'confirmation_not_found' });
+        }
+        if (existing.status !== 'pending') {
+          return json(res, 409, {
+            error: 'confirmation_not_pending',
+            status: existing.status
+          });
+        }
+        if (isConfirmationExpired(existing, ownerConfirmationConfig.ttlSeconds)) {
+          const expired = await store.resolveTaskConfirmation(
+            request.tenant_id,
+            request.confirmation_id,
+            {
+              status: 'rejected',
+              action: 'reject',
+              actor_session_id: request.session_id,
+              resolution_reason: 'expired_ttl'
+            }
+          );
+          if (!expired) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: `unable_to_resolve_expired_confirmation:${request.confirmation_id}`
+            });
+          }
+
+          const expiredEvent = createOwnerConfirmationRejectedEvent(expired);
+          const expiredEventResult = await validateAndPersistEvent(store, expiredEvent);
+          if (!expiredEventResult.ok) {
+            return json(res, 500, {
+              error: expiredEventResult.type,
+              details: expiredEventResult.details
+            });
+          }
+
+          return json(res, 409, {
+            error: 'confirmation_expired',
+            confirmation: createConfirmationSummary(expired)
+          });
+        }
+
+        if (request.decision === 'approve') {
+          const moduleTaskCommand = createModuleTaskCommandFromConfirmation(existing, request.session_id);
+          const moduleTaskCommandValidation = orchestrationCommandValid(moduleTaskCommand);
+          if (!moduleTaskCommandValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: moduleTaskCommandValidation.errors
+            });
+          }
+
+          const moduleTaskPersistError = await persistCommandSafely(store, moduleTaskCommand);
+          if (moduleTaskPersistError) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(moduleTaskPersistError.message ?? moduleTaskPersistError)
+            });
+          }
+
+          const createdEvent = createModuleTaskCreatedEvent(moduleTaskCommand);
+          const createdEventResult = await validateAndPersistEvent(store, createdEvent);
+          if (!createdEventResult.ok) {
+            return json(res, 500, {
+              error: createdEventResult.type,
+              details: createdEventResult.details
+            });
+          }
+
+          try {
+            await store.enqueueModuleTask(moduleTaskCommand, {
+              simulateFailure: existing.task_plan_ref?.simulate_failure === true
+            });
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+
+          const resolved = await store.resolveTaskConfirmation(
+            request.tenant_id,
+            request.confirmation_id,
+            {
+              status: 'approved',
+              action: 'approve',
+              actor_session_id: request.session_id,
+              resolution_reason: request.resolution_reason ?? null,
+              module_task: {
+                task_id: moduleTaskCommand.payload.task_id,
+                target_module: moduleTaskCommand.target_module,
+                task_type: moduleTaskCommand.payload.task_type,
+                status: 'queued'
+              }
+            }
+          );
+          if (!resolved) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: `unable_to_resolve_confirmation:${request.confirmation_id}`
+            });
+          }
+
+          const approvedEvent = createOwnerConfirmationApprovedEvent(resolved, moduleTaskCommand);
+          const approvedEventResult = await validateAndPersistEvent(store, approvedEvent);
+          if (!approvedEventResult.ok) {
+            return json(res, 500, {
+              error: approvedEventResult.type,
+              details: approvedEventResult.details
+            });
+          }
+
+          const response = {
+            request_id: request.request_id,
+            status: 'accepted',
+            confirmation: createConfirmationSummary(resolved),
+            downstream_task: {
+              task_id: moduleTaskCommand.payload.task_id,
+              target_module: moduleTaskCommand.target_module,
+              task_type: moduleTaskCommand.payload.task_type,
+              status: 'queued'
+            }
+          };
+
+          const responseValidation = interactionConfirmationActionResponseValid(response);
+          if (!responseValidation.ok) {
+            return json(res, 500, {
+              error: 'contract_generation_error',
+              details: responseValidation.errors
+            });
+          }
+
+          return json(res, 200, { response });
+        }
+
+        const resolved = await store.resolveTaskConfirmation(
+          request.tenant_id,
+          request.confirmation_id,
+          {
+            status: 'rejected',
+            action: 'reject',
+            actor_session_id: request.session_id,
+            resolution_reason: request.resolution_reason ?? null
+          }
+        );
+        if (!resolved) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: `unable_to_resolve_confirmation:${request.confirmation_id}`
+          });
+        }
+
+        const rejectedEvent = createOwnerConfirmationRejectedEvent(resolved);
+        const rejectedEventResult = await validateAndPersistEvent(store, rejectedEvent);
+        if (!rejectedEventResult.ok) {
+          return json(res, 500, {
+            error: rejectedEventResult.type,
+            details: rejectedEventResult.details
+          });
+        }
+
+        const response = {
+          request_id: request.request_id,
+          status: 'accepted',
+          confirmation: createConfirmationSummary(resolved)
+        };
+        const responseValidation = interactionConfirmationActionResponseValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'contract_generation_error',
+            details: responseValidation.errors
+          });
+        }
         return json(res, 200, { response });
       }
 
@@ -3609,6 +5054,62 @@ export function createApp(options = {}) {
         });
       }
 
+      if (method === 'GET' && path === '/v1/whatsapp/evolution/qr') {
+        const queryTenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        let baseUrl = '';
+        let apiKey = '';
+        let instanceId = '';
+        if (queryTenantId) {
+          try {
+            const tenantConfig = await resolveTenantRuntimeConfig(queryTenantId);
+            const ce = tenantConfig?.integrations?.crm_evolution;
+            if (ce && typeof ce === 'object') {
+              baseUrl = String(ce.base_url ?? '').trim();
+              apiKey = String(ce.api_key ?? '').trim();
+              instanceId = String(ce.instance_id ?? 'fabio').trim() || 'fabio';
+            }
+          } catch (_) {}
+        }
+        if (!baseUrl || !apiKey || !instanceId) {
+          baseUrl = String(process.env.EVOLUTION_HTTP_BASE_URL ?? options.evolutionHttpBaseUrl ?? '').trim();
+          apiKey = String(process.env.EVOLUTION_API_KEY ?? options.evolutionApiKey ?? '').trim();
+          instanceId = String(process.env.EVOLUTION_INSTANCE_ID ?? options.evolutionInstanceId ?? 'fabio').trim() || 'fabio';
+        }
+        if (!baseUrl || !apiKey || !instanceId) {
+          return json(res, 503, {
+            error: 'evolution_not_configured',
+            message: 'Configure no menu 06 Configuracoes (Evolution Base URL, API Key, Instance ID) ou env: EVOLUTION_HTTP_BASE_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE_ID.'
+          });
+        }
+        const evolutionConnectUrl = `${baseUrl.replace(/\/$/, '')}/instance/connect/${encodeURIComponent(instanceId)}`;
+        try {
+          const evolutionRes = await fetch(evolutionConnectUrl, {
+            method: 'GET',
+            headers: { apikey: apiKey }
+          });
+          if (!evolutionRes.ok) {
+            const text = await evolutionRes.text();
+            return json(res, evolutionRes.status >= 500 ? 502 : evolutionRes.status, {
+              error: 'evolution_error',
+              status: evolutionRes.status,
+              details: text.slice(0, 500)
+            });
+          }
+          const data = await evolutionRes.json();
+          return json(res, 200, {
+            code: data.code ?? data.base64 ?? null,
+            pairingCode: data.pairingCode ?? null,
+            count: data.count ?? null,
+            instanceId
+          });
+        } catch (err) {
+          return json(res, 502, {
+            error: 'evolution_unreachable',
+            details: String(err?.message ?? err)
+          });
+        }
+      }
+
       return json(res, 404, { error: 'not_found' });
     } catch (error) {
       return json(res, 500, {
@@ -3626,5 +5127,7 @@ export function createApp(options = {}) {
   handler.crmAutomationStore = crmAutomationStore;
   handler.ownerMemoryStore = ownerMemoryStore;
   handler.ownerMemoryMaintenanceStore = ownerMemoryMaintenanceStore;
+  handler.tenantRuntimeConfigStore = tenantRuntimeConfigStore;
+  handler.ownerResponseProvider = ownerResponseProvider;
   return handler;
 }

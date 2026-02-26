@@ -40,7 +40,7 @@
           </div>
 
           <div class="topbar__right">
-            <label>API<input id="apiBase" value="http://127.0.0.1:4300" /></label>
+            <label>API<input id="apiBase" value="" placeholder="auto (/api ou 4300)" /></label>
             <label>Tenant<input id="tenantId" value="tenant_automania" /></label>
             <label>
               Layout
@@ -124,6 +124,19 @@
                 <button class="btn" type="submit">Criar Lead</button>
                 <p id="formStatus" class="status">Aguardando acao.</p>
               </form>
+            </section>
+
+            <section class="card whatsapp-qr-card">
+              <header class="card__header">
+                <h3>Conectar WhatsApp</h3>
+              </header>
+              <p class="whatsapp-qr-desc">Use a mesma Evolution API do Docker (instancia diferente do fabio2 para nao conflitar).</p>
+              <button id="whatsappQrBtn" class="btn" type="button">Gerar QR Code</button>
+              <div id="whatsappQrResult" class="whatsapp-qr-result" hidden>
+                <p class="whatsapp-qr-status" id="whatsappQrStatus"></p>
+                <div id="whatsappQrImageWrap" class="whatsapp-qr-image-wrap"></div>
+                <p id="whatsappPairingCode" class="whatsapp-pairing-code"></p>
+              </div>
             </section>
 
             <section class="card insights-card">

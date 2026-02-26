@@ -40,20 +40,11 @@ $payload = @{
   }
   enforce_admins = $true
   required_pull_request_reviews = @{
-    dismissal_restrictions = @{}
     dismiss_stale_reviews = $true
     require_code_owner_reviews = $false
     required_approving_review_count = $RequiredApprovals
-    require_last_push_approval = $false
   }
   restrictions = $null
-  required_linear_history = $true
-  allow_force_pushes = $false
-  allow_deletions = $false
-  block_creations = $false
-  required_conversation_resolution = $true
-  lock_branch = $false
-  allow_fork_syncing = $true
 }
 
 $target = "repos/$Owner/$Repo/branches/$Branch/protection"
@@ -71,7 +62,7 @@ if (-not $Apply) {
 
 $tmp = [System.IO.Path]::GetTempFileName()
 try {
-  Set-Content -Path $tmp -Value $json -Encoding utf8
+  Set-Content -Path $tmp -Value $json -Encoding ascii
 
   & gh api `
     --method PUT `
@@ -92,12 +83,11 @@ try {
 
   $contexts = @($current.required_status_checks.contexts)
   $approvals = $current.required_pull_request_reviews.required_approving_review_count
-  Write-Host ("Applied: strict={0} contexts={1} approvals={2} enforce_admins={3} linear_history={4}" -f `
+  Write-Host ("Applied: strict={0} contexts={1} approvals={2} enforce_admins={3}" -f `
     $current.required_status_checks.strict, `
     ($contexts -join ','), `
     $approvals, `
-    $current.enforce_admins.enabled, `
-    $current.required_linear_history.enabled)
+    $current.enforce_admins.enabled)
 } finally {
   Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue
 }

@@ -73,6 +73,10 @@
           "additionalProperties": false,
           "properties": {
             "text": { "type": "string" },
+            "provider": { "type": "string", "enum": ["openai", "local", "none"] },
+            "model": { "type": ["string", "null"] },
+            "latency_ms": { "type": "integer", "minimum": 0 },
+            "fallback_reason": { "type": "string", "minLength": 1 },
             "attachments": {
               "type": "array",
               "items": {
@@ -87,7 +91,58 @@
               }
             }
           },
-          "required": ["text"]
+          "required": ["text", "provider", "model", "latency_ms"]
+        },
+        "policy_decision": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "route_rule_id": { "type": ["string", "null"] },
+            "policy_rule_id": { "type": ["string", "null"] },
+            "execution_decision": {
+              "type": "string",
+              "enum": ["allow", "deny", "confirm_required", "none"]
+            },
+            "requires_confirmation": { "type": "boolean" },
+            "reason_code": { "type": ["string", "null"] }
+          },
+          "required": [
+            "route_rule_id",
+            "policy_rule_id",
+            "execution_decision",
+            "requires_confirmation",
+            "reason_code"
+          ]
+        },
+        "confirmation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "confirmation_id": { "type": "string", "format": "uuid" },
+            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+            "task_type": { "type": "string", "minLength": 3 },
+            "target_module": {
+              "type": "string",
+              "enum": [
+                "mod-02-whatsapp-crm",
+                "mod-03-clientes",
+                "mod-04-agenda",
+                "mod-05-faturamento-cobranca"
+              ]
+            },
+            "reason_code": { "type": ["string", "null"] },
+            "created_at": { "type": "string", "format": "date-time" },
+            "resolved_at": { "type": ["string", "null"] }
+          },
+          "required": [
+            "confirmation_id",
+            "status",
+            "task_type",
+            "target_module",
+            "reason_code",
+            "created_at",
+            "resolved_at"
+          ]
         },
         "downstream_tasks": {
           "type": "array",
@@ -105,9 +160,10 @@
                   "mod-05-faturamento-cobranca"
                 ]
               },
-              "task_type": { "type": "string", "minLength": 3 }
+              "task_type": { "type": "string", "minLength": 3 },
+              "status": { "type": "string", "enum": ["queued", "accepted", "completed", "failed"] }
             },
-            "required": ["task_id", "target_module", "task_type"]
+            "required": ["task_id", "target_module", "task_type", "status"]
           }
         },
         "errors": {
@@ -140,6 +196,9 @@
       },
       "then": {
         "properties": {
+          "response": {
+            "required": ["policy_decision"]
+          },
           "request": {
             "properties": {
               "payload": {
@@ -156,7 +215,9 @@
                         "type": { "type": "string", "enum": ["audio", "image", "file"] },
                         "uri": { "type": "string", "minLength": 1 },
                         "mime_type": { "type": "string", "minLength": 3 },
-                        "filename": { "type": "string", "minLength": 1 }
+                        "filename": { "type": "string", "minLength": 1 },
+                        "data_base64": { "type": "string", "minLength": 1, "maxLength": 8000000 },
+                        "text_excerpt": { "type": "string", "minLength": 1, "maxLength": 20000 }
                       },
                       "required": ["type", "uri"]
                     }

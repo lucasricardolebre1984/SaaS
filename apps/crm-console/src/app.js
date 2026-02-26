@@ -1,5 +1,7 @@
 const VALID_LAYOUTS = ['fabio2', 'studio'];
 const VALID_PALETTES = ['ocean', 'forest', 'sunset'];
+const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
+const API_BASE_STORAGE_KEY = 'crm_console_api_base_v1';
 
 // Editar este mapa para definir tema padrao por cliente/tenant.
 const TENANT_THEME_PRESETS = {
@@ -31,6 +33,7 @@ const kpis = {
   won: document.getElementById('kpi-won'),
   lost: document.getElementById('kpi-lost')
 };
+let embeddedMode = false;
 
 function normalizeLayout(layout) {
   return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
@@ -68,12 +71,86 @@ function restoreVisualMode() {
   });
 }
 
+function isUnifiedUiRuntime() {
+  const pathname = window.location.pathname || '/';
+  return pathname.startsWith('/owner') || pathname.startsWith('/crm');
+}
+
+function deriveDefaultApiBase() {
+  if (isUnifiedUiRuntime()) {
+    return `${window.location.origin}/api`;
+  }
+  return LEGACY_DEFAULT_API_BASE;
+}
+
+function normalizeApiBase(value) {
+  const raw = String(value ?? '').trim();
+  if (raw.length === 0) {
+    return deriveDefaultApiBase();
+  }
+  return raw.replace(/\/+$/, '');
+}
+
+function loadApiBasePreference() {
+  try {
+    const stored = localStorage.getItem(API_BASE_STORAGE_KEY);
+    const normalized = normalizeApiBase(stored);
+    if (isUnifiedUiRuntime() && normalized === LEGACY_DEFAULT_API_BASE) {
+      return deriveDefaultApiBase();
+    }
+    return normalized;
+  } catch {
+    return deriveDefaultApiBase();
+  }
+}
+
+function persistApiBasePreference(value) {
+  try {
+    localStorage.setItem(API_BASE_STORAGE_KEY, normalizeApiBase(value));
+  } catch {
+    // no-op
+  }
+}
+
 function apiBase() {
-  return apiBaseInput.value.replace(/\/+$/, '');
+  return normalizeApiBase(apiBaseInput.value);
 }
 
 function tenantId() {
   return tenantIdInput.value.trim();
+}
+
+function applyBootstrapFromQuery() {
+  const params = new URLSearchParams(window.location.search || '');
+  const tenant = params.get('tenant');
+  const api = params.get('api');
+  const layout = params.get('layout');
+  const palette = params.get('palette');
+  const embedded = params.get('embedded');
+
+  embeddedMode = embedded === '1' || embedded === 'true';
+  if (embeddedMode) {
+    rootEl.dataset.embedded = '1';
+    bodyEl.classList.add('embedded-mode');
+  } else {
+    delete rootEl.dataset.embedded;
+    bodyEl.classList.remove('embedded-mode');
+  }
+
+  if (tenant && tenant.trim().length > 0) {
+    tenantIdInput.value = tenant.trim();
+  }
+  if (api && api.trim().length > 0) {
+    apiBaseInput.value = normalizeApiBase(api);
+    persistApiBasePreference(apiBaseInput.value);
+  }
+  if (layout || palette) {
+    applyVisualMode({
+      layout: layout ?? layoutSelect.value,
+      palette: palette ?? paletteSelect.value,
+      persist: true
+    });
+  }
 }
 
 function safeText(value) {
@@ -211,6 +288,67 @@ tenantIdInput.addEventListener('blur', () => {
 
 reloadBtn.addEventListener('click', loadLeads);
 leadForm.addEventListener('submit', createLead);
+apiBaseInput.addEventListener('change', () => {
+  apiBaseInput.value = normalizeApiBase(apiBaseInput.value);
+  persistApiBasePreference(apiBaseInput.value);
+});
+apiBaseInput.addEventListener('blur', () => {
+  apiBaseInput.value = normalizeApiBase(apiBaseInput.value);
+  persistApiBasePreference(apiBaseInput.value);
+});
+
+async function loadWhatsAppQr() {
+  const resultEl = document.getElementById('whatsappQrResult');
+  const statusEl = document.getElementById('whatsappQrStatus');
+  const imageWrap = document.getElementById('whatsappQrImageWrap');
+  const pairingEl = document.getElementById('whatsappPairingCode');
+  const btn = document.getElementById('whatsappQrBtn');
+  if (!resultEl || !statusEl || !imageWrap || !pairingEl || !btn) return;
+  resultEl.hidden = false;
+  statusEl.textContent = 'Buscando QR na Evolution API...';
+  imageWrap.innerHTML = '';
+  pairingEl.textContent = '';
+  btn.disabled = true;
+  try {
+    const tid = tenantId();
+    const url = tid
+      ? `${apiBase()}/v1/whatsapp/evolution/qr?tenant_id=${encodeURIComponent(tid)}`
+      : `${apiBase()}/v1/whatsapp/evolution/qr`;
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      statusEl.textContent = data.message || data.error || `Erro ${res.status}`;
+      if (data.error === 'evolution_not_configured') {
+        pairingEl.textContent = 'Configure no backend: EVOLUTION_HTTP_BASE_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE_ID (ex: fabio para nao conflitar com fabio2).';
+      }
+      return;
+    }
+    statusEl.textContent = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
+    const code = data.code ?? data.base64 ?? '';
+    if (code && (code.startsWith('data:') || code.length > 100)) {
+      const src = code.startsWith('data:') ? code : `data:image/png;base64,${code}`;
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = 'QR Code WhatsApp';
+      img.className = 'whatsapp-qr-img';
+      imageWrap.appendChild(img);
+    }
+    if (data.pairingCode) {
+      pairingEl.textContent = `Codigo de vinculacao: ${data.pairingCode}`;
+    }
+  } catch (e) {
+    statusEl.textContent = `Erro: ${e.message || 'rede'}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+const whatsappQrBtn = document.getElementById('whatsappQrBtn');
+if (whatsappQrBtn) {
+  whatsappQrBtn.addEventListener('click', loadWhatsAppQr);
+}
 
 restoreVisualMode();
+apiBaseInput.value = loadApiBasePreference();
+applyBootstrapFromQuery();
 loadLeads();

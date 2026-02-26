@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "default_decision": {
+    "decision": "allow",
+    "requires_confirmation": false,
+    "reason_code": "default_allow"
+  },
+  "rules": [
+    {
+      "rule_id": "deny_customer_delete",
+      "task_type": "customer.delete.request",
+      "target_module": "mod-03-clientes",
+      "decision": "deny",
+      "requires_confirmation": false,
+      "reason_code": "sensitive_customer_delete"
+    },
+    {
+      "rule_id": "confirm_billing_writeoff",
+      "task_type": "billing.writeoff.request",
+      "target_module": "mod-05-faturamento-cobranca",
+      "decision": "confirm_required",
+      "requires_confirmation": true,
+      "reason_code": "financial_writeoff"
+    },
+    {
+      "rule_id": "confirm_campaign_blast",
+      "task_type": "crm.campaign.send",
+      "target_module": "mod-02-whatsapp-crm",
+      "decision": "confirm_required",
+      "requires_confirmation": true,
+      "reason_code": "mass_message_review"
+    }
+  ]
+}

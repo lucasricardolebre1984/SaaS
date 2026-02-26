@@ -1,14 +1,27 @@
 # STATE
 
-Last update: 2026-02-25
-Active phase: Implement (blocked on external dependency)
-Active feature: milestone-3-branch-protection-slice (blocked)
+Last update: 2026-02-26
+Active phase: Implement checkpoint closed (milestone-5-aws-production-bootstrap-slice)
+Active feature: milestone-5-aws-production-bootstrap-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
 2. Keep fabio2 production flow stable while fabio matures.
 3. Work in phased specs to avoid scope pollution.
 4. Track both engineering and financial metrics from the start.
+5. Canonical product model is dual-concierge:
+   - Persona 1 = owner orchestrator with full module awareness.
+   - Persona 2 = WhatsApp CRM specialist for lead/customer execution.
+6. Continuous learning target is mandatory with tiered memory:
+   - short session memory
+   - medium episodic memory
+   - long promoted memory
+   with strict tenant/session/channel isolation and auditable trace.
+7. SaaS matrix deployment baseline moves to AWS dev:
+   - single deploy multi-tenant (`tenant_id` per client),
+   - postgres as production persistence backend,
+   - Evolution provider server-side (not local desktop dependency),
+   - domain bootstrap via `dev.automaniaai.com`.
 
 ## Anti-pollution Protocol
 - FOCO: continue current phase only.
@@ -319,18 +332,253 @@ Active feature: milestone-3-branch-protection-slice (blocked)
   - runtime CI workflow now executes `npm run preprod:validate` as unified gate
   - CI uploads `tools/reports/preprod-validate-*.log` as artifact (`if: always()`)
   - local dry run validated with `-SkipSmokePostgres` before CI push
+  - npm scripts switched from `powershell` to `pwsh` for Linux runner compatibility
 - Opened `milestone-3-branch-protection-slice`:
   - branch protection automation script published (`tools/enforce-branch-protection.ps1`)
-  - apply attempt blocked by GitHub plan constraint on private repo:
-    - `HTTP 403: Upgrade to GitHub Pro or make this repository public`
-  - blocker documented in `.specs/project/GITHUB-BRANCH-PROTECTION.md`
+  - first apply attempt failed with payload parse error (`HTTP 400`) and script was corrected (ascii payload encoding + compatible fields)
+  - branch protection applied successfully on `main` after repository became public
+  - verification readback captured via `gh api` and documented in `.specs/project/GITHUB-BRANCH-PROTECTION.md`
 - Project-only skills policy enforced for Codex (`C:\Users\Lucas\.codex\skills`):
   - retained: `.system`, `project-context-loader`, `saas-standard-architect`, `contract-first-migrator`, `metrics-discipline`
   - removed external skill set archive to avoid cross-repo context drift
 - `AGENTS.md` updated with mandatory daily commands (`init:day`, `resume:day`, `end:day`) and current active milestone priority.
+- Opened and completed `milestone-3-release-rollback-drill-slice`:
+  - published release command `npm run release:dry-run` (`tools/release-dry-run.ps1`)
+  - published rollback drill command `npm run rollback:drill` (`tools/rollback-drill.ps1`)
+  - integrated operational drill gates in `preprod:validate` with recursion-safe flags
+  - validated commands:
+    - `npm run release:dry-run -- -SkipPreprodValidate -SkipBranchProtectionCheck`
+    - `npm run rollback:drill -- -SkipPostgresSmoke`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+- `tools/start-day.ps1` now sanitizes active feature names with trailing status suffix (example: ` (completed)`), preventing false missing-doc loads.
+- Opened and completed `milestone-3-owner-modules-ui-slice`:
+  - owner console modules 03/04/05 now have real UI views with forms, list panels, and inline operation status
+  - module 03 wired to `/v1/customers` (`create`, `list`, and detail load from list)
+  - module 04 wired to `/v1/agenda/appointments` and `/v1/agenda/reminders` (`create`, `update`, `list`)
+  - module 05 wired to `/v1/billing/charges`, `/v1/billing/collection-requests`, and `/v1/billing/payments`
+  - preprod gate revalidated (`npm run preprod:validate -- -SkipSmokePostgres`) with pass report at `tools/reports/preprod-validate-20260225-030003.log`
+- Opened and completed `milestone-3-exit-go-no-go-slice`:
+  - published final readiness artifact `.specs/project/MILESTONE-3-EXIT-CHECKLIST.md` with explicit `GO` decision
+  - roadmap/state aligned to mark Milestone 3 as completed
+  - gates revalidated with fresh reports:
+    - `tools/reports/preprod-validate-20260225-042844.log`
+    - `tools/reports/release-dry-run-20260225-042900.log`
+    - `tools/reports/rollback-drill-20260225-042902.log`
+  - metrics checkpoint closed with `M3X` entries in `worklog.csv` and `costlog.csv`
+- Opened `milestone-4-mod-01-owner-ai-runtime-slice` in Specify phase:
+  - draft docs created (`spec.md`, `design.md`, `tasks.md`)
+  - focus defined: replace owner runtime stub response with real AI provider flow in contract-first mode
+  - implementation blocked until spec/design/tasks approval
+- Opened and completed `milestone-4-mod-01-owner-ai-runtime-slice`:
+  - module 01 interaction now uses real owner response provider (`auto/openai/local/off`)
+  - strict `openai` mode returns deterministic provider error when key/provider is unavailable
+  - contract updated for enriched `assistant_output` (`provider`, `model`, `latency_ms`, `fallback_reason`)
+  - response contract validation added in runtime before returning interaction payload
+  - runtime gates validated:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-044503.log`
+    - `tools/reports/release-dry-run-20260225-044522.log`
+    - `tools/reports/rollback-drill-20260225-044523.log`
+- Opened `milestone-4-mod-01-tool-execution-policy-slice` in Specify phase:
+  - draft docs created (`spec.md`, `design.md`, `tasks.md`)
+  - focus defined: policy enforcement for module task dispatch (`allow|deny|confirm_required`) in mod-01
+  - implementation blocked until spec/design/tasks approval
+- Opened and completed `milestone-4-mod-01-tool-execution-policy-slice`:
+  - task planner now enforces execution policy (`allow|deny|confirm_required`) before creating `module.task.create`
+  - execution policy config published: `apps/platform-api/config/owner-tool-execution-policy.json`
+  - interaction response now includes `policy_decision` metadata with route/policy rule ids and reason code
+  - deny/confirm-required paths keep `owner.command.create` audit trail without enqueuing downstream task
+  - runtime gates validated:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-045720.log`
+    - `tools/reports/release-dry-run-20260225-045739.log`
+    - `tools/reports/rollback-drill-20260225-045741.log`
+- Opened and completed `milestone-4-mod-01-confirmation-workflow-slice`:
+  - `confirm_required` now persists pending task confirmation with explicit `confirmation_id` and policy metadata.
+  - new endpoint implemented:
+    - `POST /v1/owner-concierge/interaction-confirmations`
+    - supports `approve|reject` decision with state guard (`pending` only)
+  - approval path now creates/enqueues `module.task.create` preserving original `correlation_id`/`trace_id`.
+  - new confirmation lifecycle events emitted:
+    - `owner.confirmation.requested`
+    - `owner.confirmation.approved`
+    - `owner.confirmation.rejected`
+  - orchestration persistence parity updated (`file` + `postgres`) for confirmations.
+  - runtime and contract gates validated:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-051326.log`
+    - `tools/reports/release-dry-run-20260225-051356.log`
+    - `tools/reports/rollback-drill-20260225-051358.log`
+- Opened and completed `milestone-4-mod-01-confirmation-queue-safeguards-slice`:
+  - safeguards added for owner confirmation queue:
+    - `max_pending_per_tenant` (runtime-configurable, tenant-scoped enforcement)
+    - `ttl_seconds` (expired pending confirmation blocked on resolution path)
+  - new queue listing endpoint:
+    - `GET /v1/owner-concierge/interaction-confirmations`
+    - filters: `tenant_id`, optional `status`, optional `limit`
+  - orchestration store parity updated with confirmation query primitives:
+    - `countPendingTaskConfirmations`
+    - `listTaskConfirmations`
+  - runtime and contract gates validated:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-052500.log`
+    - `tools/reports/release-dry-run-20260225-052522.log`
+    - `tools/reports/rollback-drill-20260225-052523.log`
+- Opened and completed `milestone-4-owner-console-approval-queue-ui-slice`:
+  - module 01 owner console now includes operational approvals queue panel inside chat workspace.
+  - queue UI supports:
+    - status filter (`pending|approved|rejected|all`)
+    - limit control
+    - row actions `approve` and `reject`
+  - queue UI integrated with runtime endpoints:
+    - `GET /v1/owner-concierge/interaction-confirmations`
+    - `POST /v1/owner-concierge/interaction-confirmations`
+  - interaction flow now auto-refreshes queue when response returns pending confirmation.
+  - runtime and preprod gates validated:
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-platform-api:test`
+    - `npm run preprod:validate -- -SkipSmokePostgres`
+  - latest reports:
+    - `tools/reports/preprod-validate-20260225-053613.log`
+    - `tools/reports/release-dry-run-20260225-053632.log`
+    - `tools/reports/rollback-drill-20260225-053634.log`
+- Applied operational hotfix `ops-unified-runtime-hotfix`:
+  - API runtime now serves unified SaaS on single endpoint `4001` with:
+    - Owner console at `/owner/`
+    - CRM console at `/crm/`
+    - API at `/api/*` (plus direct `/v1/*` compatibility)
+  - CORS/preflight standardized for runtime requests (`OPTIONS 204`, allow origin/methods/headers).
+  - Owner/CRM consoles now auto-resolve API base for unified mode and migrate legacy local default `http://127.0.0.1:4300` to `window.origin/api` when applicable.
+  - local validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`
+    - smoke check (`/health`, `/api/health`, `/owner/`, `/crm/`, CORS preflight) passed with `200/204`.
+- Opened and completed `milestone-4-runtime-config-coupling-slice`:
+  - module 06 settings now sync tenant runtime config into backend via:
+    - `POST /v1/owner-concierge/runtime-config`
+    - `GET /v1/owner-concierge/runtime-config`
+  - owner interaction now applies tenant runtime config for:
+    - OpenAI provider selection (`openai` when tenant key is configured)
+    - persona fallback (tenant prompts when request has no explicit overrides)
+    - execution override (`confirm_required` converted to `allow` when tenant disables confirmations)
+  - owner console now reports backend sync status instead of local-only note.
+  - module 02 (CRM WhatsApp) in Owner Console no longer uses placeholder:
+    - embedded CRM view enabled in module workspace
+    - owner runtime settings (tenant/api/layout/palette) sync to embedded CRM via URL bootstrap params
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`
+- Applied hotfix `ops-embedded-crm-openai-fallback-hotfix`:
+  - CRM embedded mode now hides duplicated internal sidebar/menu when rendered inside Owner module 02.
+  - Owner response provider now tries OpenAI `/responses` first and falls back to `/chat/completions`.
+  - Tenant runtime OpenAI config now runs in `auto` mode (prefer OpenAI with graceful fallback), reducing hard API failures in chat flow.
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`
+- Opened and completed `milestone-4-mod-01-openai-strict-provider-slice`:
+  - tenant runtime with `openai.api_key` now enforces strict mode (`openai`) in owner interaction path (no silent local fallback).
+  - owner interaction failures from provider now surface explicitly as `owner_response_provider_error`.
+  - owner console topbar now includes provider telemetry pill:
+    - `provider: openai|local|none|error`
+    - includes model context when available
+  - owner chat trace now logs provider metadata in interaction lines.
+  - tenant runtime config store default now uses app storage root when explicit storage path is not provided, preventing global cross-session/test contamination.
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+- Opened and completed `milestone-4-mod-01-chat-clean-voice-continuous-slice`:
+  - new owner endpoint for direct transcription:
+    - `POST /v1/owner-concierge/audio/transcribe`
+  - owner audio button now runs direct flow:
+    - microphone capture -> OpenAI transcription -> auto-send to interaction
+  - chat view now omits internal status/task/provider noise in message bubbles (clean operator stream).
+  - approvals queue now stays hidden unless there are pending items.
+  - continuous mode now activates avatar-first layout with enlarged immersive stage.
+  - default OpenAI model baseline adjusted to `gpt-5.1` for owner/runtime config defaults.
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+- Opened and completed `milestone-4-mod-01-layout-voice-polish-slice`:
+  - module 01 layout optimized:
+    - reduced right panel width in standard mode
+    - composer fixed to bottom with compact side action buttons
+    - dead lower white strip removed via flex panel structure
+  - continuous mode voice loop now uses browser SpeechRecognition with auto-restart while active.
+  - continuous avatar stage reframed to landscape immersive mode to avoid oversized/cropped giant brain behavior.
+  - assistant bubble output now normalizes protocol noise (`[accepted]`, `tasks`, `provider`) before render.
+  - validation evidence:
+    - `npx nx run app-owner-console:build`
+- Opened and completed `milestone-4-mod-01-avatar-fullscreen-slice`:
+  - approved media `AvatarSaaS.mov` converted and integrated:
+    - `avatar-fullscreen.webm`
+    - `avatar-fullscreen.mp4`
+  - continuous mode UX changed to fullscreen immersive stage:
+    - hides sidebar/topbar/chat chrome
+    - shows only transparent `Voltar` action
+  - runtime source fallback added in owner console (`webm` -> `mp4`) for browser compatibility.
+  - validation evidence:
+    - `node --check apps/owner-console/src/app.js`
+    - `npx nx run app-owner-console:build`
+- Opened and completed `milestone-4-mod-01-avatar-attachments-hotfix-slice`:
+  - fixed black avatar playback by forcing compatibility-first MP4 source and runtime fallback replay hooks.
+  - fixed owner attachment path to allow real image/file analysis:
+    - owner console now sends inline `data_base64` and bounded `text_excerpt` for supported files
+    - runtime now forwards `attachments` to owner response provider
+    - OpenAI payload now includes multimodal image input and file context text
+  - added regression coverage for attachment forwarding in strict OpenAI mode.
+  - validation evidence:
+    - `node --check apps/owner-console/src/app.js`
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+- Opened and completed `milestone-4-mod-01-continuous-voice-output-slice`:
+  - new tenant-aware endpoint:
+    - `POST /v1/owner-concierge/audio/speech`
+  - continuous mode now plays assistant responses with OpenAI TTS (female default voice profile) and pauses/restarts recognition around playback.
+  - strict tenant checks applied for speech path (`openai_not_configured`, `voice_disabled_by_tenant`).
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+- Slice `milestone-4-episode-recall-slice` implemented and validated:
+  - episode_context from episodeStore.listEpisodes(tenant_id, { session_id, limit: 5 }) in send_message path; payload.episode_context passed to generateAssistantOutput.
+  - owner-response-provider injects episode_context into instructions (Responses API) and system message (Chat Completions) when non-empty.
+  - validation: `npx nx run app-platform-api:test` (51 tests pass).
+- Slice `milestone-4-long-memory-promotion-slice` implemented:
+  - after episodeStore.appendEpisode, promote to long memory: resolveMemoryEmbedding + ownerMemoryStore.createEntry (source episode_promotion, external_key); emit memory.promoted.from_episode on success; best-effort (embedding/create failure does not break flow).
+  - PROXIMO-PASSO updated: memoria, contexto e aprendizado fechados no produto.
 
 ## Next Checkpoint
-Resolve GitHub plan/repository visibility blocker and rerun `npm run github:protect-main`.
+- Slice `milestone-4-long-memory-promotion-slice` implementado: promocao episodio -> memoria longa (createEntry source episode_promotion, evento memory.promoted.from_episode); PROXIMO-PASSO atualizado: memoria, contexto e aprendizado fechados no produto.
+- **Produto:** memoria/contexto/aprendizado fechados (ver `.specs/project/PROXIMO-PASSO.md`). Nenhum passo pendente neste eixo.
+- Opened `milestone-5-aws-production-bootstrap-slice`:
+  - published spec/design/tasks for AWS dev bootstrap, deploy gate, and runbook
+  - added readiness command `npm run deploy:aws:readiness`
+  - published env baseline `.env.aws.example`
+  - published deploy runbook `apps/platform-api/RUNBOOK-aws-deploy-dev.md`
+- Validation evidence for milestone-5 bootstrap:
+  - `npm run deploy:aws:readiness -- -SkipDnsResolve` failed only on local Docker unavailability (`smoke-postgres`).
+  - `npm run deploy:aws:readiness -- -SkipDnsResolve -SkipSmokePostgres` passed.
+  - reports:
+    - `tools/reports/preprod-validate-20260226-133549.log`
+    - `tools/reports/deploy-aws-readiness-20260226-133548.log`
+    - `tools/reports/preprod-validate-20260226-133653.log`
+    - `tools/reports/deploy-aws-readiness-20260226-133653.log`
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
@@ -348,3 +596,7 @@ Resolve GitHub plan/repository visibility blocker and rerun `npm run github:prot
 - Persona remains optional/configurable and tenant-specific.
 
 - agent-skills-cli-mvp MVP completed (skills + trigger matrix + runbook + installer test).
+- Checkpoint M5 commit: 57558f4 (branch feat/m5-aws-production-bootstrap).
+- PR aberto: https://github.com/lucasricardolebre1984/fabio/pull/3
+- CI check Preprod Validate bloqueado por billing account lock no GitHub Actions (run 22451808265).
+- Deploy readiness DNS check failed on 2026-02-26: dev.automaniaai.com not resolved yet (report deploy-aws-readiness-20260226-134747.log).

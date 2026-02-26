@@ -47,6 +47,24 @@ CREATE TABLE IF NOT EXISTS public.orchestration_module_task_queue (
 CREATE INDEX IF NOT EXISTS orchestration_module_task_queue_status_idx
   ON public.orchestration_module_task_queue (status, enqueued_at);
 
+CREATE TABLE IF NOT EXISTS public.orchestration_task_confirmations (
+  confirmation_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  reason_code TEXT NULL,
+  owner_command_ref_json JSONB NOT NULL,
+  task_plan_ref_json JSONB NOT NULL,
+  request_snapshot_json JSONB NOT NULL,
+  resolution_json JSONB NULL,
+  module_task_json JSONB NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  resolved_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS orchestration_task_confirmations_tenant_status_idx
+  ON public.orchestration_task_confirmations (tenant_id, status, created_at);
+
 CREATE TABLE IF NOT EXISTS public.customers (
   customer_id UUID PRIMARY KEY,
   tenant_id TEXT NOT NULL,

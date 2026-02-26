@@ -96,3 +96,65 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3C-001 runtime-ci integration with preprod gate
 2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3B-001 branch protection automation implementation
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3B-002..003 branch protection blocked by GitHub plan documented
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3B-002 branch protection apply and verification
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3B-003 branch protection completion governance updates
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3C-001-fix CI shell compatibility fix for preprod gate
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3R-001..003 release dry-run rollback-drill and preprod operational gate integration
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3R-004 governance updates plus start-day parser hardening
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3U-001..004 owner console modules 03 04 05 real UI and endpoint wiring
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3U-005 build preprod gate pass and governance checkpoint closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M3X-001..002 milestone 3 exit checklist publication and roadmap state alignment
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M3X-003 milestone 3 exit slice metrics closure and consistency audit
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4O-SPEC-OPEN milestone 4 mod-01 owner ai runtime slice kickoff and governance alignment
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4O-001..003 owner response runtime provider integration with strict openai fallback local modes and response contract metadata
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4O-004 milestone 4 owner ai runtime slice gates and governance closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4P-SPEC-OPEN milestone 4 mod-01 tool execution policy slice kickoff and active-feature transition
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4P-001..003 mod-01 task execution policy enforcement allow deny confirm_required and response policy_decision metadata
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4P-004 mod-01 tool execution policy slice gate validation and governance closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4C-SPEC-OPEN milestone 4 mod-01 confirmation workflow slice kickoff and scope approval
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4C-001..003 explicit confirmation workflow endpoint plus file postgres persistence parity confirmation lifecycle events and tests
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4C-004 milestone 4 confirmation workflow gate validation and governance artifact updates
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4Q-SPEC-OPEN milestone 4 confirmation queue safeguards slice kickoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4Q-001..003 tenant queue limit ttl expiration and confirmation list endpoint with store parity and tests
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4Q-004 milestone 4 confirmation queue safeguards gate and governance closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4UQ-SPEC-OPEN owner console approvals queue ui slice kickoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4UQ-001..002 module 01 approvals queue UI list filter action wiring and auto-refresh behavior
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4UQ-003 owner console approvals queue slice validation and governance closure
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,OPS-HOTFIX-4001-CORS unified runtime endpoint on 4001 with /api mapping CORS preflight and owner crm API base auto migration
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4RC-001..004 runtime config backend coupling for module 06 with tenant OpenAI apply persona fallback and execution policy override
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4RC-004..005 module 02 embedded crm coupling in owner workspace with tenant runtime bootstrap sync
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,OPS-HOTFIX-EMBED-API embedded crm no-duplicate-menu mode and openai endpoint fallback hardening
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4OS-SPEC-OPEN milestone 4 strict openai provider observability slice kickoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4OS-001..002 strict tenant openai mode with explicit provider errors and owner ui provider badge telemetry
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4OS-003 runtime gates validated and governance artifacts updated for strict provider slice
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4CV-SPEC-OPEN milestone 4 chat cleanup voice continuous slice kickoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4CV-001..003 direct owner transcription endpoint plus clean chat UX and continuous avatar-first mode
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4CV-004 gate validation and governance updates for chat clean voice continuous slice
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4LP-SPEC-OPEN milestone 4 module 01 layout and continuous voice polish slice kickoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4LP-001..003 module 01 viewport optimization compact composer plus browser continuous speech loop and assistant output cleanup
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4LP-004 owner console build validation and governance artifact closure for layout voice polish slice
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4AF-SPEC-OPEN milestone 4 avatar fullscreen slice kickoff using approved AvatarSaaS media
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4AF-001..003 avatar media conversion webm mp4 and fullscreen continuous mode with transparent voltar action and runtime fallback
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4AF-004 app-owner-console build validation and governance closure for avatar fullscreen slice
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4AH-SPEC-OPEN milestone 4 avatar and attachment hotfix slice kickoff for black-screen and non-readable attachment regressions
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4AH-001..002 avatar playback fallback hardening and inline attachment forwarding to OpenAI multimodal provider path
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4AH-003 owner build api tests and contract-checks validation with governance closure for hotfix slice
+2026-02-25,internal,engineering-time,local,0.00,0.00,specification,M4VO-SPEC-OPEN milestone 4 continuous voice output slice kickoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,implementation,M4VO-001..003 tenant OpenAI speech endpoint plus continuous assistant voice playback and recognition handoff
+2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4VO-004 validation and governance closure for continuous voice output slice
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,CTX-ROOT-001 root context lock for canonical dual-concierge and continuous memory model before next spec
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,CTX-ROOT-002 explicit next natural step and gate registration before commit push
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4D-008..012 dual-concierge memory orchestrator slice short memory episode recall delegation retrieval
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M4DC-CLOSE slice checkpoint closure STATE ROADMAP AGENTS metrics
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4D-009c owner-episode-store medium store persist on episode event
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4E-001a..d episode-recall slice episode_context in payload and provider
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M4E-CLOSE episode-recall slice checkpoint STATE AGENTS ROADMAP worklog
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4L-001a..b long-memory-promotion slice event and episode-to-long promotion
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M4L-CLOSE PROXIMO-PASSO memoria contexto aprendizado fechados
+2026-02-26,internal,engineering-time,local,0.00,0.00,specification,M5A-001 aws deployment axis context lock and feature publication
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M5A-002 deploy aws readiness gate script and package integration
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M5A-003 aws dev runbook and env baseline documentation
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-004 gate execution evidence and governance closure for milestone 5 bootstrap
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-004b PR creation and CI lock audit evidence
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-DEPLOY-001 DNS readiness check and blocker registration
+2026-02-26,internal,engineering-time,local,0.00,0.00,research,M5A-RESEARCH-001 official-source AWS Ubuntu deploy baseline with checklist and reference links

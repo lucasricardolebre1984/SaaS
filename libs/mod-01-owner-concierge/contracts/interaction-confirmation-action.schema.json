@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-01/interaction-confirmation-action.schema.json",
+  "title": "Module 01 Interaction Confirmation Action API",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "session_id": { "type": "string", "format": "uuid" },
+        "confirmation_id": { "type": "string", "format": "uuid" },
+        "decision": { "type": "string", "enum": ["approve", "reject"] },
+        "resolution_reason": { "type": "string", "minLength": 1 }
+      },
+      "required": [
+        "request_id",
+        "tenant_id",
+        "session_id",
+        "confirmation_id",
+        "decision"
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "status": { "type": "string", "enum": ["accepted"] },
+        "confirmation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "confirmation_id": { "type": "string", "format": "uuid" },
+            "status": { "type": "string", "enum": ["approved", "rejected"] },
+            "task_type": { "type": "string", "minLength": 3 },
+            "target_module": {
+              "type": "string",
+              "enum": [
+                "mod-02-whatsapp-crm",
+                "mod-03-clientes",
+                "mod-04-agenda",
+                "mod-05-faturamento-cobranca"
+              ]
+            },
+            "reason_code": { "type": ["string", "null"] },
+            "created_at": { "type": "string", "format": "date-time" },
+            "resolved_at": { "type": "string", "format": "date-time" }
+          },
+          "required": [
+            "confirmation_id",
+            "status",
+            "task_type",
+            "target_module",
+            "reason_code",
+            "created_at",
+            "resolved_at"
+          ]
+        },
+        "downstream_task": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "task_id": { "type": "string", "format": "uuid" },
+            "target_module": {
+              "type": "string",
+              "enum": [
+                "mod-02-whatsapp-crm",
+                "mod-03-clientes",
+                "mod-04-agenda",
+                "mod-05-faturamento-cobranca"
+              ]
+            },
+            "task_type": { "type": "string", "minLength": 3 },
+            "status": { "type": "string", "enum": ["queued"] }
+          },
+          "required": ["task_id", "target_module", "task_type", "status"]
+        }
+      },
+      "required": ["request_id", "status", "confirmation"]
+    }
+  },
+  "required": ["request", "response"]
+}
