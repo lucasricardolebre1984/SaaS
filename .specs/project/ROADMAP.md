@@ -1,6 +1,6 @@
 # ROADMAP
 
-Last update: 2026-02-25
+Last update: 2026-02-26
 
 ## Milestone 0 - Institutional Foundation (completed)
 Objective: Create governance, architecture baseline, and metrics operating system.
@@ -118,7 +118,28 @@ Status update:
     - `milestone-4-mod-01-owner-ai-runtime-slice`
     - owner response runtime provider (`auto/openai/local/off`) integrated in module 01
     - contract enrichment for `assistant_output`
+  - feature implemented and validated:
+    - `milestone-4-mod-01-layout-voice-polish-slice`
+    - owner chat layout optimized for space usage and composer ergonomics
+    - continuous browser voice loop integrated with auto speech dispatch
+    - avatar stage framing corrected for immersive mode without oversized crop
     - gates passed (`app-platform-api:test`, `contract-checks`, `preprod:validate -- -SkipSmokePostgres`)
+  - feature implemented and validated:
+    - `milestone-4-mod-01-avatar-fullscreen-slice`
+    - approved avatar asset (`AvatarSaaS.mov`) converted to web and integrated in module 01
+    - continuous mode now runs fullscreen with only transparent `Voltar` action visible
+    - browser source fallback enabled (`webm` preferred, `mp4` fallback)
+    - gate passed (`app-owner-console:build`)
+  - hotfix slice implemented and validated:
+    - `milestone-4-mod-01-avatar-attachments-hotfix-slice`
+    - fixed black avatar playback with compatibility-first source and replay fallback
+    - fixed real image/file reading path by forwarding inline attachments to OpenAI provider
+    - gates passed (`app-owner-console:build`, `app-platform-api:test`, `contract-checks`)
+  - feature implemented and validated:
+    - `milestone-4-mod-01-continuous-voice-output-slice`
+    - module 01 continuous mode now emits assistant voice output via OpenAI TTS endpoint
+    - recognition pause/resume around playback added to avoid self-capture loop
+    - gates passed (`app-platform-api:test`, `app-owner-console:build`)
   - next feature opened in Specify:
     - `milestone-4-mod-01-tool-execution-policy-slice`
     - status: implemented and validated
@@ -156,6 +177,25 @@ Status update:
       - tenant persona fallback
       - optional confirmation disable (`confirm_required` -> `allow`)
     - gates passed (`app-platform-api:test`, `contract-checks`, `app-owner-console:build`, `app-crm-console:build`)
+  - feature implemented and validated:
+    - `milestone-4-mod-01-openai-strict-provider-slice`
+    - tenant runtime OpenAI key now enforces strict provider mode (`openai`) with explicit `owner_response_provider_error` on upstream failure
+    - owner console topbar now exposes last assistant provider (`openai|local|none|error`) with model/fallback telemetry
+    - runtime config store default now isolates by app storage root (no cross-session global leakage)
+    - gates passed (`app-platform-api:test`, `app-owner-console:build`)
+  - feature implemented and validated:
+    - `milestone-4-mod-01-chat-clean-voice-continuous-slice`
+    - module 01 now supports direct audio pipeline (record -> transcribe -> auto-send) via tenant OpenAI endpoint:
+      - `POST /v1/owner-concierge/audio/transcribe`
+    - chat stream cleaned from internal status/provider/task noise for operator UX parity
+    - continuous mode now activates avatar-first layout with immersive stage
+    - defaults updated to gpt-5.1 baseline in owner/runtime config
+    - gates passed (`app-platform-api:test`, `app-owner-console:build`)
+  - context lock approved for next slice:
+    - canonical dual-concierge model promoted to root context (`CONTEXT.md`)
+    - mandatory continuous learning target (short/medium/long memory tiers) with strict session boundaries
+  - immediate next slice (Specify):
+    - dual-concierge memory orchestrator (owner orchestrator + WhatsApp execution specialist + continuous memory capture/recall)
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

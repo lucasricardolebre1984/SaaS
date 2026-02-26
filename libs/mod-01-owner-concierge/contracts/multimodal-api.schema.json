@@ -215,7 +215,9 @@
                         "type": { "type": "string", "enum": ["audio", "image", "file"] },
                         "uri": { "type": "string", "minLength": 1 },
                         "mime_type": { "type": "string", "minLength": 3 },
-                        "filename": { "type": "string", "minLength": 1 }
+                        "filename": { "type": "string", "minLength": 1 },
+                        "data_base64": { "type": "string", "minLength": 1, "maxLength": 8000000 },
+                        "text_excerpt": { "type": "string", "minLength": 1, "maxLength": 20000 }
                       },
                       "required": ["type", "uri"]
                     }

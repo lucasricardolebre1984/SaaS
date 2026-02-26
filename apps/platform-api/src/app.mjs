@@ -187,7 +187,7 @@ function sanitizeTenantRuntimeConfigInput(rawConfig) {
       api_key: typeof openaiRaw.api_key === 'string' ? openaiRaw.api_key.trim() : '',
       model: typeof openaiRaw.model === 'string' && openaiRaw.model.trim().length > 0
         ? openaiRaw.model.trim()
-        : 'gpt-5.1-mini',
+        : 'gpt-5.1',
       vision_enabled: openaiRaw.vision_enabled !== false,
       voice_enabled: openaiRaw.voice_enabled !== false,
       image_generation_enabled: openaiRaw.image_generation_enabled !== false,
@@ -231,6 +231,176 @@ function validateTenantRuntimeConfigRequest(body) {
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+function validateOwnerAudioTranscriptionRequest(body) {
+  const request = body?.request;
+  const errors = [];
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    errors.push({ instancePath: '/request', message: 'must be an object' });
+    return { ok: false, errors };
+  }
+
+  if (typeof request.request_id !== 'string' || request.request_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/request_id', message: 'must be a non-empty string' });
+  }
+  if (typeof request.tenant_id !== 'string' || request.tenant_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/tenant_id', message: 'must be a non-empty string' });
+  }
+  if (typeof request.audio_base64 !== 'string' || request.audio_base64.trim().length === 0) {
+    errors.push({ instancePath: '/request/audio_base64', message: 'must be a non-empty string' });
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+function validateOwnerAudioSpeechRequest(body) {
+  const request = body?.request;
+  const errors = [];
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    errors.push({ instancePath: '/request', message: 'must be an object' });
+    return { ok: false, errors };
+  }
+
+  if (typeof request.request_id !== 'string' || request.request_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/request_id', message: 'must be a non-empty string' });
+  }
+  if (typeof request.tenant_id !== 'string' || request.tenant_id.trim().length === 0) {
+    errors.push({ instancePath: '/request/tenant_id', message: 'must be a non-empty string' });
+  }
+  if (typeof request.text !== 'string' || request.text.trim().length === 0) {
+    errors.push({ instancePath: '/request/text', message: 'must be a non-empty string' });
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+async function transcribeAudioWithOpenAi(input) {
+  const startedAt = Date.now();
+  const baseUrl = String(input.baseUrl ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const fileName = String(input.fileName ?? 'audio.webm').trim() || 'audio.webm';
+  const mimeType = String(input.mimeType ?? 'audio/webm').trim() || 'audio/webm';
+  const language = typeof input.language === 'string' ? input.language.trim() : '';
+  const model = typeof input.model === 'string' && input.model.trim().length > 0
+    ? input.model.trim()
+    : 'whisper-1';
+
+  let audioBytes;
+  try {
+    audioBytes = Buffer.from(String(input.audioBase64 ?? '').trim(), 'base64');
+  } catch {
+    throw new Error('invalid_audio_base64');
+  }
+  if (!audioBytes || audioBytes.length === 0) {
+    throw new Error('invalid_audio_base64');
+  }
+
+  const formData = new FormData();
+  formData.append('model', model);
+  if (language.length > 0) {
+    formData.append('language', language);
+  }
+  formData.append('file', new Blob([audioBytes], { type: mimeType }), fileName);
+
+  const response = await fetch(`${baseUrl}/audio/transcriptions`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${input.apiKey}`
+    },
+    body: formData
+  });
+  if (!response.ok) {
+    const raw = await response.text();
+    throw new Error(`openai_transcription_http_${response.status}:${raw.slice(0, 500)}`);
+  }
+
+  const body = await response.json();
+  const text = typeof body?.text === 'string' ? body.text.trim() : '';
+  if (!text) {
+    throw new Error('openai_transcription_invalid_payload');
+  }
+
+  return {
+    text,
+    provider: 'openai',
+    model: typeof body?.model === 'string' && body.model.trim().length > 0 ? body.model.trim() : model,
+    latency_ms: Math.max(0, Date.now() - startedAt)
+  };
+}
+
+function mimeTypeFromAudioFormat(format) {
+  const normalized = String(format ?? '').toLowerCase();
+  if (normalized === 'wav') return 'audio/wav';
+  if (normalized === 'opus') return 'audio/ogg';
+  if (normalized === 'aac') return 'audio/aac';
+  if (normalized === 'flac') return 'audio/flac';
+  if (normalized === 'pcm') return 'audio/wav';
+  return 'audio/mpeg';
+}
+
+function parseSpeechSpeed(rawValue, fallback = 1.12) {
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < 0.25) return 0.25;
+  if (parsed > 4) return 4;
+  return parsed;
+}
+
+async function synthesizeSpeechWithOpenAi(input) {
+  const startedAt = Date.now();
+  const baseUrl = String(input.baseUrl ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const model = typeof input.model === 'string' && input.model.trim().length > 0
+    ? input.model.trim()
+    : 'gpt-4o-mini-tts';
+  const voice = typeof input.voice === 'string' && input.voice.trim().length > 0
+    ? input.voice.trim()
+    : 'shimmer';
+  const text = String(input.text ?? '').trim();
+  if (!text) {
+    throw new Error('speech_text_required');
+  }
+  const responseFormat = typeof input.responseFormat === 'string' && input.responseFormat.trim().length > 0
+    ? input.responseFormat.trim().toLowerCase()
+    : 'mp3';
+  const speed = parseSpeechSpeed(input.speed);
+
+  const response = await fetch(`${baseUrl}/audio/speech`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${input.apiKey}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      voice,
+      input: text,
+      response_format: responseFormat,
+      speed
+    })
+  });
+
+  if (!response.ok) {
+    const raw = await response.text();
+    throw new Error(`openai_speech_http_${response.status}:${raw.slice(0, 500)}`);
+  }
+
+  const audioBytes = Buffer.from(await response.arrayBuffer());
+  if (audioBytes.length === 0) {
+    throw new Error('openai_speech_empty_audio');
+  }
+
+  const contentType = String(response.headers.get('content-type') ?? '').trim()
+    || mimeTypeFromAudioFormat(responseFormat);
+
+  return {
+    audioBytes,
+    contentType,
+    provider: 'openai',
+    model,
+    voice,
+    speed,
+    latency_ms: Math.max(0, Date.now() - startedAt)
+  };
 }
 
 function createRuntimeConfigSummary(tenantId, configRecord) {
@@ -1346,7 +1516,7 @@ export function createApp(options = {}) {
     pgAutoMigrate
   });
   const tenantRuntimeConfigStore = createTenantRuntimeConfigStore({
-    storageDir: options.tenantRuntimeConfigStorageDir
+    storageDir: options.tenantRuntimeConfigStorageDir ?? options.orchestrationStorageDir
   });
   const ownerEmbeddingProviderConfig = {
     mode: options.ownerEmbeddingMode,
@@ -1378,7 +1548,7 @@ export function createApp(options = {}) {
 
     return createOwnerResponseProvider({
       ...ownerResponseProviderConfig,
-      mode: tenantApiKey.length > 0 ? 'auto' : ownerResponseProvider.mode,
+      mode: tenantApiKey.length > 0 ? 'openai' : ownerResponseProvider.mode,
       openaiApiKey: tenantApiKey.length > 0
         ? tenantApiKey
         : ownerResponseProviderConfig.openaiApiKey,
@@ -1629,6 +1799,122 @@ export function createApp(options = {}) {
           status: 'accepted'
         };
         return json(res, 200, { response });
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/audio/transcribe') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = validateOwnerAudioTranscriptionRequest(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id).trim();
+        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
+        const tenantApiKey = String(tenantRuntimeConfig?.openai?.api_key ?? '').trim();
+
+        if (tenantApiKey.length === 0) {
+          return json(res, 400, { error: 'openai_not_configured' });
+        }
+
+        const mimeType = typeof request.mime_type === 'string'
+          ? request.mime_type.trim()
+          : 'audio/webm';
+        const fileName = typeof request.filename === 'string' && request.filename.trim().length > 0
+          ? request.filename.trim()
+          : 'audio.webm';
+        const language = typeof request.language === 'string' ? request.language.trim() : '';
+        const model = typeof request.model === 'string' ? request.model.trim() : '';
+
+        try {
+          const transcription = await transcribeAudioWithOpenAi({
+            apiKey: tenantApiKey,
+            baseUrl: options.openaiBaseUrl ?? process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
+            audioBase64: request.audio_base64,
+            mimeType,
+            fileName,
+            language,
+            model
+          });
+          return json(res, 200, {
+            response: {
+              request_id: String(request.request_id),
+              status: 'accepted',
+              transcription
+            }
+          });
+        } catch (error) {
+          return json(res, 502, {
+            error: 'owner_audio_transcription_error',
+            details: String(error.message ?? error)
+          });
+        }
+      }
+
+      if (method === 'POST' && path === '/v1/owner-concierge/audio/speech') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = validateOwnerAudioSpeechRequest(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id).trim();
+        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
+        const tenantApiKey = String(tenantRuntimeConfig?.openai?.api_key ?? '').trim();
+
+        if (tenantApiKey.length === 0) {
+          return json(res, 400, { error: 'openai_not_configured' });
+        }
+
+        if (tenantRuntimeConfig?.openai?.voice_enabled === false) {
+          return json(res, 400, { error: 'voice_disabled_by_tenant' });
+        }
+
+        try {
+          const speech = await synthesizeSpeechWithOpenAi({
+            apiKey: tenantApiKey,
+            baseUrl: options.openaiBaseUrl ?? process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
+            text: String(request.text),
+            model: typeof request.model === 'string' ? request.model.trim() : '',
+            voice: typeof request.voice === 'string' ? request.voice.trim() : '',
+            speed: request.speed,
+            responseFormat: typeof request.response_format === 'string'
+              ? request.response_format.trim()
+              : ''
+          });
+          res.writeHead(200, {
+            'content-type': speech.contentType,
+            'cache-control': 'no-store',
+            'x-owner-speech-provider': speech.provider,
+            'x-owner-speech-model': speech.model,
+            'x-owner-speech-voice': speech.voice,
+            'x-owner-speech-speed': String(speech.speed),
+            'x-owner-speech-latency-ms': String(speech.latency_ms),
+            'x-owner-speech-request-id': String(request.request_id)
+          });
+          res.end(speech.audioBytes);
+          return;
+        } catch (error) {
+          return json(res, 502, {
+            error: 'owner_audio_speech_error',
+            details: String(error.message ?? error)
+          });
+        }
       }
 
       if (method === 'GET' && path === '/internal/orchestration/commands') {
@@ -4141,7 +4427,10 @@ export function createApp(options = {}) {
               text: String(request.payload?.text ?? ''),
               tenant_id: request.tenant_id,
               session_id: request.session_id,
-              persona_overrides: personaOverrides
+              persona_overrides: personaOverrides,
+              attachments: Array.isArray(request.payload?.attachments)
+                ? request.payload.attachments
+                : []
             });
           } catch (error) {
             return json(res, 502, {

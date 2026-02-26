@@ -36,6 +36,7 @@
           <div class="topbar__right">
             <button id="openSettingsBtn" class="btn btn--ghost" type="button">Configuracoes</button>
             <span id="settingsLockStatus" class="status-pill is-locked">admin: bloqueado</span>
+            <span id="assistantProviderStatus" class="status-pill is-provider-none">provider: idle</span>
             <button id="healthBtn" class="btn btn--ghost" type="button">Health</button>
             <span id="healthStatus" class="status-pill">idle</span>
           </div>
@@ -97,24 +98,31 @@
             </section>
 
             <form id="chatForm" class="composer">
-              <div class="composer-tools">
-                <button id="audioRecordBtn" class="btn btn--ghost" type="button">Audio</button>
-                <button id="photoPickBtn" class="btn btn--ghost" type="button">Foto</button>
-                <button id="filePickBtn" class="btn btn--ghost" type="button">Arquivo</button>
-                <input id="photoInput" type="file" accept="image/*" class="hidden" />
-                <input id="fileInput" type="file" class="hidden" />
-              </div>
-
               <div id="pendingAttachments" class="pending-attachments"></div>
 
               <div class="composer-row">
-                <input id="messageInput" placeholder="Ex.: criar cobranca e avisar no WhatsApp" autocomplete="off" />
-                <button class="btn" type="submit">Enviar</button>
+                <div class="composer-tools composer-tools--compact">
+                  <button id="audioRecordBtn" class="btn btn--ghost" type="button">Audio</button>
+                  <button id="photoPickBtn" class="btn btn--ghost" type="button">Foto</button>
+                  <button id="filePickBtn" class="btn btn--ghost" type="button">Arquivo</button>
+                  <input id="photoInput" type="file" accept="image/*" class="hidden" />
+                  <input id="fileInput" type="file" class="hidden" />
+                </div>
+                <textarea
+                  id="messageInput"
+                  class="composer-input"
+                  rows="2"
+                  placeholder="Ex.: criar cobranca e avisar no WhatsApp"
+                ></textarea>
+                <button class="btn composer-send-btn" type="submit">Enviar</button>
               </div>
             </form>
           </section>
 
           <aside class="voice-panel card" id="voicePanel">
+            <button id="continuousBackBtn" class="continuous-back-btn" type="button" aria-label="Voltar">
+              Voltar
+            </button>
             <header class="card__header">
               <h3>Avatar Continuo</h3>
               <button id="simulateVoiceBtn" class="btn btn--ghost" type="button">Simular Voz</button>
@@ -123,19 +131,21 @@
             <div class="avatar" id="avatar" data-state="idle">
               <video
                 class="avatar__video avatar__video--idle"
-                src="./avatar/assets/brain-idle.webm"
+                src="./avatar/assets/avatar-fullscreen.mp4"
                 autoplay
                 loop
                 muted
                 playsinline
+                preload="auto"
               ></video>
               <video
                 class="avatar__video avatar__video--speaking"
-                src="./avatar/assets/brain-speaking.webm"
+                src="./avatar/assets/avatar-fullscreen.mp4"
                 autoplay
                 loop
                 muted
                 playsinline
+                preload="auto"
               ></video>
             </div>
 

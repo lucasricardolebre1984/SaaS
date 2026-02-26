@@ -32,6 +32,10 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 - SaaS starter generator and operational runbooks.
 - Milestone 3 planning and production-readiness closure completed.
 - Milestone 4 scope definition kickoff (next slice in Specify phase).
+- Canonical standard lock:
+  - Persona 1 as full SaaS orchestrator (module-aware across 01..06).
+  - Persona 2 as WhatsApp CRM execution specialist (lead capture/follow-up/conversion).
+  - Continuous learning baseline with short/medium/long memory tiers and strict session boundaries.
 
 ## Success Criteria (Current Cycle)
 - .specs complete and reviewed.
@@ -45,6 +49,7 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 - Every decision documented in STATE.md.
 - Every feature must have spec/design/tasks before coding.
 - Prefer reversible changes and explicit rollback paths.
+- Root context (CONTEXT.md) is authoritative for product identity and dual-concierge behavior.
 
 ## Legacy Handling Rule
 Legacy implementation can be used only as behavior reference. New code in fabio must prioritize clean module boundaries, explicit contracts, and testable orchestration.

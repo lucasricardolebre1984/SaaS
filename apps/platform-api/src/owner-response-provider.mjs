@@ -47,8 +47,136 @@ function normalizeAssistantContent(raw) {
   return parts.join('\n');
 }
 
+function sanitizeAttachments(rawAttachments) {
+  if (!Array.isArray(rawAttachments)) return [];
+
+  const supportedTypes = new Set(['audio', 'image', 'file']);
+  const items = [];
+  for (const rawItem of rawAttachments) {
+    if (!rawItem || typeof rawItem !== 'object') continue;
+    const type = asNonEmptyString(rawItem.type);
+    if (!type || !supportedTypes.has(type)) continue;
+
+    const attachment = {
+      type,
+      uri: asNonEmptyString(rawItem.uri) ?? 'upload://local/unknown'
+    };
+
+    const mimeType = asNonEmptyString(rawItem.mime_type);
+    if (mimeType) attachment.mime_type = mimeType;
+
+    const filename = asNonEmptyString(rawItem.filename);
+    if (filename) attachment.filename = filename;
+
+    const dataBase64 = asNonEmptyString(rawItem.data_base64);
+    if (dataBase64) {
+      attachment.data_base64 = dataBase64.replace(/\s+/g, '');
+    }
+
+    const textExcerpt = asNonEmptyString(rawItem.text_excerpt);
+    if (textExcerpt) {
+      attachment.text_excerpt = textExcerpt.slice(0, 20000);
+    }
+
+    items.push(attachment);
+  }
+
+  return items;
+}
+
+function buildAssistantAttachmentRefs(attachments) {
+  return attachments.map((item, index) => ({
+    type: item.type,
+    attachment_ref: item.uri ?? item.filename ?? `attachment-${index + 1}`,
+    ...(item.mime_type ? { mime_type: item.mime_type } : {})
+  }));
+}
+
+function attachmentDataUrl(attachment) {
+  const data = asNonEmptyString(attachment?.data_base64);
+  if (!data) return null;
+  const mime = asNonEmptyString(attachment?.mime_type) ?? 'application/octet-stream';
+  return `data:${mime};base64,${data}`;
+}
+
+function buildUserTextWithAttachmentContext(payload, attachments) {
+  const baseText = asNonEmptyString(payload?.text) ?? '';
+  const notes = [];
+
+  for (const attachment of attachments) {
+    if (attachment.type === 'file') {
+      if (attachment.text_excerpt) {
+        notes.push(
+          `Arquivo anexado (${attachment.filename ?? 'sem_nome'}):\n${attachment.text_excerpt}`
+        );
+      } else {
+        notes.push(
+          `Arquivo anexado (${attachment.filename ?? 'sem_nome'}) sem texto extraivel direto.`
+        );
+      }
+      continue;
+    }
+
+    if (attachment.type === 'image' && !attachment.data_base64) {
+      notes.push(
+        `Imagem anexada (${attachment.filename ?? 'sem_nome'}) sem dados inline para analise.`
+      );
+    }
+  }
+
+  if (notes.length === 0) {
+    return baseText;
+  }
+
+  return `${baseText}\n\nContexto de anexos:\n${notes.join('\n\n')}`.trim();
+}
+
+function buildResponsesInput(payload, attachments) {
+  const textWithContext = buildUserTextWithAttachmentContext(payload, attachments);
+  const content = [{
+    type: 'input_text',
+    text: textWithContext
+  }];
+
+  for (const attachment of attachments) {
+    if (attachment.type !== 'image') continue;
+    const imageDataUrl = attachmentDataUrl(attachment);
+    if (!imageDataUrl) continue;
+    content.push({
+      type: 'input_image',
+      image_url: imageDataUrl
+    });
+  }
+
+  return [{
+    role: 'user',
+    content
+  }];
+}
+
+function buildChatUserContent(payload, attachments) {
+  const textWithContext = buildUserTextWithAttachmentContext(payload, attachments);
+  const content = [{
+    type: 'text',
+    text: textWithContext
+  }];
+
+  for (const attachment of attachments) {
+    if (attachment.type !== 'image') continue;
+    const imageDataUrl = attachmentDataUrl(attachment);
+    if (!imageDataUrl) continue;
+    content.push({
+      type: 'image_url',
+      image_url: { url: imageDataUrl }
+    });
+  }
+
+  return content;
+}
+
 function buildLocalReply(payload, fallbackReason = null) {
   const userText = asNonEmptyString(payload?.text) ?? '';
+  const attachments = sanitizeAttachments(payload?.attachments);
   const base = 'Entendido. Solicitação recebida e task queued para execução.';
   const text = userText.length > 0 ? `${base} Input: ${userText}` : base;
 
@@ -57,6 +185,7 @@ function buildLocalReply(payload, fallbackReason = null) {
     provider: 'local',
     model: 'deterministic-rule-v1',
     latency_ms: 0,
+    ...(attachments.length > 0 ? { attachments: buildAssistantAttachmentRefs(attachments) } : {}),
     ...(fallbackReason ? { fallback_reason: fallbackReason } : {})
   };
 }
@@ -75,6 +204,7 @@ async function requestOpenAiResponsesReply(options, payload) {
     instructionParts.push(`WhatsApp agent guidance:\n${whatsappPrompt}`);
   }
 
+  const attachments = sanitizeAttachments(payload?.attachments);
   const startedAt = Date.now();
   const response = await fetch(`${options.baseUrl}/responses`, {
     method: 'POST',
@@ -86,7 +216,7 @@ async function requestOpenAiResponsesReply(options, payload) {
       model: options.model,
       temperature: 0.2,
       instructions: instructionParts.join('\n\n'),
-      input: asNonEmptyString(payload?.text) ?? ''
+      input: buildResponsesInput(payload, attachments)
     })
   });
 
@@ -107,7 +237,8 @@ async function requestOpenAiResponsesReply(options, payload) {
     text: outputText,
     provider: 'openai',
     model: asNonEmptyString(body?.model) ?? options.model,
-    latency_ms: Math.max(0, Date.now() - startedAt)
+    latency_ms: Math.max(0, Date.now() - startedAt),
+    ...(attachments.length > 0 ? { attachments: buildAssistantAttachmentRefs(attachments) } : {})
   };
 }
 
@@ -127,9 +258,10 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
     messages.push({ role: 'system', content: `WhatsApp agent guidance:\n${whatsappPrompt}` });
   }
 
+  const attachments = sanitizeAttachments(payload?.attachments);
   messages.push({
     role: 'user',
-    content: asNonEmptyString(payload?.text) ?? ''
+    content: buildChatUserContent(payload, attachments)
   });
 
   const startedAt = Date.now();
@@ -162,7 +294,8 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
     text,
     provider: 'openai',
     model: asNonEmptyString(body?.model) ?? options.model,
-    latency_ms: Math.max(0, Date.now() - startedAt)
+    latency_ms: Math.max(0, Date.now() - startedAt),
+    ...(attachments.length > 0 ? { attachments: buildAssistantAttachmentRefs(attachments) } : {})
   };
 }
 
@@ -183,7 +316,7 @@ async function requestOpenAiReply(options, payload) {
 export function createOwnerResponseProvider(options = {}) {
   const mode = resolveMode(options.mode ?? process.env.OWNER_RESPONSE_MODE);
   const apiKey = asNonEmptyString(options.openaiApiKey ?? process.env.OPENAI_API_KEY);
-  const model = asNonEmptyString(options.openaiModel ?? process.env.OWNER_RESPONSE_MODEL) ?? 'gpt-5.1-mini';
+  const model = asNonEmptyString(options.openaiModel ?? process.env.OWNER_RESPONSE_MODEL) ?? 'gpt-5.1';
   const baseUrl = (
     asNonEmptyString(options.openaiBaseUrl ?? process.env.OPENAI_BASE_URL)
     ?? 'https://api.openai.com/v1'

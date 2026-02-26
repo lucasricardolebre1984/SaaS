@@ -60,6 +60,37 @@ function validRuntimeConfigUpsertRequest(overrides = {}) {
   };
 }
 
+function validOwnerAudioTranscriptionRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '5a6ac2d4-5f2a-4f86-a5e7-3da35c33377d',
+      tenant_id: 'tenant_automania',
+      session_id: '67c28929-5ff7-48ef-bdcc-6f7f4dc6580b',
+      audio_base64: Buffer.from('fake-audio-bytes').toString('base64'),
+      mime_type: 'audio/webm',
+      filename: 'audio.webm',
+      language: 'pt',
+      ...overrides
+    }
+  };
+}
+
+function validOwnerAudioSpeechRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: 'f18e976d-87f5-4fa1-b398-0885176f1772',
+      tenant_id: 'tenant_automania',
+      session_id: '67c28929-5ff7-48ef-bdcc-6f7f4dc6580b',
+      text: 'Teste de voz continua.',
+      voice: 'shimmer',
+      model: 'gpt-4o-mini-tts',
+      speed: 1.12,
+      response_format: 'mp3',
+      ...overrides
+    }
+  };
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -2490,6 +2521,203 @@ test('tenant runtime config applies OpenAI response and disables confirmation wo
   }
 });
 
+test('tenant runtime config enforces strict OpenAI and returns provider error on upstream failure', async () => {
+  const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-runtime-tenant-openai-strict-'));
+  let providerCalledCount = 0;
+  const failingProviderServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    providerCalledCount += 1;
+    res.writeHead(500, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'upstream_failure' }));
+  });
+  await new Promise((resolve) => failingProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = failingProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: policyDir,
+      tenantRuntimeConfigStorageDir: policyDir,
+      ownerResponseMode: 'auto',
+      openaiApiKey: '',
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const configRes = await fetch(`${appBaseUrl}/v1/owner-concierge/runtime-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validRuntimeConfigUpsertRequest())
+    });
+    assert.equal(configRes.status, 200);
+
+    const interactionRes = await fetch(`${appBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerRequest())
+    });
+    assert.equal(interactionRes.status, 502);
+    const interactionBody = await interactionRes.json();
+    assert.equal(interactionBody.error, 'owner_response_provider_error');
+    assert.match(String(interactionBody.details ?? ''), /openai_all_endpoints_failed/i);
+    assert.ok(providerCalledCount >= 1);
+  } finally {
+    await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => failingProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(policyDir, { recursive: true, force: true });
+  }
+});
+
+test('POST /v1/owner-concierge/audio/transcribe uses tenant OpenAI runtime config', async () => {
+  const storageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-owner-audio-transcribe-'));
+  let providerCalled = false;
+  const mockProviderServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST' || req.url !== '/audio/transcriptions') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    providerCalled = true;
+    const authHeader = String(req.headers.authorization ?? '');
+    if (!authHeader.startsWith('Bearer tenant-openai-key')) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
+
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({
+      text: 'transcricao teste viva',
+      model: 'whisper-1'
+    }));
+  });
+  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = mockProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: storageRoot,
+      tenantRuntimeConfigStorageDir: storageRoot,
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const configRes = await fetch(`${appBaseUrl}/v1/owner-concierge/runtime-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validRuntimeConfigUpsertRequest())
+    });
+    assert.equal(configRes.status, 200);
+
+    const transcribeRes = await fetch(`${appBaseUrl}/v1/owner-concierge/audio/transcribe`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerAudioTranscriptionRequest())
+    });
+    assert.equal(transcribeRes.status, 200);
+    const transcribeBody = await transcribeRes.json();
+    assert.equal(transcribeBody.response.status, 'accepted');
+    assert.equal(transcribeBody.response.transcription.provider, 'openai');
+    assert.equal(transcribeBody.response.transcription.text, 'transcricao teste viva');
+    assert.equal(providerCalled, true);
+  } finally {
+    await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('POST /v1/owner-concierge/audio/speech streams OpenAI TTS audio with tenant key', async () => {
+  const storageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-owner-audio-speech-'));
+  let providerCalled = false;
+  const mockProviderServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST' || req.url !== '/audio/speech') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    providerCalled = true;
+    const authHeader = String(req.headers.authorization ?? '');
+    if (!authHeader.startsWith('Bearer tenant-openai-key')) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
+
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    assert.equal(body.model, 'gpt-4o-mini-tts');
+    assert.equal(body.voice, 'shimmer');
+    assert.equal(body.response_format, 'mp3');
+    assert.equal(body.speed, 1.12);
+    assert.equal(body.input, 'Teste de voz continua.');
+
+    res.writeHead(200, { 'content-type': 'audio/mpeg' });
+    res.end(Buffer.from('fake-mp3-binary'));
+  });
+  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = mockProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: storageRoot,
+      tenantRuntimeConfigStorageDir: storageRoot,
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const configRes = await fetch(`${appBaseUrl}/v1/owner-concierge/runtime-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validRuntimeConfigUpsertRequest())
+    });
+    assert.equal(configRes.status, 200);
+
+    const speechRes = await fetch(`${appBaseUrl}/v1/owner-concierge/audio/speech`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerAudioSpeechRequest())
+    });
+    assert.equal(speechRes.status, 200);
+    assert.equal(speechRes.headers.get('content-type'), 'audio/mpeg');
+    assert.equal(speechRes.headers.get('x-owner-speech-provider'), 'openai');
+    assert.equal(speechRes.headers.get('x-owner-speech-model'), 'gpt-4o-mini-tts');
+    assert.equal(speechRes.headers.get('x-owner-speech-voice'), 'shimmer');
+    assert.equal(speechRes.headers.get('x-owner-speech-request-id'), 'f18e976d-87f5-4fa1-b398-0885176f1772');
+    const audioBytes = Buffer.from(await speechRes.arrayBuffer());
+    assert.equal(audioBytes.toString('utf8'), 'fake-mp3-binary');
+    assert.equal(providerCalled, true);
+  } finally {
+    await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(storageRoot, { recursive: true, force: true });
+  }
+});
+
 test('POST /v1/owner-concierge/interaction uses openai response provider in strict mode with mock', async () => {
   let providerCalled = false;
   const mockProviderServer = http.createServer(async (req, res) => {
@@ -2566,6 +2794,114 @@ test('POST /v1/owner-concierge/interaction uses openai response provider in stri
     await new Promise((resolve, reject) => strictServer.close((err) => (err ? reject(err) : resolve())));
     await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
     await fs.rm(strictStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('POST /v1/owner-concierge/interaction forwards inline image and file excerpt to OpenAI payload', async () => {
+  let providerCalled = false;
+  const mockProviderServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    if (req.url === '/responses') {
+      // Force fallback to chat/completions to validate payload shape there.
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'responses_not_available' }));
+      return;
+    }
+
+    if (req.url !== '/chat/completions') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    providerCalled = true;
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+
+    assert.equal(body.model, 'gpt-5.1-mini');
+    assert.ok(Array.isArray(body.messages));
+    const userMessage = body.messages.find((item) => item.role === 'user');
+    assert.ok(userMessage);
+    assert.ok(Array.isArray(userMessage.content));
+    const imagePart = userMessage.content.find((item) => item.type === 'image_url');
+    assert.ok(imagePart);
+    assert.ok(String(imagePart.image_url?.url ?? '').startsWith('data:image/png;base64,'));
+    const textPart = userMessage.content.find((item) => item.type === 'text');
+    assert.ok(textPart);
+    assert.match(String(textPart.text ?? ''), /EXCERTO DO ARQUIVO/i);
+
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({
+      model: 'gpt-5.1-mini',
+      choices: [{
+        message: { content: 'Anexos processados com sucesso' }
+      }]
+    }));
+  });
+  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = mockProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-owner-openai-attachment-'));
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: storageDir,
+      ownerResponseMode: 'openai',
+      ownerResponseModel: 'gpt-5.1-mini',
+      openaiApiKey: 'test-key',
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const payload = validOwnerRequest();
+    payload.request.payload = {
+      text: 'Analise os anexos enviados',
+      attachments: [
+        {
+          type: 'image',
+          uri: 'upload://local/logo',
+          mime_type: 'image/png',
+          filename: 'logo.png',
+          data_base64: Buffer.from('fake-png-bytes').toString('base64')
+        },
+        {
+          type: 'file',
+          uri: 'upload://local/texto',
+          mime_type: 'text/plain',
+          filename: 'contexto.txt',
+          text_excerpt: 'EXCERTO DO ARQUIVO: detalhes importantes para analise'
+        }
+      ]
+    };
+
+    const res = await fetch(`${appBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.response.assistant_output.provider, 'openai');
+    assert.equal(body.response.assistant_output.text, 'Anexos processados com sucesso');
+    assert.ok(Array.isArray(body.response.assistant_output.attachments));
+    assert.equal(body.response.assistant_output.attachments.length, 2);
+    assert.equal(providerCalled, true);
+  } finally {
+    await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(storageDir, { recursive: true, force: true });
   }
 });
 

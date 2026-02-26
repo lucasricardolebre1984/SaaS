@@ -36,6 +36,11 @@ const TENANT_THEME_PRESETS = {
 const state = {
   activeModuleId: 'mod-01-owner-concierge',
   continuous: false,
+  continuousListening: false,
+  continuousRecognition: null,
+  continuousRestartTimer: null,
+  continuousSpeechAudio: null,
+  continuousSpeechOutputActive: false,
   speaking: false,
   pendingAttachments: [],
   mediaRecorder: null,
@@ -140,6 +145,7 @@ const chargeIdOptionsEl = document.getElementById('chargeIdOptions');
 const billingStatusEl = document.getElementById('billingStatus');
 
 const healthStatusEl = document.getElementById('healthStatus');
+const assistantProviderStatusEl = document.getElementById('assistantProviderStatus');
 const messagesEl = document.getElementById('messages');
 const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
@@ -152,9 +158,12 @@ const confirmationsRefreshBtn = document.getElementById('confirmationsRefreshBtn
 
 const continuousBtn = document.getElementById('continuousBtn');
 const continuousStateEl = document.getElementById('continuousState');
+const continuousBackBtn = document.getElementById('continuousBackBtn');
 const avatarEl = document.getElementById('avatar');
 const simulateVoiceBtn = document.getElementById('simulateVoiceBtn');
 const lastRunEl = document.getElementById('lastRun');
+const avatarIdleVideoEl = document.querySelector('.avatar__video--idle');
+const avatarSpeakingVideoEl = document.querySelector('.avatar__video--speaking');
 
 const audioRecordBtn = document.getElementById('audioRecordBtn');
 const photoPickBtn = document.getElementById('photoPickBtn');
@@ -196,6 +205,14 @@ const resetMetricsBtn = document.getElementById('resetMetricsBtn');
 const metricsRowsEl = document.getElementById('metricsRows');
 const configStatusEl = document.getElementById('configStatus');
 
+const AVATAR_VIDEO_WEBM = './avatar/assets/avatar-fullscreen.webm';
+const AVATAR_VIDEO_MP4 = './avatar/assets/avatar-fullscreen.mp4';
+const OPENAI_TTS_DEFAULT_MODEL = 'gpt-4o-mini-tts';
+const OPENAI_TTS_DEFAULT_VOICE = 'shimmer';
+const OPENAI_TTS_DEFAULT_SPEED = 1.12;
+const MAX_INLINE_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_TEXT_EXCERPT_CHARS = 12000;
+
 function createDefaultMetrics() {
   return {
     fx_usd_brl: 5.0,
@@ -207,6 +224,50 @@ function createDefaultMetrics() {
       'mod-05-faturamento-cobranca': { calls: 0, estimated_usd: 0, estimated_brl: 0 }
     }
   };
+}
+
+function chooseAvatarVideoSource() {
+  // Prefer MP4 for maximum browser compatibility in the current local stack.
+  return AVATAR_VIDEO_MP4;
+}
+
+function safePlayVideo(videoEl) {
+  if (!videoEl) return;
+  const playResult = videoEl.play();
+  if (playResult && typeof playResult.catch === 'function') {
+    playResult.catch(() => {});
+  }
+}
+
+function ensureAvatarPlayback() {
+  safePlayVideo(avatarIdleVideoEl);
+  safePlayVideo(avatarSpeakingVideoEl);
+}
+
+function registerAvatarVideoFallback(videoEl) {
+  if (!videoEl) return;
+  videoEl.addEventListener('error', () => {
+    const currentSrc = String(videoEl.currentSrc || videoEl.src || '');
+    if (currentSrc.includes('avatar-fullscreen.mp4')) {
+      return;
+    }
+    videoEl.src = AVATAR_VIDEO_MP4;
+    videoEl.load();
+    safePlayVideo(videoEl);
+  });
+}
+
+function applyAvatarVideoSource() {
+  const source = chooseAvatarVideoSource();
+  if (avatarIdleVideoEl) {
+    avatarIdleVideoEl.src = source;
+    avatarIdleVideoEl.load();
+  }
+  if (avatarSpeakingVideoEl) {
+    avatarSpeakingVideoEl.src = source;
+    avatarSpeakingVideoEl.load();
+  }
+  ensureAvatarPlayback();
 }
 
 function isUnifiedUiRuntime() {
@@ -240,7 +301,7 @@ function createDefaultConfig() {
     },
     openai: {
       api_key: '',
-      model: 'gpt-5.1-mini',
+      model: 'gpt-5.1',
       vision_enabled: true,
       voice_enabled: true,
       image_generation_enabled: true,
@@ -380,6 +441,50 @@ function renderSettingsLockStatus() {
   settingsLockStatusEl.textContent = state.settingsUnlocked ? 'admin: liberado' : 'admin: bloqueado';
   settingsLockStatusEl.classList.toggle('is-unlocked', state.settingsUnlocked);
   settingsLockStatusEl.classList.toggle('is-locked', !state.settingsUnlocked);
+}
+
+function setAssistantProviderStatus(provider, options = {}) {
+  if (!assistantProviderStatusEl) return;
+
+  const normalized = String(provider ?? 'none').trim().toLowerCase() || 'none';
+  assistantProviderStatusEl.classList.remove(
+    'is-provider-openai',
+    'is-provider-local',
+    'is-provider-none',
+    'is-provider-error'
+  );
+
+  let text = `provider: ${normalized}`;
+  let title = '';
+
+  if (normalized === 'openai') {
+    assistantProviderStatusEl.classList.add('is-provider-openai');
+    text = options.configuredOnly ? 'provider: openai*' : 'provider: openai';
+  } else if (normalized === 'local') {
+    assistantProviderStatusEl.classList.add('is-provider-local');
+    text = options.configuredOnly ? 'provider: local*' : 'provider: local';
+  } else if (normalized === 'error') {
+    assistantProviderStatusEl.classList.add('is-provider-error');
+    text = 'provider: error';
+  } else if (normalized === 'none') {
+    assistantProviderStatusEl.classList.add('is-provider-none');
+    text = 'provider: none';
+  } else {
+    assistantProviderStatusEl.classList.add('is-provider-none');
+  }
+
+  if (typeof options.model === 'string' && options.model.trim().length > 0 && normalized === 'openai') {
+    text = `${text} (${options.model.trim()})`;
+  }
+  if (typeof options.fallbackReason === 'string' && options.fallbackReason.trim().length > 0) {
+    title = options.fallbackReason.trim();
+  }
+  if (typeof options.errorDetails === 'string' && options.errorDetails.trim().length > 0) {
+    title = options.errorDetails.trim();
+  }
+
+  assistantProviderStatusEl.textContent = text;
+  assistantProviderStatusEl.title = title;
 }
 
 function getNavModules() {
@@ -753,6 +858,16 @@ async function pullRuntimeConfigFromBackend() {
   if (body?.execution && typeof body.execution.confirmations_enabled === 'boolean') {
     state.config.execution.confirmations_enabled = body.execution.confirmations_enabled;
   }
+
+  if (body?.runtime?.openai_configured === true) {
+    setAssistantProviderStatus('openai', {
+      configuredOnly: true,
+      model: body?.runtime?.model
+    });
+  } else {
+    setAssistantProviderStatus('local', { configuredOnly: true });
+  }
+
   populateConfigForm();
   persistConfig();
 }
@@ -1281,6 +1396,232 @@ function startSpeakingPulse(ms = 1400) {
   window.setTimeout(() => setSpeaking(false), ms);
 }
 
+function getSpeechRecognitionCtor() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function setContinuousListening(value) {
+  state.continuousListening = Boolean(value);
+  if (state.continuous) {
+    continuousStateEl.textContent = state.continuousListening ? 'continuous+voz' : 'continuous';
+  }
+}
+
+function clearContinuousRestartTimer() {
+  if (state.continuousRestartTimer) {
+    window.clearTimeout(state.continuousRestartTimer);
+    state.continuousRestartTimer = null;
+  }
+}
+
+function stopContinuousVoiceRecognition() {
+  clearContinuousRestartTimer();
+  setContinuousListening(false);
+  if (!state.continuousRecognition) return;
+
+  const recognition = state.continuousRecognition;
+  state.continuousRecognition = null;
+  recognition.onstart = null;
+  recognition.onresult = null;
+  recognition.onerror = null;
+  recognition.onend = null;
+  try {
+    recognition.stop();
+  } catch {
+    // ignore stop errors from already-closed sessions
+  }
+}
+
+function stopContinuousSpeechOutput(resetSpeaking = true) {
+  if (state.continuousSpeechAudio?.audioEl) {
+    try {
+      state.continuousSpeechAudio.audioEl.pause();
+      state.continuousSpeechAudio.audioEl.src = '';
+    } catch {
+      // ignore cleanup errors
+    }
+  }
+  if (state.continuousSpeechAudio?.objectUrl) {
+    URL.revokeObjectURL(state.continuousSpeechAudio.objectUrl);
+  }
+  state.continuousSpeechAudio = null;
+  state.continuousSpeechOutputActive = false;
+  if (resetSpeaking) {
+    setSpeaking(false);
+  }
+}
+
+async function synthesizeAssistantSpeech(text) {
+  const response = await fetch(`${apiBase()}/v1/owner-concierge/audio/speech`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: crypto.randomUUID(),
+        tenant_id: tenantId(),
+        session_id: sessionId(),
+        text,
+        model: OPENAI_TTS_DEFAULT_MODEL,
+        voice: OPENAI_TTS_DEFAULT_VOICE,
+        speed: OPENAI_TTS_DEFAULT_SPEED,
+        response_format: 'mp3'
+      }
+    })
+  });
+
+  if (!response.ok) {
+    let details = '';
+    try {
+      const body = await response.json();
+      details = body?.details ? ` (${body.details})` : '';
+      throw new Error(`${body?.error ?? response.status}${details}`);
+    } catch (jsonError) {
+      if (jsonError instanceof Error) {
+        throw jsonError;
+      }
+      throw new Error(`speech_http_${response.status}`);
+    }
+  }
+
+  const speechBlob = await response.blob();
+  if (!speechBlob || speechBlob.size === 0) {
+    throw new Error('speech_audio_empty');
+  }
+  return speechBlob;
+}
+
+async function playContinuousAssistantSpeech(text) {
+  const normalized = String(text ?? '').trim();
+  if (!state.continuous || normalized.length === 0 || state.config.openai.voice_enabled !== true) {
+    return;
+  }
+
+  stopContinuousVoiceRecognition();
+  stopContinuousSpeechOutput(false);
+  state.continuousSpeechOutputActive = true;
+  setSpeaking(true);
+
+  try {
+    const speechBlob = await synthesizeAssistantSpeech(normalized);
+    const objectUrl = URL.createObjectURL(speechBlob);
+    const audioEl = new Audio(objectUrl);
+    audioEl.preload = 'auto';
+    state.continuousSpeechAudio = { audioEl, objectUrl };
+
+    await new Promise((resolve, reject) => {
+      audioEl.onended = () => resolve();
+      audioEl.onpause = () => {
+        if (!state.continuous || audioEl.src.length === 0) {
+          resolve();
+        }
+      };
+      audioEl.onerror = () => reject(new Error('speech_playback_error'));
+      const playPromise = audioEl.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch((error) => reject(error));
+      }
+    });
+  } catch (error) {
+    appendMessage(`Falha na voz continua: ${error.message}`, 'assistant');
+  } finally {
+    stopContinuousSpeechOutput();
+    if (state.continuous) {
+      startContinuousVoiceRecognition();
+    }
+  }
+}
+
+function startContinuousVoiceRecognition() {
+  const RecognitionCtor = getSpeechRecognitionCtor();
+  if (!RecognitionCtor) {
+    appendMessage('Modo continuo por voz indisponivel neste navegador.', 'assistant');
+    setContinuousListening(false);
+    return false;
+  }
+
+  stopContinuousVoiceRecognition();
+
+  const recognition = new RecognitionCtor();
+  recognition.lang = 'pt-BR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    setContinuousListening(true);
+  };
+
+  recognition.onresult = (event) => {
+    if (state.continuousSpeechOutputActive) return;
+    let finalText = '';
+    for (let i = event.resultIndex; i < event.results.length; i += 1) {
+      const transcript = String(event.results[i]?.[0]?.transcript ?? '').trim();
+      if (!transcript) continue;
+      if (event.results[i].isFinal) {
+        finalText += ` ${transcript}`;
+      }
+    }
+    const normalized = finalText.trim();
+    if (normalized.length > 0) {
+      sendInteraction(normalized, []);
+    }
+  };
+
+  recognition.onerror = (event) => {
+    const errorCode = String(event?.error ?? 'unknown');
+    setContinuousListening(false);
+
+    if (state.continuousSpeechOutputActive) {
+      return;
+    }
+
+    if (errorCode === 'not-allowed' || errorCode === 'service-not-allowed') {
+      appendMessage('Microfone bloqueado para modo continuo. Libere permissao do navegador.', 'assistant');
+      state.continuous = false;
+      stopContinuousVoiceRecognition();
+      stopContinuousSpeechOutput();
+      applyContinuousUiState();
+      continuousStateEl.textContent = 'one-shot';
+      continuousBtn.textContent = 'Ativar Continuo';
+      return;
+    }
+
+    if (state.continuous) {
+      clearContinuousRestartTimer();
+      state.continuousRestartTimer = window.setTimeout(() => {
+        if (state.continuous) {
+          startContinuousVoiceRecognition();
+        }
+      }, 600);
+    }
+  };
+
+  recognition.onend = () => {
+    setContinuousListening(false);
+    if (!state.continuous || state.continuousSpeechOutputActive) return;
+    clearContinuousRestartTimer();
+    state.continuousRestartTimer = window.setTimeout(() => {
+      if (state.continuous) {
+        startContinuousVoiceRecognition();
+      }
+    }, 380);
+  };
+
+  state.continuousRecognition = recognition;
+  try {
+    recognition.start();
+    return true;
+  } catch (error) {
+    appendMessage(`Falha ao iniciar modo continuo por voz: ${error.message}`, 'assistant');
+    setContinuousListening(false);
+    return false;
+  }
+}
+
+function applyContinuousUiState() {
+  bodyEl.classList.toggle('continuous-active', state.continuous === true);
+}
+
 function applyVisualMode(layout, palette, persist = true) {
   const safeLayout = normalizeLayout(layout);
   const safePalette = normalizePalette(palette);
@@ -1320,6 +1661,14 @@ function setActiveModule(moduleId) {
   }
 
   if (moduleId === 'mod-06-configuracoes') {
+    if (state.continuous) {
+      state.continuous = false;
+      stopContinuousVoiceRecognition();
+      stopContinuousSpeechOutput();
+      applyContinuousUiState();
+      continuousStateEl.textContent = 'one-shot';
+      continuousBtn.textContent = 'Ativar Continuo';
+    }
     chatWorkspaceEl.classList.add('hidden');
     moduleWorkspaceEl.classList.add('hidden');
     settingsWorkspaceEl.classList.remove('hidden');
@@ -1329,6 +1678,14 @@ function setActiveModule(moduleId) {
   }
 
   if (MODULE_WORKSPACE_IDS.has(moduleId)) {
+    if (state.continuous) {
+      state.continuous = false;
+      stopContinuousVoiceRecognition();
+      stopContinuousSpeechOutput();
+      applyContinuousUiState();
+      continuousStateEl.textContent = 'one-shot';
+      continuousBtn.textContent = 'Ativar Continuo';
+    }
     chatWorkspaceEl.classList.add('hidden');
     moduleWorkspaceEl.classList.remove('hidden');
     settingsWorkspaceEl.classList.add('hidden');
@@ -1439,7 +1796,7 @@ function collectConfigForm() {
   state.config.metrics.fx_usd_brl = safeNumber(cfgFxUsdBrlInput.value, 5.0);
 
   state.config.openai.api_key = cfgOpenAiApiKeyInput.value.trim();
-  state.config.openai.model = cfgOpenAiModelInput.value.trim() || 'gpt-5.1-mini';
+  state.config.openai.model = cfgOpenAiModelInput.value.trim() || 'gpt-5.1';
   state.config.openai.vision_enabled = cfgOpenAiVisionInput.checked;
   state.config.openai.voice_enabled = cfgOpenAiVoiceInput.checked;
   state.config.openai.image_generation_enabled = cfgOpenAiImageGenInput.checked;
@@ -1494,6 +1851,58 @@ function buildAttachmentRef(fileName) {
   return `upload://local/${Date.now()}-${safeName}`;
 }
 
+function fileExtension(fileName) {
+  const raw = String(fileName ?? '');
+  const idx = raw.lastIndexOf('.');
+  return idx >= 0 ? raw.slice(idx + 1).toLowerCase() : '';
+}
+
+function isTextAttachment(file) {
+  const mime = String(file?.type ?? '').toLowerCase();
+  if (mime.startsWith('text/')) return true;
+  if (mime.includes('json') || mime.includes('xml') || mime.includes('yaml')) return true;
+  const ext = fileExtension(file?.name);
+  return [
+    'txt', 'md', 'csv', 'json', 'xml', 'yaml', 'yml',
+    'js', 'ts', 'py', 'html', 'css', 'sql', 'log'
+  ].includes(ext);
+}
+
+async function fileToBase64(file) {
+  const buffer = await file.arrayBuffer();
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+async function buildAttachmentPayload(file, forcedType = null) {
+  const type = forcedType ?? (String(file.type).startsWith('image/') ? 'image' : 'file');
+  const mimeType = file.type || (type === 'image' ? 'image/*' : 'application/octet-stream');
+  const payload = {
+    type,
+    uri: buildAttachmentRef(file.name),
+    mime_type: mimeType,
+    filename: file.name,
+    size: file.size
+  };
+
+  if (file.size <= MAX_INLINE_ATTACHMENT_BYTES) {
+    payload.data_base64 = await fileToBase64(file);
+  }
+
+  if (isTextAttachment(file)) {
+    const rawText = await file.text();
+    payload.text_excerpt = rawText.slice(0, MAX_TEXT_EXCERPT_CHARS);
+  }
+
+  return payload;
+}
+
 function renderPendingAttachments() {
   if (state.pendingAttachments.length === 0) {
     pendingAttachmentsEl.innerHTML = '';
@@ -1546,6 +1955,17 @@ function buildPersonaOverridesFromConfig() {
   return Object.keys(overrides).length > 0 ? overrides : null;
 }
 
+function normalizeAssistantOutputText(rawText) {
+  const raw = String(rawText ?? '').trim();
+  if (!raw) return 'Comando recebido.';
+  const cleaned = raw
+    .replace(/^\[[^\]]+\]\s*/u, '')
+    .replace(/\s*\|\s*tasks?:\s*\d+\b/giu, '')
+    .replace(/\s*\|\s*provider=.*$/giu, '')
+    .trim();
+  return cleaned || 'Comando recebido.';
+}
+
 async function callHealth() {
   healthStatusEl.textContent = 'checking...';
   try {
@@ -1570,9 +1990,11 @@ async function refreshInteractionConfirmations() {
       confirmationsStatusEl,
       `Fila carregada (${status}): ${state.moduleData.confirmations.length} item(ns).`
     );
+    chatWorkspaceEl.classList.toggle('has-confirmations', state.moduleData.confirmations.length > 0);
     trackModuleSpend('mod-01-owner-concierge', 0.0006, 1);
   } catch (error) {
     setModuleStatus(confirmationsStatusEl, `Erro ao carregar fila: ${error.message}`, true);
+    chatWorkspaceEl.classList.toggle('has-confirmations', false);
   }
 }
 
@@ -1631,9 +2053,18 @@ async function toggleContinuousMode() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     state.continuous = next;
-    continuousStateEl.textContent = state.continuous ? 'continuous' : 'one-shot';
+    applyContinuousUiState();
+    if (state.continuous) {
+      ensureAvatarPlayback();
+      const started = startContinuousVoiceRecognition();
+      continuousStateEl.textContent = started ? 'continuous+voz' : 'continuous';
+    } else {
+      stopContinuousVoiceRecognition();
+      stopContinuousSpeechOutput();
+      continuousStateEl.textContent = 'one-shot';
+    }
     continuousBtn.textContent = state.continuous ? 'Pausar Continuo' : 'Ativar Continuo';
-    appendMessage(state.continuous ? 'Modo continuo ativado.' : 'Modo continuo pausado.');
+    updateConfigStatus(state.continuous ? 'Modo continuo ativado.' : 'Modo continuo pausado.');
     trackModuleSpend('mod-01-owner-concierge', 0.001, 1);
   } catch (error) {
     appendMessage(`Falha ao alternar modo continuo: ${error.message}. Verifique API em ${apiBase()}.`);
@@ -1659,7 +2090,13 @@ async function sendInteraction(text, attachments = []) {
       type: item.type,
       uri: item.uri,
       mime_type: item.mime_type,
-      filename: item.filename
+      filename: item.filename,
+      ...(typeof item.data_base64 === 'string' && item.data_base64.length > 0
+        ? { data_base64: item.data_base64 }
+        : {}),
+      ...(typeof item.text_excerpt === 'string' && item.text_excerpt.length > 0
+        ? { text_excerpt: item.text_excerpt }
+        : {})
     }));
   }
   const personaOverrides = buildPersonaOverridesFromConfig();
@@ -1685,16 +2122,32 @@ async function sendInteraction(text, attachments = []) {
 
     const body = await response.json();
     if (!response.ok) {
-      appendMessage(`Erro runtime: ${body.error ?? response.status}`);
+      const details = body?.details ? ` (${body.details})` : '';
+      appendMessage(`Erro runtime: ${body.error ?? response.status}${details}`);
+      setAssistantProviderStatus('error', {
+        errorDetails: `${body?.error ?? response.status}${details}`
+      });
       return;
     }
 
-    const status = body.response?.status ?? 'unknown';
-    const output = body.response?.assistant_output?.text ?? 'Comando recebido.';
-    const tasks = Array.isArray(body.response?.downstream_tasks)
-      ? ` | tasks: ${body.response.downstream_tasks.length}`
-      : '';
-    appendMessage(`[${status}] ${output}${tasks}`);
+    const assistantOutput = body.response?.assistant_output ?? {};
+    const output = normalizeAssistantOutputText(assistantOutput.text);
+    const provider = String(assistantOutput.provider ?? 'none');
+    const model = typeof assistantOutput.model === 'string'
+      ? assistantOutput.model
+      : null;
+    const fallbackReason = typeof assistantOutput.fallback_reason === 'string'
+      ? assistantOutput.fallback_reason
+      : null;
+    appendMessage(output);
+    setAssistantProviderStatus(provider, {
+      model,
+      fallbackReason
+    });
+
+    if (state.continuous && provider === 'openai' && state.config.openai.voice_enabled === true) {
+      void playContinuousAssistantSpeech(output);
+    }
 
     const confirmation = body.response?.confirmation;
     if (confirmation?.status === 'pending') {
@@ -1707,12 +2160,94 @@ async function sendInteraction(text, attachments = []) {
     trackModuleSpend('mod-01-owner-concierge', estimateMessageCostUSD(attachments), 1);
   } catch (error) {
     appendMessage(`Falha de conexao com API (${apiBase()}): ${error.message}`);
+    setAssistantProviderStatus('error', { errorDetails: error.message });
   }
 }
 
 function stopMediaRecorder() {
   if (state.mediaRecorder && state.mediaRecorder.state === 'recording') {
     state.mediaRecorder.stop();
+  }
+}
+
+function resolveAudioRecorderMimeType() {
+  const supported = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus'
+  ];
+
+  if (typeof window.MediaRecorder !== 'function' || typeof window.MediaRecorder.isTypeSupported !== 'function') {
+    return '';
+  }
+
+  for (const mime of supported) {
+    if (window.MediaRecorder.isTypeSupported(mime)) {
+      return mime;
+    }
+  }
+
+  return '';
+}
+
+function extensionFromMimeType(mimeType) {
+  const normalized = String(mimeType ?? '').toLowerCase();
+  if (normalized.includes('ogg')) return 'ogg';
+  if (normalized.includes('mp4')) return 'm4a';
+  if (normalized.includes('wav')) return 'wav';
+  return 'webm';
+}
+
+async function blobToBase64(blob) {
+  const buffer = await blob.arrayBuffer();
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+async function transcribeRecordedAudioAndSend(blob, mimeType, fileName) {
+  audioRecordBtn.disabled = true;
+  audioRecordBtn.textContent = 'Transcrevendo...';
+  try {
+    const audioBase64 = await blobToBase64(blob);
+    const response = await fetch(`${apiBase()}/v1/owner-concierge/audio/transcribe`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: crypto.randomUUID(),
+          tenant_id: tenantId(),
+          session_id: sessionId(),
+          audio_base64: audioBase64,
+          mime_type: mimeType,
+          filename: fileName,
+          language: 'pt'
+        }
+      })
+    });
+
+    const body = await response.json();
+    if (!response.ok) {
+      const details = body?.details ? ` (${body.details})` : '';
+      throw new Error(`${body?.error ?? response.status}${details}`);
+    }
+
+    const transcript = String(body?.response?.transcription?.text ?? '').trim();
+    if (transcript.length === 0) {
+      throw new Error('transcription_empty');
+    }
+    await sendInteraction(transcript, []);
+  } catch (error) {
+    appendMessage(`Falha ao transcrever audio: ${error.message}`, 'assistant');
+  } finally {
+    audioRecordBtn.disabled = false;
+    audioRecordBtn.textContent = 'Audio';
   }
 }
 
@@ -1729,7 +2264,9 @@ async function toggleAudioRecording() {
 
   try {
     state.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(state.mediaStream);
+    const preferredMimeType = resolveAudioRecorderMimeType();
+    const recorderOptions = preferredMimeType ? { mimeType: preferredMimeType } : undefined;
+    const recorder = new MediaRecorder(state.mediaStream, recorderOptions);
     const chunks = [];
 
     recorder.addEventListener('dataavailable', (event) => {
@@ -1738,17 +2275,13 @@ async function toggleAudioRecording() {
       }
     });
 
-    recorder.addEventListener('stop', () => {
-      const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+    recorder.addEventListener('stop', async () => {
+      const mimeType = recorder.mimeType || preferredMimeType || 'audio/webm';
+      const blob = new Blob(chunks, { type: mimeType });
       if (blob.size > 0) {
-        const fileName = `audio-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
-        addPendingAttachment({
-          type: 'audio',
-          uri: buildAttachmentRef(fileName),
-          mime_type: blob.type || 'audio/webm',
-          filename: fileName,
-          size: blob.size
-        });
+        const ext = extensionFromMimeType(mimeType);
+        const fileName = `audio-${new Date().toISOString().replace(/[:.]/g, '-')}.${ext}`;
+        await transcribeRecordedAudioAndSend(blob, mimeType, fileName);
       }
 
       if (state.mediaStream) {
@@ -1757,8 +2290,7 @@ async function toggleAudioRecording() {
 
       state.mediaRecorder = null;
       state.mediaStream = null;
-      audioRecordBtn.textContent = 'Audio';
-      updateConfigStatus('Audio capturado e adicionado na fila de anexos.');
+      updateConfigStatus('Audio processado em modo direto.');
     });
 
     state.mediaRecorder = recorder;
@@ -1769,19 +2301,17 @@ async function toggleAudioRecording() {
   }
 }
 
-function handleFilesSelected(fileList, forcedType = null) {
+async function handleFilesSelected(fileList, forcedType = null) {
   const files = Array.from(fileList || []);
   if (files.length === 0) return;
 
   for (const file of files) {
-    const type = forcedType ?? (file.type.startsWith('image/') ? 'image' : 'file');
-    addPendingAttachment({
-      type,
-      uri: buildAttachmentRef(file.name),
-      mime_type: file.type || (type === 'image' ? 'image/*' : 'application/octet-stream'),
-      filename: file.name,
-      size: file.size
-    });
+    try {
+      const attachmentPayload = await buildAttachmentPayload(file, forcedType);
+      addPendingAttachment(attachmentPayload);
+    } catch (error) {
+      appendMessage(`Falha ao processar anexo ${file.name}: ${error.message}`, 'assistant');
+    }
   }
 }
 
@@ -1837,6 +2367,8 @@ function bootstrapConfig() {
   populateConfigForm();
   renderMetricsTable();
   renderSettingsLockStatus();
+  setAssistantProviderStatus('none');
+  applyContinuousUiState();
   setTopbarLabels();
 }
 
@@ -1858,7 +2390,19 @@ function setupEvents() {
 
   healthBtn.addEventListener('click', callHealth);
   continuousBtn.addEventListener('click', toggleContinuousMode);
+  if (continuousBackBtn) {
+    continuousBackBtn.addEventListener('click', () => {
+      if (state.continuous) {
+        toggleContinuousMode();
+      }
+    });
+  }
   simulateVoiceBtn.addEventListener('click', () => startSpeakingPulse(1800));
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.continuous) {
+      toggleContinuousMode();
+    }
+  });
 
   saveConfigBtn.addEventListener('click', () => {
     saveConfig();
@@ -1881,17 +2425,22 @@ function setupEvents() {
   });
 
   audioRecordBtn.addEventListener('click', toggleAudioRecording);
+  messageInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+    chatForm.requestSubmit();
+  });
 
   photoPickBtn.addEventListener('click', () => photoInput.click());
   filePickBtn.addEventListener('click', () => fileInput.click());
 
   photoInput.addEventListener('change', () => {
-    handleFilesSelected(photoInput.files, 'image');
+    void handleFilesSelected(photoInput.files, 'image');
     photoInput.value = '';
   });
 
   fileInput.addEventListener('change', () => {
-    handleFilesSelected(fileInput.files);
+    void handleFilesSelected(fileInput.files);
     fileInput.value = '';
   });
 
@@ -1950,6 +2499,9 @@ function setupEvents() {
 }
 
 async function bootstrap() {
+  registerAvatarVideoFallback(avatarIdleVideoEl);
+  registerAvatarVideoFallback(avatarSpeakingVideoEl);
+  applyAvatarVideoSource();
   bootstrapConfig();
   syncCrmEmbeddedFrame();
   renderModuleNav();

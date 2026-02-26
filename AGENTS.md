@@ -90,6 +90,13 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-4-runtime-config-coupling-slice` (completed)
+- Active feature: `milestone-4-mod-01-continuous-voice-output-slice` (completed)
 - Active phase: `Implement checkpoint closed`
-- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase for real persona-2 WhatsApp execution over Evolution outbound.
+- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase for canonical dual-concierge memory orchestrator (persona 1 full orchestration + persona 2 WhatsApp CRM execution + short/medium/long memory control).
+
+### Proximo passo natural (traceavel)
+- Feature name (target): `milestone-4-dual-concierge-memory-orchestrator-slice`
+- Exit gate before code:
+  - `.specs/features/<feature>/spec.md` approved
+  - `.specs/features/<feature>/design.md` approved
+  - `.specs/features/<feature>/tasks.md` approved

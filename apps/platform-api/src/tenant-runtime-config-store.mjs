@@ -41,7 +41,7 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
   return {
     openai: {
       api_key: asString(openaiInput.api_key, asString(openaiFallback.api_key, '')),
-      model: asString(openaiInput.model, asString(openaiFallback.model, 'gpt-5.1-mini')) || 'gpt-5.1-mini',
+      model: asString(openaiInput.model, asString(openaiFallback.model, 'gpt-5.1')) || 'gpt-5.1',
       vision_enabled: asBool(openaiInput.vision_enabled, asBool(openaiFallback.vision_enabled, true)),
       voice_enabled: asBool(openaiInput.voice_enabled, asBool(openaiFallback.voice_enabled, true)),
       image_generation_enabled: asBool(

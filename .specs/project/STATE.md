@@ -1,14 +1,22 @@
 # STATE
 
-Last update: 2026-02-25
-Active phase: Implement checkpoint closed (Milestone 4 runtime config coupling slice)
-Active feature: milestone-4-runtime-config-coupling-slice (completed)
+Last update: 2026-02-26
+Active phase: Implement checkpoint closed (Milestone 4 continuous voice output slice)
+Active feature: milestone-4-mod-01-continuous-voice-output-slice (completed)
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
 2. Keep fabio2 production flow stable while fabio matures.
 3. Work in phased specs to avoid scope pollution.
 4. Track both engineering and financial metrics from the start.
+5. Canonical product model is dual-concierge:
+   - Persona 1 = owner orchestrator with full module awareness.
+   - Persona 2 = WhatsApp CRM specialist for lead/customer execution.
+6. Continuous learning target is mandatory with tiered memory:
+   - short session memory
+   - medium episodic memory
+   - long promoted memory
+   with strict tenant/session/channel isolation and auditable trace.
 
 ## Anti-pollution Protocol
 - FOCO: continue current phase only.
@@ -478,9 +486,78 @@ Active feature: milestone-4-runtime-config-coupling-slice (completed)
     - `npx nx run app-platform-api:test`
     - `npx nx run app-owner-console:build`
     - `npx nx run app-crm-console:build`
+- Opened and completed `milestone-4-mod-01-openai-strict-provider-slice`:
+  - tenant runtime with `openai.api_key` now enforces strict mode (`openai`) in owner interaction path (no silent local fallback).
+  - owner interaction failures from provider now surface explicitly as `owner_response_provider_error`.
+  - owner console topbar now includes provider telemetry pill:
+    - `provider: openai|local|none|error`
+    - includes model context when available
+  - owner chat trace now logs provider metadata in interaction lines.
+  - tenant runtime config store default now uses app storage root when explicit storage path is not provided, preventing global cross-session/test contamination.
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+- Opened and completed `milestone-4-mod-01-chat-clean-voice-continuous-slice`:
+  - new owner endpoint for direct transcription:
+    - `POST /v1/owner-concierge/audio/transcribe`
+  - owner audio button now runs direct flow:
+    - microphone capture -> OpenAI transcription -> auto-send to interaction
+  - chat view now omits internal status/task/provider noise in message bubbles (clean operator stream).
+  - approvals queue now stays hidden unless there are pending items.
+  - continuous mode now activates avatar-first layout with enlarged immersive stage.
+  - default OpenAI model baseline adjusted to `gpt-5.1` for owner/runtime config defaults.
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
+- Opened and completed `milestone-4-mod-01-layout-voice-polish-slice`:
+  - module 01 layout optimized:
+    - reduced right panel width in standard mode
+    - composer fixed to bottom with compact side action buttons
+    - dead lower white strip removed via flex panel structure
+  - continuous mode voice loop now uses browser SpeechRecognition with auto-restart while active.
+  - continuous avatar stage reframed to landscape immersive mode to avoid oversized/cropped giant brain behavior.
+  - assistant bubble output now normalizes protocol noise (`[accepted]`, `tasks`, `provider`) before render.
+  - validation evidence:
+    - `npx nx run app-owner-console:build`
+- Opened and completed `milestone-4-mod-01-avatar-fullscreen-slice`:
+  - approved media `AvatarSaaS.mov` converted and integrated:
+    - `avatar-fullscreen.webm`
+    - `avatar-fullscreen.mp4`
+  - continuous mode UX changed to fullscreen immersive stage:
+    - hides sidebar/topbar/chat chrome
+    - shows only transparent `Voltar` action
+  - runtime source fallback added in owner console (`webm` -> `mp4`) for browser compatibility.
+  - validation evidence:
+    - `node --check apps/owner-console/src/app.js`
+    - `npx nx run app-owner-console:build`
+- Opened and completed `milestone-4-mod-01-avatar-attachments-hotfix-slice`:
+  - fixed black avatar playback by forcing compatibility-first MP4 source and runtime fallback replay hooks.
+  - fixed owner attachment path to allow real image/file analysis:
+    - owner console now sends inline `data_base64` and bounded `text_excerpt` for supported files
+    - runtime now forwards `attachments` to owner response provider
+    - OpenAI payload now includes multimodal image input and file context text
+  - added regression coverage for attachment forwarding in strict OpenAI mode.
+  - validation evidence:
+    - `node --check apps/owner-console/src/app.js`
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-platform-api:test`
+    - `npx nx run contract-tests:contract-checks`
+- Opened and completed `milestone-4-mod-01-continuous-voice-output-slice`:
+  - new tenant-aware endpoint:
+    - `POST /v1/owner-concierge/audio/speech`
+  - continuous mode now plays assistant responses with OpenAI TTS (female default voice profile) and pauses/restarts recognition around playback.
+  - strict tenant checks applied for speech path (`openai_not_configured`, `voice_disabled_by_tenant`).
+  - validation evidence:
+    - `npx nx run app-platform-api:test`
+    - `npx nx run app-owner-console:build`
 
 ## Next Checkpoint
-Definir proximo slice de Milestone 4 para integrar execucao real da persona 2 (WhatsApp) com Evolution outbound em fluxo tenant-config-first.
+Proximo passo natural (institucional):
+- Abrir e aprovar em `Specify` o slice `milestone-4-dual-concierge-memory-orchestrator-slice` com escopo fechado:
+  1. Auto-capture + auto-recall de memoria por turno (curta/media/longa),
+  2. Orquestracao real persona 1 -> persona 2 -> retorno auditavel,
+  3. Acoplamento operacional com execucao CRM WhatsApp tenant-safe.
+- Criterio de saida do checkpoint: `spec.md`, `design.md`, `tasks.md` aprovados e sem ambiguidade de escopo.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
