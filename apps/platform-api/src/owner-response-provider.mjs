@@ -203,6 +203,12 @@ async function requestOpenAiResponsesReply(options, payload) {
   if (whatsappPrompt) {
     instructionParts.push(`WhatsApp agent guidance:\n${whatsappPrompt}`);
   }
+  const operationalContext = typeof payload?.operational_context === 'string' && payload.operational_context.trim().length > 0
+    ? payload.operational_context.trim()
+    : null;
+  if (operationalContext) {
+    instructionParts.push(`Use the following live data from the system to answer accurately. Do not say you cannot access the system when this block is present:\n${operationalContext}`);
+  }
 
   const attachments = sanitizeAttachments(payload?.attachments);
   const startedAt = Date.now();
@@ -256,6 +262,15 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
   }
   if (whatsappPrompt) {
     messages.push({ role: 'system', content: `WhatsApp agent guidance:\n${whatsappPrompt}` });
+  }
+  const operationalContext = typeof payload?.operational_context === 'string' && payload.operational_context.trim().length > 0
+    ? payload.operational_context.trim()
+    : null;
+  if (operationalContext) {
+    messages.push({
+      role: 'system',
+      content: `Use the following live data from the system to answer accurately. Do not say you cannot access the system when this block is present:\n${operationalContext}`
+    });
   }
 
   const attachments = sanitizeAttachments(payload?.attachments);

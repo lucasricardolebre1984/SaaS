@@ -1570,6 +1570,50 @@ export function createApp(options = {}) {
     policyPath: options.taskRoutingPolicyPath,
     executionPolicyPath: options.taskExecutionPolicyPath
   });
+
+  const LIST_LIMIT = 20;
+  async function buildOperationalContextForOwner(tenantId, userText) {
+    const t = String(userText ?? '').toLowerCase().trim();
+    if (t.length < 2) return null;
+    const parts = [];
+    const wantClientes = /\b(clientes?|lista de clientes|quantos clientes|cadastro de clientes)\b/.test(t) || (/\b(listar|mostre|quais|o que tem)\b/.test(t) && /\b(cliente|contato)\b/.test(t));
+    const wantAgenda = /\b(agenda|lembretes?|compromissos?|reuni[oó]es?)\b/.test(t) || (/\b(listar|mostre|quais|o que tem)\b/.test(t) && /\b(agenda|lembrete)\b/.test(t));
+    const wantLeads = /\b(leads?|crm|qualifica[cç][aã]o)\b/.test(t) || (/\b(listar|mostre|quais|o que tem)\b/.test(t) && /\b(lead|crm)\b/.test(t));
+    const wantCobranca = /\b(cobran[cç]as?|faturas?|faturamento|pagamentos?)\b/.test(t) || (/\b(listar|mostre|quais|o que tem)\b/.test(t) && /\b(cobrança|fatura)\b/.test(t));
+    const wantAny = /\b(listar|mostre|quais|o que tem|navegar|saber o que|entender)\b/.test(t) && (wantClientes || wantAgenda || wantLeads || wantCobranca);
+    if (!wantClientes && !wantAgenda && !wantLeads && !wantCobranca && !wantAny) return null;
+    try {
+      if (wantClientes || wantAny) {
+        const raw = await customerStore.listCustomers(tenantId);
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const list = items.slice(0, LIST_LIMIT).map((c) => `${c.full_name ?? c.customer_id}${c.phone_e164 ? ` (${c.phone_e164})` : ''}`);
+        parts.push(`Clientes (${items.length}): ${list.length ? list.join('; ') : 'nenhum cadastrado'}.`);
+      }
+      if (wantLeads || wantAny) {
+        const raw = await leadStore.listLeads(tenantId);
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const list = items.slice(0, LIST_LIMIT).map((l) => `${(l.lead_id ?? '').slice(0, 8)} ${l.stage ?? '?'}`);
+        parts.push(`Leads CRM (${items.length}): ${list.length ? list.join('; ') : 'nenhum'}.`);
+      }
+      if (wantAgenda || wantAny) {
+        const raw = await agendaStore.listReminders(tenantId);
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const list = items.slice(0, LIST_LIMIT).map((r) => `${r.title ?? (r.reminder_id ?? '').slice(0, 8)} ${r.schedule_at ?? ''}`).filter(Boolean);
+        parts.push(`Lembretes agenda (${items.length}): ${list.length ? list.join('; ') : 'nenhum'}.`);
+      }
+      if (wantCobranca || wantAny) {
+        const raw = await billingStore.listCharges(tenantId);
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const list = items.slice(0, LIST_LIMIT).map((c) => `${(c.charge_id ?? '').slice(0, 8)} ${c.status ?? '?'} ${c.amount ?? ''}`).filter(Boolean);
+        parts.push(`Cobranças (${items.length}): ${list.length ? list.join('; ') : 'nenhuma'}.`);
+      }
+      if (parts.length === 0) return null;
+      return `Dados atuais do SaaS (para responder com precisão):\n${parts.join('\n')}`;
+    } catch (err) {
+      return null;
+    }
+  }
+
   const ownerConfirmationConfig = {
     maxPendingPerTenant: parseConfirmationMaxPending(
       options.ownerConfirmationMaxPendingPerTenant ??
@@ -4422,15 +4466,23 @@ export function createApp(options = {}) {
         let assistantOutput;
         if (request.operation === 'send_message') {
           try {
+            const userText = String(request.payload?.text ?? '');
+            let operationalContext = null;
+            try {
+              operationalContext = await buildOperationalContextForOwner(request.tenant_id, userText);
+            } catch (_) {
+              operationalContext = null;
+            }
             const tenantResponseProvider = getOwnerResponseProviderForTenant(tenantRuntimeConfig);
             assistantOutput = await tenantResponseProvider.generateAssistantOutput({
-              text: String(request.payload?.text ?? ''),
+              text: userText,
               tenant_id: request.tenant_id,
               session_id: request.session_id,
               persona_overrides: personaOverrides,
               attachments: Array.isArray(request.payload?.attachments)
                 ? request.payload.attachments
-                : []
+                : [],
+              operational_context: operationalContext ?? undefined
             });
           } catch (error) {
             return json(res, 502, {
