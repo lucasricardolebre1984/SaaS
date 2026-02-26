@@ -599,3 +599,4 @@ Active feature: milestone-5-aws-production-bootstrap-slice
 - Checkpoint M5 commit: 57558f4 (branch feat/m5-aws-production-bootstrap).
 - PR aberto: https://github.com/lucasricardolebre1984/fabio/pull/3
 - CI check Preprod Validate bloqueado por billing account lock no GitHub Actions (run 22451808265).
+- Deploy readiness DNS check failed on 2026-02-26: dev.automaniaai.com not resolved yet (report deploy-aws-readiness-20260226-134747.log).

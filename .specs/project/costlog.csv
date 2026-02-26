@@ -156,3 +156,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M5A-003 aws dev runbook and env baseline documentation
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-004 gate execution evidence and governance closure for milestone 5 bootstrap
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-004b PR creation and CI lock audit evidence
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-DEPLOY-001 DNS readiness check and blocker registration
