@@ -151,3 +151,7 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M4E-CLOSE episode-recall slice checkpoint STATE AGENTS ROADMAP worklog
 2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4L-001a..b long-memory-promotion slice event and episode-to-long promotion
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M4L-CLOSE PROXIMO-PASSO memoria contexto aprendizado fechados
+2026-02-26,internal,engineering-time,local,0.00,0.00,specification,M5A-001 aws deployment axis context lock and feature publication
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M5A-002 deploy aws readiness gate script and package integration
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M5A-003 aws dev runbook and env baseline documentation
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-004 gate execution evidence and governance closure for milestone 5 bootstrap

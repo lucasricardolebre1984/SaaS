@@ -12,6 +12,7 @@ tmp/
 .env
 .env.*
 !.env.example
+!.env.aws.example
 .DS_Store
 Thumbs.db
 

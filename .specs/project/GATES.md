@@ -12,5 +12,6 @@
 ## Pre-prod
 
 - `npm run preprod:validate`
+- `npm run deploy:aws:readiness`
 
 Ref: QUALITY_GATES.md, README.md.

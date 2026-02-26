@@ -155,3 +155,7 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-26,14:25,14:30,0.08,Governance,milestone-4-episode-recall-slice,M4E-CLOSE,pair,done,Closed Implement checkpoint STATE AGENTS spec tasks worklog
 2026-02-26,15:00,15:45,0.75,Implement,milestone-4-long-memory-promotion-slice,M4L-001a..b,pair,done,Event memory.promoted.from_episode + promotion episode to long memory in app.mjs
 2026-02-26,15:45,15:50,0.08,Governance,milestone-4-long-memory-promotion-slice,M4L-CLOSE,pair,done,PROXIMO-PASSO STATE ROADMAP AGENTS worklog costlog updated; memoria contexto aprendizado fechados
+2026-02-26,13:10,13:18,0.13,Specify,milestone-5-aws-production-bootstrap-slice,M5A-001,pair,done,Locked AWS deploy axis in context and opened feature docs spec design tasks
+2026-02-26,13:18,13:27,0.15,Implement,milestone-5-aws-production-bootstrap-slice,M5A-002,pair,done,Implemented deploy aws readiness gate script and package command
+2026-02-26,13:27,13:33,0.10,Implement,milestone-5-aws-production-bootstrap-slice,M5A-003,pair,done,Published aws dev runbook and env baseline for dev automania domain
+2026-02-26,13:33,13:39,0.10,Governance,milestone-5-aws-production-bootstrap-slice,M5A-004,pair,done,Validated readiness gate updated state roadmap and closed bootstrap checkpoint

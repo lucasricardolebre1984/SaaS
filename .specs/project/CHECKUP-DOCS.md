@@ -11,5 +11,7 @@
 - [ ] worklog.csv, costlog.csv (METRICS.md).
 - [ ] Feature ativa com spec/design/tasks consistentes.
 - [ ] AGENTS.md com Current Priority e proximo passo.
+- [ ] RUNBOOK AWS dev atualizado (`apps/platform-api/RUNBOOK-aws-deploy-dev.md`).
+- [ ] Baseline de ambiente AWS atualizado (`.env.aws.example`).
 
 Local: `.specs/project/*.md`, `.specs/features/<feature>/`.

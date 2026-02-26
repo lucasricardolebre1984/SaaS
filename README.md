@@ -4,9 +4,9 @@ SaaS base institucional da Automania AI (Nx monorepo). **Modelo universal** para
 
 ## Status Atual
 - **Fonte de verdade:** `.specs/project/STATE.md` e `.specs/project/STATUS-ATUAL.md` (atualizados com data para auditoria).
-- Milestone: Milestone 4 (dual-concierge + memoria/contexto/aprendizado).
-- Slice em foco: `milestone-4-dual-concierge-memory-orchestrator-slice` (Specify/Design fechado; tasks M4D-008..012).
-- Checkpoints recentes: confirmation queue, approvals UI, operational_context (IA responde com dados ao vivo: clientes, agenda, leads, cobrancas).
+- Milestone atual: **Milestone 5** (AWS deployment bootstrap do SaaS matriz).
+- Slice em foco: `milestone-5-aws-production-bootstrap-slice`.
+- Eixo memoria/contexto/aprendizado: **fechado** no produto; foco atual em deploy dev com Postgres e gates de producao.
 
 ## Arquitetura Padrão (fixa)
 1. `mod-01-owner-concierge` (chat IA + avatar + memória/contexto)
@@ -81,6 +81,11 @@ Gate único de pré-produção (orquestra todos os checks):
 npm run preprod:validate
 ```
 
+Gate de readiness para deploy AWS:
+```powershell
+npm run deploy:aws:readiness
+```
+
 Drills operacionais:
 ```powershell
 npm run release:dry-run
@@ -121,3 +126,4 @@ npm run generate:saas-starter -- --saas-name "Meu SaaS" --tenant-id "tenant_meu_
 
 Manual operacional:
 - `docs/SAAS-STANDARD-MANUAL.md`
+- `apps/platform-api/RUNBOOK-aws-deploy-dev.md`

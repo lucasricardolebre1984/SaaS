@@ -94,8 +94,8 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-4-long-memory-promotion-slice` (implementado)
+- Active feature: `milestone-5-aws-production-bootstrap-slice` (implementado)
 - Active phase: Implement checkpoint closed
 
 ### Produto: memoria/contexto/aprendizado
-- **Fonte:** `.specs/project/PROXIMO-PASSO.md` — memoria, contexto e aprendizado **fechados** no SaaS (promocao medium->long implementada). Nenhum passo pendente neste eixo.
+- **Fonte:** `.specs/project/PROXIMO-PASSO.md` — memoria, contexto e aprendizado estao **fechados**. Eixo ativo agora: deploy dev AWS do SaaS matriz com Postgres, Evolution server-side e gates de producao.

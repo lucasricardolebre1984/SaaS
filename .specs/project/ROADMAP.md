@@ -203,6 +203,30 @@ Status update:
   - feature implemented and validated: milestone-4-episode-recall-slice (M4E-001a..d episode_context in recall; provider instructions + system message; gates passed)
   - feature implemented: milestone-4-long-memory-promotion-slice (promocao episodio -> memoria longa; evento memory.promoted.from_episode; PROXIMO-PASSO: memoria/contexto/aprendizado fechados no produto)
 
+## Milestone 5 - AWS Deployment Bootstrap (in progress)
+Objective: Put the matrix SaaS in AWS dev with production-grade persistence and operational gates.
+
+Deliverables:
+- AWS dev deploy runbook for `dev.automaniaai.com`
+- deploy readiness gate with report artifacts
+- env baseline for postgres + providers
+- context lock updates across project docs
+
+Exit criteria:
+- `deploy:aws:readiness` green with report artifact
+- runtime in AWS dev uses `postgres` backend
+- DNS and reverse proxy flow documented and validated
+
+Status update:
+- first execution slice opened:
+  - `milestone-5-aws-production-bootstrap-slice`
+  - scope: context lock + readiness gate + runbook + governance checkpoint
+  - validation target: Nx gates + preprod + deploy readiness report
+- slice implemented and validated:
+  - `deploy:aws:readiness` command published and executed
+  - runbook `RUNBOOK-aws-deploy-dev.md` + `.env.aws.example` published
+  - readiness gate passed with `-SkipSmokePostgres` in local machine (Docker indisponivel)
+
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS
 - Advanced AI cost optimization per provider/model

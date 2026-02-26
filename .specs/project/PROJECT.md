@@ -3,7 +3,7 @@
 Project: fabio (Automania AI institutional SaaS base)
 Owner: Lucas Ricardo Lebre
 Created: 2026-02-22
-Status: Execution (post-Milestone 3 transition)
+Status: Execution (AWS production bootstrap)
 
 ## Vision
 Build a reusable SaaS base that can be cloned for future products, with strict process discipline, module boundaries, and measurable engineering/financial performance from day 1.
@@ -20,7 +20,7 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 4. Keep production untouched until migration quality gates pass.
 
 ## Non-goals (for now)
-- No production deployment from this repo yet.
+- No direct deploy to final `prod` without dev/hml gate evidence.
 - No risky direct migration without specification and task gating.
 - No ad-hoc feature work outside the active phase.
 
@@ -31,7 +31,8 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 - Persona 1/2 optional prompt wiring in settings and interaction contracts.
 - SaaS starter generator and operational runbooks.
 - Milestone 3 planning and production-readiness closure completed.
-- Milestone 4 scope definition kickoff (next slice in Specify phase).
+- Milestone 4 memory/context/aprendizado closure completed.
+- Milestone 5 AWS bootstrap in progress (deploy dev + Postgres + operational gates).
 - Canonical standard lock:
   - Persona 1 as full SaaS orchestrator (module-aware across 01..06).
   - Persona 2 as WhatsApp CRM execution specialist (lead capture/follow-up/conversion).

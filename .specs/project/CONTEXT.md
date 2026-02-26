@@ -2,7 +2,7 @@
 
 Project: fabio
 Date: 2026-02-26
-Status: Post-Milestone 3 transition active
+Status: AWS production bootstrap active
 
 ## Mission
 Create a reusable SaaS operating system for Automania AI with strict phase workflow, modular architecture, and measurable outcomes (delivery, quality, reliability, and cost).
@@ -74,7 +74,7 @@ This repository defines a fixed SaaS standard model:
 - Metrics tracking in worklog/costlog
 
 ## Immediate Goal
-Open next Milestone 4 feature in `Specify` phase to implement:
-- dual-concierge execution loop (persona 1 -> persona 2 -> persona 1 feedback),
-- continuous memory orchestration (short/medium/long tiers),
-- tenant-safe session control with no context-loss behavior.
+Execute SaaS matrix deployment bootstrap for AWS dev environment:
+- enable production-like runtime (`postgres` backend) as default target for remote deploy,
+- lock operational path for `dev.automaniaai.com` with auditable gates,
+- keep multi-tenant model (`tenant_id`) as the scaling unit for client onboarding.

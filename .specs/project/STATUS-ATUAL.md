@@ -33,7 +33,7 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
 | Modulos 01..06 | Implementados (UI + API) | Menu fixo; M06 configuracoes com sync backend por tenant. |
 | Persona 1 (Owner Concierge) | Operacional | Responde com dados ao vivo (clientes, agenda, leads, cobrancas) via `operational_context` injetado por turno. |
 | Persona 2 (WhatsApp CRM) | Contratos e worker integrado | Comando `crm.whatsapp.send`; eventos `crm.delegation.sent`/`failed` no schema; worker drain emite delegacao para mod-02. |
-| Dual-concierge loop P1->P2->P1 | Especificado, nao fechado | Design e tasks no slice `milestone-4-dual-concierge-memory-orchestrator-slice`. |
+| Dual-concierge loop P1->P2->P1 | Operacional baseline | Delegacao e feedback via eventos/worker com trilha auditavel tenant-scoped. |
 
 ### 3.2 Memoria e aprendizado continuo
 
@@ -45,12 +45,12 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
 | **Recall (RAG)** | Antes de cada resposta | Implementado: short_memory + operational_context + retrieved_context (M4D-010). | — |
 | **Auditoria** | Trace em todos os fluxos | Sim: correlation_id, trace_id, eventos persistidos. | Garantir que eventos de memoria tenham timestamp e tenant/session. |
 
-### 3.3 Aprendizado infinito (evolucao por proprietario)
+### 3.3 Aprendizado continuo (estado atual)
 
-- **Objetivo:** A IA evolui conforme cada proprietario de SaaS conduz o uso.
-- **Ja existente:** Memoria longa por tenant; retrieval por tenant; runtime config por tenant.
-- **Para fechar o ciclo:** (1) Auto-capture de turno em short. (2) Promocao short->medium->long auditavel. (3) Recall sistematico antes de cada resposta do Persona 1. (4) Sem vazamento entre tenants; restore/resume por sessao.
-- **Referencia:** `.specs/project/RESEARCH-CONTINUOUS-LEARNING-CRM-2026.md` e slice dual-concierge.
+- **Status:** fechado no produto para eixo memoria/contexto/aprendizado.
+- **Ja implementado:** short + episodios + promocao para long memory com evento auditavel.
+- **Foco atual:** deploy AWS dev do SaaS matriz com Postgres + Evolution server-side + DNS `dev.automaniaai.com`.
+- **Referencia:** `.specs/project/PROXIMO-PASSO.md`.
 
 ---
 
@@ -76,6 +76,7 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 | GATES.md | Portas de qualidade. |
 | CHECKUP-DOCS.md | Checkup dos docs. |
 | METRICS.md | worklog, costlog. |
+| RUNBOOK-aws-deploy-dev.md | Deploy dev AWS + DNS + reverse proxy. |
 | RESEARCH-CONTINUOUS-LEARNING-CRM-2026.md | Pesquisa aprendizado continuo. |
 | features/*/spec.md, design.md, tasks.md | Por feature. |
 
@@ -83,7 +84,7 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 
 ## 6. Proximo passo natural
 
-- **Slice:** milestone-4-dual-concierge-memory-orchestrator-slice concluido (Implement checkpoint closed).
-- **Pendente futuro:** M4D-009c (persistir episodio em medium store).
-- **Proximo passo:** abrir novo slice em Specify (M4) ou implementar M4D-009c.
-- **Spec do fluxo:** MEMORY-CONTEXT-LEARNING-FLOW.md.
+- **Slice ativo:** `milestone-5-aws-production-bootstrap-slice`.
+- **Objetivo imediato:** readiness + deploy dev AWS do SaaS matriz.
+- **Gate principal:** `npm run deploy:aws:readiness`.
+- **Runbook:** `apps/platform-api/RUNBOOK-aws-deploy-dev.md`.

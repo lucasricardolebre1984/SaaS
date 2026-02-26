@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-26
-Active phase: Implement checkpoint closed (milestone-4-long-memory-promotion-slice)
-Active feature: milestone-4-long-memory-promotion-slice
+Active phase: Implement checkpoint closed (milestone-5-aws-production-bootstrap-slice)
+Active feature: milestone-5-aws-production-bootstrap-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -17,6 +17,11 @@ Active feature: milestone-4-long-memory-promotion-slice
    - medium episodic memory
    - long promoted memory
    with strict tenant/session/channel isolation and auditable trace.
+7. SaaS matrix deployment baseline moves to AWS dev:
+   - single deploy multi-tenant (`tenant_id` per client),
+   - postgres as production persistence backend,
+   - Evolution provider server-side (not local desktop dependency),
+   - domain bootstrap via `dev.automaniaai.com`.
 
 ## Anti-pollution Protocol
 - FOCO: continue current phase only.
@@ -561,6 +566,19 @@ Active feature: milestone-4-long-memory-promotion-slice
 ## Next Checkpoint
 - Slice `milestone-4-long-memory-promotion-slice` implementado: promocao episodio -> memoria longa (createEntry source episode_promotion, evento memory.promoted.from_episode); PROXIMO-PASSO atualizado: memoria, contexto e aprendizado fechados no produto.
 - **Produto:** memoria/contexto/aprendizado fechados (ver `.specs/project/PROXIMO-PASSO.md`). Nenhum passo pendente neste eixo.
+- Opened `milestone-5-aws-production-bootstrap-slice`:
+  - published spec/design/tasks for AWS dev bootstrap, deploy gate, and runbook
+  - added readiness command `npm run deploy:aws:readiness`
+  - published env baseline `.env.aws.example`
+  - published deploy runbook `apps/platform-api/RUNBOOK-aws-deploy-dev.md`
+- Validation evidence for milestone-5 bootstrap:
+  - `npm run deploy:aws:readiness -- -SkipDnsResolve` failed only on local Docker unavailability (`smoke-postgres`).
+  - `npm run deploy:aws:readiness -- -SkipDnsResolve -SkipSmokePostgres` passed.
+  - reports:
+    - `tools/reports/preprod-validate-20260226-133549.log`
+    - `tools/reports/deploy-aws-readiness-20260226-133548.log`
+    - `tools/reports/preprod-validate-20260226-133653.log`
+    - `tools/reports/deploy-aws-readiness-20260226-133653.log`
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.
