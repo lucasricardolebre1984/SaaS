@@ -29,3 +29,9 @@ Date: 2026-02-26
   - Nx/preprod gates executed
   - STATE/worklog/costlog updated
   - commit + push evidence
+
+## Evidence
+- Commit: 57558f4
+- Branch: feat/m5-aws-production-bootstrap
+- PR: https://github.com/lucasricardolebre1984/fabio/pull/3
+- CI gate: blocked by GitHub billing lock (run 22451808265).

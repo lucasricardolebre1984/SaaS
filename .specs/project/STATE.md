@@ -596,3 +596,6 @@ Active feature: milestone-5-aws-production-bootstrap-slice
 - Persona remains optional/configurable and tenant-specific.
 
 - agent-skills-cli-mvp MVP completed (skills + trigger matrix + runbook + installer test).
+- Checkpoint M5 commit: 57558f4 (branch feat/m5-aws-production-bootstrap).
+- PR aberto: https://github.com/lucasricardolebre1984/fabio/pull/3
+- CI check Preprod Validate bloqueado por billing account lock no GitHub Actions (run 22451808265).
