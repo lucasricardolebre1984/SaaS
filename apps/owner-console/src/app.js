@@ -62,6 +62,7 @@ const bodyEl = document.body;
 
 const moduleNavEl = document.getElementById('moduleNav');
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const sidebarBackdropEl = document.getElementById('sidebarBackdrop');
 const topModuleTitleEl = document.getElementById('topModuleTitle');
 const topTenantLabelEl = document.getElementById('topTenantLabel');
 const openSettingsBtn = document.getElementById('openSettingsBtn');
@@ -208,6 +209,8 @@ const configStatusEl = document.getElementById('configStatus');
 
 const AVATAR_VIDEO_WEBM = './avatar/assets/avatar-fullscreen.webm';
 const AVATAR_VIDEO_MP4 = './avatar/assets/avatar-fullscreen.mp4';
+const AVATAR_VIDEO_IDLE_FALLBACK_MP4 = './avatar/assets/brain-idle.mp4';
+const AVATAR_VIDEO_SPEAKING_FALLBACK_MP4 = './avatar/assets/brain-speaking.mp4';
 const OPENAI_TTS_DEFAULT_MODEL = 'gpt-4o-mini-tts';
 const OPENAI_TTS_DEFAULT_VOICE = 'shimmer';
 const OPENAI_TTS_DEFAULT_SPEED = 1.12;
@@ -249,10 +252,13 @@ function registerAvatarVideoFallback(videoEl) {
   if (!videoEl) return;
   videoEl.addEventListener('error', () => {
     const currentSrc = String(videoEl.currentSrc || videoEl.src || '');
-    if (currentSrc.includes('avatar-fullscreen.mp4')) {
+    if (currentSrc.includes('brain-idle.mp4') || currentSrc.includes('brain-speaking.mp4')) {
       return;
     }
-    videoEl.src = AVATAR_VIDEO_MP4;
+    const fallbackSource = videoEl.classList.contains('avatar__video--speaking')
+      ? AVATAR_VIDEO_SPEAKING_FALLBACK_MP4
+      : AVATAR_VIDEO_IDLE_FALLBACK_MP4;
+    videoEl.src = fallbackSource;
     videoEl.load();
     safePlayVideo(videoEl);
   });
@@ -1637,6 +1643,14 @@ function applyContinuousUiState() {
   bodyEl.classList.toggle('continuous-active', state.continuous === true);
 }
 
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 900px)').matches;
+}
+
+function closeMobileMenu() {
+  bodyEl.classList.remove('menu-open');
+}
+
 function applyVisualMode(layout, palette, persist = true) {
   const safeLayout = normalizeLayout(layout);
   const safePalette = normalizePalette(palette);
@@ -1661,6 +1675,8 @@ function setActiveModule(moduleId) {
   if (moduleId === 'mod-06-configuracoes' && !requestSettingsAccess()) {
     return;
   }
+
+  closeMobileMenu();
 
   state.activeModuleId = moduleId;
   renderModuleNav();
@@ -2392,8 +2408,10 @@ function bootstrapConfig() {
 function setupEvents() {
   mobileMenuBtn.addEventListener('click', () => {
     if (rootEl.dataset.layout === 'studio') return;
+    if (!isMobileViewport()) return;
     bodyEl.classList.toggle('menu-open');
   });
+  sidebarBackdropEl?.addEventListener('click', closeMobileMenu);
 
   moduleNavEl.addEventListener('click', (event) => {
     const target = event.target.closest('[data-module-id]');
@@ -2416,8 +2434,17 @@ function setupEvents() {
   }
   simulateVoiceBtn.addEventListener('click', () => startSpeakingPulse(1800));
   window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && bodyEl.classList.contains('menu-open')) {
+      closeMobileMenu();
+    }
     if (event.key === 'Escape' && state.continuous) {
       toggleContinuousMode();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (!isMobileViewport()) {
+      closeMobileMenu();
     }
   });
 

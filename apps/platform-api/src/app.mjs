@@ -186,9 +186,16 @@ function sanitizeTenantRuntimeConfigInput(rawConfig) {
   const integrationsRaw = raw.integrations && typeof raw.integrations === 'object' ? raw.integrations : {};
   const crmEvolutionRaw = integrationsRaw.crm_evolution && typeof integrationsRaw.crm_evolution === 'object' ? integrationsRaw.crm_evolution : {};
 
+  const normalizeApiKey = (value) => {
+    const rawValue = typeof value === 'string' ? value.trim() : '';
+    if (rawValue.length === 0) return '';
+    // Prevent accidental multi-secret paste (e.g. "sk-... API_KEY=...").
+    return rawValue.split(/\s+/)[0];
+  };
+
   const config = {
     openai: {
-      api_key: typeof openaiRaw.api_key === 'string' ? openaiRaw.api_key.trim() : '',
+      api_key: normalizeApiKey(openaiRaw.api_key),
       model: typeof openaiRaw.model === 'string' && openaiRaw.model.trim().length > 0
         ? openaiRaw.model.trim()
         : 'gpt-5.1',

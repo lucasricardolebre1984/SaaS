@@ -157,3 +157,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-004 gate execution evidence and governance closure for milestone 5 bootstrap
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-004b PR creation and CI lock audit evidence
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-DEPLOY-001 DNS readiness check and blocker registration
+2026-02-26,internal,engineering-time,local,0.00,0.00,research,M5A-RESEARCH-001 official-source AWS Ubuntu deploy baseline with checklist and reference links

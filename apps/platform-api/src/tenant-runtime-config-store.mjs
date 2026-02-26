@@ -30,6 +30,13 @@ function asString(value, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
+function normalizeApiKey(value, fallback = '') {
+  const raw = asString(value, fallback);
+  if (!raw) return '';
+  // Keep only first token to avoid accidental concatenated secrets in UI paste.
+  return raw.split(/\s+/)[0];
+}
+
 function normalizeIntegrationsCrmEvolution(input = {}, fallback = {}) {
   const raw = input.crm_evolution ?? {};
   const fb = fallback.crm_evolution ?? {};
@@ -52,7 +59,7 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
 
   return {
     openai: {
-      api_key: asString(openaiInput.api_key, asString(openaiFallback.api_key, '')),
+      api_key: normalizeApiKey(openaiInput.api_key, normalizeApiKey(openaiFallback.api_key, '')),
       model: asString(openaiInput.model, asString(openaiFallback.model, 'gpt-5.1')) || 'gpt-5.1',
       vision_enabled: asBool(openaiInput.vision_enabled, asBool(openaiFallback.vision_enabled, true)),
       voice_enabled: asBool(openaiInput.voice_enabled, asBool(openaiFallback.voice_enabled, true)),
