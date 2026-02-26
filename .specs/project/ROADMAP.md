@@ -226,6 +226,11 @@ Status update:
   - `deploy:aws:readiness` command published and executed
   - runbook `RUNBOOK-aws-deploy-dev.md` + `.env.aws.example` published
   - readiness gate passed with `-SkipSmokePostgres` in local machine (Docker indisponivel)
+- PR #3 merged into `main` (2026-02-26T21:56:05Z) with AWS bootstrap package.
+- stabilization slice opened:
+  - `milestone-5-runtime-stability-hotfix-slice`
+  - scope: provider-error runtime sanitize + mobile owner console fixes + branch/protection hygiene
+  - status: implement complete, AWS rollout validation pending.
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

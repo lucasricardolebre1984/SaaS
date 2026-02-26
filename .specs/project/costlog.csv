@@ -158,3 +158,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-004b PR creation and CI lock audit evidence
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5A-DEPLOY-001 DNS readiness check and blocker registration
 2026-02-26,internal,engineering-time,local,0.00,0.00,research,M5A-RESEARCH-001 official-source AWS Ubuntu deploy baseline with checklist and reference links
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M5B-001..003 hotfix spec docs branch hygiene and branch protection restore
+2026-02-26,internal,engineering-time,local,0.00,0.00,operations,M5B-004 pending aws host rollout and runtime validation
