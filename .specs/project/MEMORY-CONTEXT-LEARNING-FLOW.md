@@ -40,7 +40,7 @@ Promocao: Short -> Medium (episodio), Medium -> Long (conhecimento), com eventos
 
 | Componente | Atual | Alvo |
 |------------|-------|------|
-| Short persistido | Parcial (session_id, operational_context) | M4D-008: persistir turno; recall antes de gerar. |
+| Short persistido | Implementado (M4D-008): store + recall + append turno. | — |
 | Retrieval | Implementado | Integrar no recall unificado (M4D-010). |
 | Promocao short->medium | Nao | M4D-009: episodios e evento. |
 

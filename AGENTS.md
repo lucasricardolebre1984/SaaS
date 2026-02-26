@@ -39,8 +39,9 @@ Legacy split runtime (3 processes):
 2. `.specs/project/PROJECT.md`
 3. `.specs/project/ROADMAP.md`
 4. `.specs/project/STATE.md`
-5. `.specs/project/STATUS-ATUAL.md` (status e aprendizado; rastreabilidade)
-6. Active feature docs:
+5. `.specs/project/PROXIMO-PASSO.md` (unico proximo passo; memoria/aprendizado/RAG/contexto)
+6. `.specs/project/STATUS-ATUAL.md` (status e aprendizado; rastreabilidade)
+7. Active feature docs:
    - `.specs/features/<feature>/spec.md`
    - `.specs/features/<feature>/design.md`
    - `.specs/features/<feature>/tasks.md`
@@ -93,13 +94,8 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-4-mod-01-continuous-voice-output-slice` (completed)
-- Active phase: `Implement checkpoint closed`
-- Immediate checkpoint: open next Milestone 4 slice in `Specify` phase for canonical dual-concierge memory orchestrator (persona 1 full orchestration + persona 2 WhatsApp CRM execution + short/medium/long memory control).
+- Active feature: `milestone-4-long-memory-promotion-slice` (implementado)
+- Active phase: Implement checkpoint closed
 
-### Proximo passo natural (traceavel)
-- Feature name (target): `milestone-4-dual-concierge-memory-orchestrator-slice`
-- Exit gate before code:
-  - `.specs/features/<feature>/spec.md` approved
-  - `.specs/features/<feature>/design.md` approved
-  - `.specs/features/<feature>/tasks.md` approved
+### Produto: memoria/contexto/aprendizado
+- **Fonte:** `.specs/project/PROXIMO-PASSO.md` — memoria, contexto e aprendizado **fechados** no SaaS (promocao medium->long implementada). Nenhum passo pendente neste eixo.

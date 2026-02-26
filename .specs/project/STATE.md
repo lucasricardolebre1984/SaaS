@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-02-26
-Active phase: Implement checkpoint closed (Milestone 4 continuous voice output slice)
-Active feature: milestone-4-mod-01-continuous-voice-output-slice (completed)
+Active phase: Implement checkpoint closed (milestone-4-long-memory-promotion-slice)
+Active feature: milestone-4-long-memory-promotion-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -550,14 +550,17 @@ Active feature: milestone-4-mod-01-continuous-voice-output-slice (completed)
   - validation evidence:
     - `npx nx run app-platform-api:test`
     - `npx nx run app-owner-console:build`
+- Slice `milestone-4-episode-recall-slice` implemented and validated:
+  - episode_context from episodeStore.listEpisodes(tenant_id, { session_id, limit: 5 }) in send_message path; payload.episode_context passed to generateAssistantOutput.
+  - owner-response-provider injects episode_context into instructions (Responses API) and system message (Chat Completions) when non-empty.
+  - validation: `npx nx run app-platform-api:test` (51 tests pass).
+- Slice `milestone-4-long-memory-promotion-slice` implemented:
+  - after episodeStore.appendEpisode, promote to long memory: resolveMemoryEmbedding + ownerMemoryStore.createEntry (source episode_promotion, external_key); emit memory.promoted.from_episode on success; best-effort (embedding/create failure does not break flow).
+  - PROXIMO-PASSO updated: memoria, contexto e aprendizado fechados no produto.
 
 ## Next Checkpoint
-Proximo passo natural (institucional):
-- Abrir e aprovar em `Specify` o slice `milestone-4-dual-concierge-memory-orchestrator-slice` com escopo fechado:
-  1. Auto-capture + auto-recall de memoria por turno (curta/media/longa),
-  2. Orquestracao real persona 1 -> persona 2 -> retorno auditavel,
-  3. Acoplamento operacional com execucao CRM WhatsApp tenant-safe.
-- Criterio de saida do checkpoint: `spec.md`, `design.md`, `tasks.md` aprovados e sem ambiguidade de escopo.
+- Slice `milestone-4-long-memory-promotion-slice` implementado: promocao episodio -> memoria longa (createEntry source episode_promotion, evento memory.promoted.from_episode); PROXIMO-PASSO atualizado: memoria, contexto e aprendizado fechados no produto.
+- **Produto:** memoria/contexto/aprendizado fechados (ver `.specs/project/PROXIMO-PASSO.md`). Nenhum passo pendente neste eixo.
 
 ## Legacy Quarantine Policy (critical)
 - Legacy code in fabio2 is reference for business behavior, not implementation source.

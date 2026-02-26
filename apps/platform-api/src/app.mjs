@@ -47,6 +47,8 @@ import { createLeadStore } from './lead-store.mjs';
 import { createCrmAutomationStore } from './crm-automation-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
 import { createOwnerMemoryMaintenanceStore } from './owner-memory-maintenance-store.mjs';
+import { createOwnerShortMemoryStore } from './owner-short-memory-store.mjs';
+import { createOwnerEpisodeStore } from './owner-episode-store.mjs';
 import { createTenantRuntimeConfigStore } from './tenant-runtime-config-store.mjs';
 import { createEmbeddingProvider } from './embedding-provider.mjs';
 import { createOwnerResponseProvider } from './owner-response-provider.mjs';
@@ -837,6 +839,91 @@ function createModuleTaskTerminalEvent(queueItem) {
   };
 }
 
+function createMemoryEpisodeCreatedEvent(tenantId, sessionId, turnCount, causationId, summary = null) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'memory.episode.created',
+    tenant_id: tenantId,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: randomUUID(),
+    causation_id: causationId,
+    trace_id: randomUUID().slice(0, 8),
+    status: 'info',
+    payload: {
+      tenant_id: tenantId,
+      session_id: sessionId,
+      turn_count: turnCount,
+      summary: summary ?? null
+    }
+  };
+}
+
+function createMemoryPromotedFromEpisodeEvent(tenantId, sessionId, turnCount, memoryId, episodeEventId = null) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'memory.promoted.from_episode',
+    tenant_id: tenantId,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: randomUUID(),
+    trace_id: randomUUID().slice(0, 8),
+    status: 'info',
+    payload: {
+      tenant_id: tenantId,
+      session_id: sessionId,
+      turn_count: turnCount,
+      memory_id: memoryId,
+      episode_event_id: episodeEventId ?? null
+    }
+  };
+}
+
+function createCrmDelegationEvent(queueItem, terminalEvent) {
+  const command = queueItem.command;
+  if (command.target_module !== 'mod-02-whatsapp-crm') return null;
+  const base = {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    tenant_id: command.tenant_id,
+    source_module: 'mod-02-whatsapp-crm',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: command.correlation_id,
+    causation_id: command.command_id,
+    trace_id: command.trace_id,
+    payload: { task_id: command.payload.task_id }
+  };
+  if (terminalEvent.name === 'module.task.completed') {
+    return {
+      ...base,
+      name: 'crm.delegation.sent',
+      status: 'completed',
+      payload: {
+        ...base.payload,
+        result_summary: terminalEvent.payload?.result_summary ?? 'Delegation executed.'
+      }
+    };
+  }
+  return {
+    ...base,
+    name: 'crm.delegation.failed',
+    status: 'failed',
+    payload: {
+      ...base.payload,
+      error_code: terminalEvent.payload?.error_code ?? 'DELEGATION_FAILED',
+      retryable: Boolean(terminalEvent.payload?.retryable)
+    }
+  };
+}
+
 function actorFromCustomerSourceModule(sourceModule) {
   if (sourceModule === 'mod-02-whatsapp-crm') {
     return {
@@ -1518,6 +1605,14 @@ export function createApp(options = {}) {
   const tenantRuntimeConfigStore = createTenantRuntimeConfigStore({
     storageDir: options.tenantRuntimeConfigStorageDir ?? options.orchestrationStorageDir
   });
+  const shortMemoryStore = createOwnerShortMemoryStore({
+    storageDir: options.ownerShortMemoryStorageDir ?? options.orchestrationStorageDir,
+    maxTurnsPerSession: options.ownerShortMemoryMaxTurns ?? 20
+  });
+  const episodeStore = createOwnerEpisodeStore({
+    storageDir: options.ownerEpisodeStorageDir ?? options.orchestrationStorageDir,
+    maxEpisodesPerTenant: options.ownerEpisodeMaxPerTenant ?? 500
+  });
   const ownerEmbeddingProviderConfig = {
     mode: options.ownerEmbeddingMode,
     openaiApiKey: options.openaiApiKey,
@@ -1626,6 +1721,9 @@ export function createApp(options = {}) {
       900
     )
   };
+  const ownerEpisodeThreshold = Number(
+    options.ownerEpisodeThreshold ?? process.env.OWNER_EPISODE_THRESHOLD ?? 10
+  ) || 10;
   const corsAllowOrigins = parseCorsAllowOrigins(
     options.corsAllowOrigins ?? process.env.CORS_ALLOW_ORIGINS ?? '*'
   );
@@ -2035,6 +2133,17 @@ export function createApp(options = {}) {
               error: terminalResult.type,
               details: terminalResult.details
             });
+          }
+
+          const delegationEvent = createCrmDelegationEvent(queueItem, terminalEvent);
+          if (delegationEvent) {
+            const delegationResult = await validateAndPersistEvent(store, delegationEvent);
+            if (!delegationResult.ok) {
+              return json(res, 500, {
+                error: delegationResult.type,
+                details: delegationResult.details
+              });
+            }
           }
 
           const completionStatus = terminalEvent.name === 'module.task.failed' ? 'failed' : 'completed';
@@ -4473,6 +4582,48 @@ export function createApp(options = {}) {
             } catch (_) {
               operationalContext = null;
             }
+            let shortMemory = [];
+            try {
+              shortMemory = shortMemoryStore.getLastTurns(request.tenant_id, request.session_id, 20);
+            } catch (_) {
+              shortMemory = [];
+            }
+            let retrievedContext = null;
+            try {
+              const retrieval = await ownerMemoryStore.retrieveContext(request.tenant_id, {
+                text: userText,
+                top_k: 5
+              });
+              const items = retrieval?.items ?? [];
+              if (items.length > 0) {
+                const parts = items
+                  .filter((it) => typeof it?.content === 'string' && it.content.trim().length > 0)
+                  .map((it, i) => `[${i + 1}] ${it.content.trim()}`)
+                  .slice(0, 5);
+                if (parts.length > 0) {
+                  retrievedContext = parts.join('\n\n');
+                }
+              }
+            } catch (_) {
+              retrievedContext = null;
+            }
+            let episodeContext = null;
+            try {
+              const episodes = episodeStore.listEpisodes(request.tenant_id, {
+                session_id: request.session_id,
+                limit: 5
+              });
+              if (Array.isArray(episodes) && episodes.length > 0) {
+                const lines = episodes.map((e) => {
+                  const at = e.created_at ? ` at ${e.created_at}` : '';
+                  const sum = typeof e.summary === 'string' && e.summary.trim() ? `: ${e.summary.trim().slice(0, 100)}` : '';
+                  return `- Turn ${e.turn_count ?? '?'}${at}${sum}`;
+                });
+                episodeContext = lines.join('\n');
+              }
+            } catch (_) {
+              episodeContext = null;
+            }
             const tenantResponseProvider = getOwnerResponseProviderForTenant(tenantRuntimeConfig);
             assistantOutput = await tenantResponseProvider.generateAssistantOutput({
               text: userText,
@@ -4482,8 +4633,72 @@ export function createApp(options = {}) {
               attachments: Array.isArray(request.payload?.attachments)
                 ? request.payload.attachments
                 : [],
-              operational_context: operationalContext ?? undefined
+              operational_context: operationalContext ?? undefined,
+              short_memory: shortMemory.length > 0 ? shortMemory : undefined,
+              retrieved_context: retrievedContext ?? undefined,
+              episode_context: episodeContext ?? undefined
             });
+            try {
+              shortMemoryStore.appendTurn(request.tenant_id, request.session_id, { role: 'user', content: userText });
+              shortMemoryStore.appendTurn(request.tenant_id, request.session_id, { role: 'assistant', content: assistantOutput?.text ?? '' });
+              const episodeThreshold = Number(ownerEpisodeThreshold ?? 10) || 10;
+              const turnCount = shortMemoryStore.getTurnCount(request.tenant_id, request.session_id);
+              if (turnCount >= episodeThreshold && turnCount % episodeThreshold === 0) {
+                const episodeEvent = createMemoryEpisodeCreatedEvent(
+                  request.tenant_id,
+                  request.session_id,
+                  turnCount,
+                  ownerCommand.command_id,
+                  null
+                );
+                const episodeResult = await validateAndPersistEvent(store, episodeEvent);
+                if (episodeResult.ok) {
+                  try {
+                    episodeStore.appendEpisode(request.tenant_id, request.session_id, {
+                      turn_count: turnCount,
+                      summary: null,
+                      event_id: episodeEvent.event_id,
+                      created_at: episodeEvent.emitted_at
+                    });
+                  } catch (_) {}
+                  try {
+                    const promotionContent = `Session milestone at turn ${turnCount} (session ${request.session_id}).`;
+                    const embeddingResult = await ownerEmbeddingProvider.resolveMemoryEmbedding({
+                      tenant_id: request.tenant_id,
+                      session_id: request.session_id,
+                      memory_id: null,
+                      content: promotionContent,
+                      tags: ['episode', 'milestone']
+                    });
+                    const externalKey = `episode_${request.tenant_id}_${request.session_id}_${turnCount}`;
+                    const memoryId = randomUUID();
+                    const createResult = await ownerMemoryStore.createEntry({
+                      memory_id: memoryId,
+                      tenant_id: request.tenant_id,
+                      session_id: request.session_id,
+                      external_key: externalKey,
+                      source: 'episode_promotion',
+                      content: promotionContent,
+                      tags: ['episode', 'milestone'],
+                      salience_score: 0.5,
+                      embedding_ref: embeddingResult.embedding_ref,
+                      embedding_vector: embeddingResult.embedding_vector,
+                      metadata: { episode_event_id: episodeEvent.event_id }
+                    });
+                    if (createResult?.entry?.memory_id) {
+                      const promotedEvent = createMemoryPromotedFromEpisodeEvent(
+                        request.tenant_id,
+                        request.session_id,
+                        turnCount,
+                        createResult.entry.memory_id,
+                        episodeEvent.event_id
+                      );
+                      await validateAndPersistEvent(store, promotedEvent);
+                    }
+                  } catch (_) {}
+                }
+              }
+            } catch (_) {}
           } catch (error) {
             return json(res, 502, {
               error: 'owner_response_provider_error',

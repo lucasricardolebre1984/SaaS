@@ -32,7 +32,7 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
 |------|--------|------------|
 | Modulos 01..06 | Implementados (UI + API) | Menu fixo; M06 configuracoes com sync backend por tenant. |
 | Persona 1 (Owner Concierge) | Operacional | Responde com dados ao vivo (clientes, agenda, leads, cobrancas) via `operational_context` injetado por turno. |
-| Persona 2 (WhatsApp CRM) | Contratos e runtime parcial | Comando `crm.whatsapp.send` e eventos `crm.delegation.sent`/`failed` publicados; worker que emite eventos ainda nao integrado. |
+| Persona 2 (WhatsApp CRM) | Contratos e worker integrado | Comando `crm.whatsapp.send`; eventos `crm.delegation.sent`/`failed` no schema; worker drain emite delegacao para mod-02. |
 | Dual-concierge loop P1->P2->P1 | Especificado, nao fechado | Design e tasks no slice `milestone-4-dual-concierge-memory-orchestrator-slice`. |
 
 ### 3.2 Memoria e aprendizado continuo
@@ -40,9 +40,9 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
 | Camada | Spec (CONTEXT) | Implementado | Pendente |
 |--------|----------------|--------------|----------|
 | **Long** | Conhecimento promovido, auditavel | Sim: owner memory entries, context promotion, retrieval. | — |
-| **Medium** | Episodios operacionais | Parcial: estruturas existem; auto-promocao short->medium nao. | M4D-009 (promocao, evento episode). |
-| **Short** | Contexto de sessao ativa | Parcial: `session_id` aceito; dados ao vivo por turno (`operational_context`). | M4D-008: persistir turno por (tenant_id, session_id); recall antes da resposta. |
-| **Recall (RAG)** | Antes de cada resposta | Parcial: so `operational_context` (listagens). | M4D-010: combinar short + retrieval (medium/long) antes de gerar resposta. |
+| **Medium** | Episodios operacionais | Implementado: memory.episode.created + owner-episode-store (append/list por tenant). | — |
+| **Short** | Contexto de sessao ativa | Implementado: store por (tenant_id, session_id); recall antes de gerar; turnos persistidos (M4D-008). | — |
+| **Recall (RAG)** | Antes de cada resposta | Implementado: short_memory + operational_context + retrieved_context (M4D-010). | — |
 | **Auditoria** | Trace em todos os fluxos | Sim: correlation_id, trace_id, eventos persistidos. | Garantir que eventos de memoria tenham timestamp e tenant/session. |
 
 ### 3.3 Aprendizado infinito (evolucao por proprietario)
@@ -83,6 +83,7 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 
 ## 6. Proximo passo natural
 
-- **Slice:** milestone-4-dual-concierge-memory-orchestrator-slice.
-- **Implementar:** M4D-011/012 (worker delegacao) e M4D-008/009/010 (short memory, promocao, recall).
+- **Slice:** milestone-4-dual-concierge-memory-orchestrator-slice concluido (Implement checkpoint closed).
+- **Pendente futuro:** M4D-009c (persistir episodio em medium store).
+- **Proximo passo:** abrir novo slice em Specify (M4) ou implementar M4D-009c.
 - **Spec do fluxo:** MEMORY-CONTEXT-LEARNING-FLOW.md.

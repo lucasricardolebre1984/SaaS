@@ -144,3 +144,10 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-25,internal,engineering-time,local,0.00,0.00,governance,M4VO-004 validation and governance closure for continuous voice output slice
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,CTX-ROOT-001 root context lock for canonical dual-concierge and continuous memory model before next spec
 2026-02-26,internal,engineering-time,local,0.00,0.00,governance,CTX-ROOT-002 explicit next natural step and gate registration before commit push
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4D-008..012 dual-concierge memory orchestrator slice short memory episode recall delegation retrieval
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M4DC-CLOSE slice checkpoint closure STATE ROADMAP AGENTS metrics
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4D-009c owner-episode-store medium store persist on episode event
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4E-001a..d episode-recall slice episode_context in payload and provider
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M4E-CLOSE episode-recall slice checkpoint STATE AGENTS ROADMAP worklog
+2026-02-26,internal,engineering-time,local,0.00,0.00,implementation,M4L-001a..b long-memory-promotion slice event and episode-to-long promotion
+2026-02-26,internal,engineering-time,local,0.00,0.00,governance,M4L-CLOSE PROXIMO-PASSO memoria contexto aprendizado fechados

@@ -148,3 +148,10 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-25,18:24,18:27,0.05,Governance,milestone-4-mod-01-continuous-voice-output-slice,M4VO-004,pair,done,Validated app-platform-api tests and owner-console build and updated roadmap state costlog and feature docs
 2026-02-26,09:45,09:52,0.12,Governance,milestone-4-context-root-dual-concierge-lock,CTX-ROOT-001,pair,done,Promoted canonical dual-concierge product model to root context with persona responsibilities CRM flow and mandatory short-medium-long memory/session standards
 2026-02-26,10:02,10:07,0.08,Governance,milestone-4-context-root-dual-concierge-lock,CTX-ROOT-002,pair,done,Recorded explicit next natural step and exit gate in STATE and AGENTS before repository checkpoint commit
+2026-02-26,12:00,12:30,0.50,Implement,milestone-4-dual-concierge-memory-orchestrator-slice,M4D-008..012,pair,done,Short memory store recall episode events delegation worker retrieval in recall (M4D-009c future)
+2026-02-26,12:30,12:35,0.08,Governance,milestone-4-dual-concierge-memory-orchestrator-slice,M4DC-CLOSE,pair,done,Closed Implement checkpoint updated STATE ROADMAP AGENTS STATUS-ATUAL worklog costlog
+2026-02-26,13:00,13:20,0.33,Implement,milestone-4-dual-concierge-memory-orchestrator-slice,M4D-009c,pair,done,Owner episode store medium store append on memory.episode.created listEpisodes by tenant
+2026-02-26,14:00,14:25,0.42,Implement,milestone-4-episode-recall-slice,M4E-001a..d,pair,done,Episode context in recall app.mjs payload and owner-response-provider instructions and system message; tests and governance updated
+2026-02-26,14:25,14:30,0.08,Governance,milestone-4-episode-recall-slice,M4E-CLOSE,pair,done,Closed Implement checkpoint STATE AGENTS spec tasks worklog
+2026-02-26,15:00,15:45,0.75,Implement,milestone-4-long-memory-promotion-slice,M4L-001a..b,pair,done,Event memory.promoted.from_episode + promotion episode to long memory in app.mjs
+2026-02-26,15:45,15:50,0.08,Governance,milestone-4-long-memory-promotion-slice,M4L-CLOSE,pair,done,PROXIMO-PASSO STATE ROADMAP AGENTS worklog costlog updated; memoria contexto aprendizado fechados

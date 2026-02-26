@@ -194,8 +194,14 @@ Status update:
   - context lock approved for next slice:
     - canonical dual-concierge model promoted to root context (`CONTEXT.md`)
     - mandatory continuous learning target (short/medium/long memory tiers) with strict session boundaries
-  - immediate next slice (Specify):
-    - dual-concierge memory orchestrator (owner orchestrator + WhatsApp execution specialist + continuous memory capture/recall)
+  - feature implemented and validated:
+    - `milestone-4-dual-concierge-memory-orchestrator-slice`
+    - short memory store + recall + append turn (M4D-008), episode event memory.episode.created every N turns (M4D-009a/b), unified recall short + operational_context + retrieved_context (M4D-010), crm.delegation.sent/failed in worker drain for mod-02 (M4D-011/012)
+    - M4D-009c (persist episode in medium store) left for future
+    - gates passed: `app-platform-api:test`, `contract-checks`
+  - next slice opened in Specify: milestone-4-episode-recall-slice (episode context in recall for Persona 1)
+  - feature implemented and validated: milestone-4-episode-recall-slice (M4E-001a..d episode_context in recall; provider instructions + system message; gates passed)
+  - feature implemented: milestone-4-long-memory-promotion-slice (promocao episodio -> memoria longa; evento memory.promoted.from_episode; PROXIMO-PASSO: memoria/contexto/aprendizado fechados no produto)
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

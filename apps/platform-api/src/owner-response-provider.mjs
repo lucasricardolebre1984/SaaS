@@ -209,6 +209,25 @@ async function requestOpenAiResponsesReply(options, payload) {
   if (operationalContext) {
     instructionParts.push(`Use the following live data from the system to answer accurately. Do not say you cannot access the system when this block is present:\n${operationalContext}`);
   }
+  const retrievedContext = typeof payload?.retrieved_context === 'string' && payload.retrieved_context.trim().length > 0
+    ? payload.retrieved_context.trim()
+    : null;
+  if (retrievedContext) {
+    instructionParts.push(`Relevant long-term memory (use to ground your answer when applicable):\n${retrievedContext}`);
+  }
+  const episodeContext = typeof payload?.episode_context === 'string' && payload.episode_context.trim().length > 0
+    ? payload.episode_context.trim()
+    : null;
+  if (episodeContext) {
+    instructionParts.push(`Recent session milestones (for context):\n${episodeContext}`);
+  }
+  const shortMemory = Array.isArray(payload?.short_memory) ? payload.short_memory : [];
+  if (shortMemory.length > 0) {
+    const recent = shortMemory.map((t) => `${t?.role === 'assistant' ? 'Assistant' : 'User'}: ${(t?.content ?? '').slice(0, 500)}`).join('\n');
+    if (recent) {
+      instructionParts.push(`Recent conversation (for context only):\n${recent}`);
+    }
+  }
 
   const attachments = sanitizeAttachments(payload?.attachments);
   const startedAt = Date.now();
@@ -271,6 +290,33 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
       role: 'system',
       content: `Use the following live data from the system to answer accurately. Do not say you cannot access the system when this block is present:\n${operationalContext}`
     });
+  }
+  const retrievedContext = typeof payload?.retrieved_context === 'string' && payload.retrieved_context.trim().length > 0
+    ? payload.retrieved_context.trim()
+    : null;
+  if (retrievedContext) {
+    messages.push({
+      role: 'system',
+      content: `Relevant long-term memory (use to ground your answer when applicable):\n${retrievedContext}`
+    });
+  }
+  const episodeContext = typeof payload?.episode_context === 'string' && payload.episode_context.trim().length > 0
+    ? payload.episode_context.trim()
+    : null;
+  if (episodeContext) {
+    messages.push({
+      role: 'system',
+      content: `Recent session milestones (for context):\n${episodeContext}`
+    });
+  }
+
+  const shortMemory = Array.isArray(payload?.short_memory) ? payload.short_memory : [];
+  for (const turn of shortMemory) {
+    const role = turn?.role === 'assistant' ? 'assistant' : 'user';
+    const content = typeof turn?.content === 'string' ? turn.content : String(turn?.content ?? '');
+    if (content.length > 0) {
+      messages.push({ role, content });
+    }
   }
 
   const attachments = sanitizeAttachments(payload?.attachments);
