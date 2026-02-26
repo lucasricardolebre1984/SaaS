@@ -3120,3 +3120,10 @@ test('POST /provider/evolution/outbound/validate rejects invalid queue item', as
   });
   assert.equal(res.status, 400);
 });
+
+test('GET /v1/whatsapp/evolution/qr returns 503 when Evolution not configured', async () => {
+  const res = await fetch(`${baseUrl}/v1/whatsapp/evolution/qr`, { method: 'GET' });
+  assert.equal(res.status, 503);
+  const body = await res.json();
+  assert.equal(body.error, 'evolution_not_configured');
+});

@@ -597,6 +597,36 @@ html[data-layout='studio'] .status-pill {
   }
 }
 
+.whatsapp-qr-desc {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  margin: 0 0 var(--space-3);
+}
+.whatsapp-qr-result {
+  margin-top: var(--space-3);
+}
+.whatsapp-qr-status {
+  margin: 0 0 var(--space-2);
+  font-size: 0.9rem;
+}
+.whatsapp-qr-image-wrap {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  background: var(--color-bg-soft);
+  border-radius: var(--radius-md);
+  display: inline-block;
+}
+.whatsapp-qr-img {
+  display: block;
+  max-width: 260px;
+  height: auto;
+}
+.whatsapp-pairing-code {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  margin: var(--space-2) 0 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

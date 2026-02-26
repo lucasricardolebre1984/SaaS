@@ -126,6 +126,19 @@
               </form>
             </section>
 
+            <section class="card whatsapp-qr-card">
+              <header class="card__header">
+                <h3>Conectar WhatsApp</h3>
+              </header>
+              <p class="whatsapp-qr-desc">Use a mesma Evolution API do Docker (instancia diferente do fabio2 para nao conflitar).</p>
+              <button id="whatsappQrBtn" class="btn" type="button">Gerar QR Code</button>
+              <div id="whatsappQrResult" class="whatsapp-qr-result" hidden>
+                <p class="whatsapp-qr-status" id="whatsappQrStatus"></p>
+                <div id="whatsappQrImageWrap" class="whatsapp-qr-image-wrap"></div>
+                <p id="whatsappPairingCode" class="whatsapp-pairing-code"></p>
+              </div>
+            </section>
+
             <section class="card insights-card">
               <header class="card__header">
                 <h3>Orquestracao IA</h3>

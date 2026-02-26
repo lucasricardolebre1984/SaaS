@@ -30,6 +30,16 @@ function asString(value, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
+function normalizeIntegrationsCrmEvolution(input = {}, fallback = {}) {
+  const raw = input.crm_evolution ?? {};
+  const fb = fallback.crm_evolution ?? {};
+  return {
+    base_url: asString(raw.base_url, asString(fb.base_url, '')),
+    api_key: asString(raw.api_key, asString(fb.api_key, '')),
+    instance_id: asString(raw.instance_id, asString(fb.instance_id, 'fabio')) || 'fabio'
+  };
+}
+
 function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
   const openaiInput = input.openai ?? {};
   const openaiFallback = fallback.openai ?? {};
@@ -37,6 +47,8 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
   const personasFallback = fallback.personas ?? {};
   const executionInput = input.execution ?? {};
   const executionFallback = fallback.execution ?? {};
+  const integrationsInput = input.integrations ?? {};
+  const integrationsFallback = fallback.integrations ?? {};
 
   return {
     openai: {
@@ -67,6 +79,12 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
       confirmations_enabled: asBool(
         executionInput.confirmations_enabled,
         asBool(executionFallback.confirmations_enabled, false)
+      )
+    },
+    integrations: {
+      crm_evolution: normalizeIntegrationsCrmEvolution(
+        integrationsInput,
+        integrationsFallback
       )
     }
   };
@@ -117,6 +135,7 @@ export function createTenantRuntimeConfigStore(options = {}) {
         existing.openai = normalized.openai;
         existing.personas = normalized.personas;
         existing.execution = normalized.execution;
+        existing.integrations = normalized.integrations;
         existing.updated_at = nowIso;
         persist();
         return structuredClone(existing);
@@ -127,6 +146,7 @@ export function createTenantRuntimeConfigStore(options = {}) {
         openai: normalized.openai,
         personas: normalized.personas,
         execution: normalized.execution,
+        integrations: normalized.integrations,
         created_at: nowIso,
         updated_at: nowIso
       };

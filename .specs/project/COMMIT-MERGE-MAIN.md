@@ -11,25 +11,19 @@
 - **Contratos:** events.schema.json (memory.episode.created, memory.promoted.from_episode, crm.delegation.sent/failed).
 - **Governance:** STATE, ROADMAP, AGENTS, PROXIMO-PASSO, STATUS-ATUAL, MEMORY-CONTEXT-LEARNING-FLOW, worklog, costlog.
 
-## Comandos (executar em C:\projetos\fabio)
+## O que ja foi feito (2026-02-26)
 
-```powershell
-git add -A
-git status
-git commit -m "feat(m4): memory context learning closed - short/medium/long + episode recall + promotion to RAG"
-git push origin feat/docs-and-owner-concierge-context
-git checkout main
-git pull origin main
-git merge feat/docs-and-owner-concierge-context -m "Merge feat/docs-and-owner-concierge-context: memory, context, learning complete"
-git push origin main
-git branch -d feat/docs-and-owner-concierge-context
-git push origin --delete feat/docs-and-owner-concierge-context
-```
+- `git add -A` e `git commit -m "feat(m4): memory context learning closed - short/medium/long + episode recall + promotion to RAG"` (commit 3fcd4da).
+- `git push origin feat/docs-and-owner-concierge-context` — branch feature atualizada no GitHub.
+- `git checkout main` e `git merge feat/docs-and-owner-concierge-context` — merge feito **localmente** (fast-forward); main local contem todo o trabalho.
+- `git push origin main` — **rejeitado**: branch main e protegida (exige 1 aprovacao e check "Preprod Validate").
 
-Se o ambiente nao permitir git (ex.: processo elevado), executar os comandos acima manualmente no terminal.
+## Proximos passos (manter so main)
 
-## Resultado esperado
+1. Abrir **PR no GitHub**: base `main` <- compare `feat/docs-and-owner-concierge-context`.
+2. Garantir que o check **Preprod Validate** passe (ou ajustar ate passar).
+3. Obter **1 aprovacao** de quem tem write no repo.
+4. Fazer **Merge** do PR no GitHub (botoes "Merge pull request" e confirmar).
+5. Apos o merge em main no GitHub, localmente: `git checkout main`, `git pull origin main`, `git branch -d feat/docs-and-owner-concierge-context`, e no GitHub apagar a branch `feat/docs-and-owner-concierge-context` (ou via `git push origin --delete feat/docs-and-owner-concierge-context`).
 
-- main atualizado com todo o trabalho dos slices de memoria/contexto/aprendizado.
-- Branch feat/docs-and-owner-concierge-context removida (local e remota).
-- Repo com apenas main como branch principal de trabalho.
+Assim main fica atualizada no remoto e a branch feature pode ser removida; manter so main.

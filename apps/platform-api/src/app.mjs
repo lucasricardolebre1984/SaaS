@@ -183,6 +183,8 @@ function sanitizeTenantRuntimeConfigInput(rawConfig) {
   const openaiRaw = raw.openai && typeof raw.openai === 'object' ? raw.openai : {};
   const personasRaw = raw.personas && typeof raw.personas === 'object' ? raw.personas : {};
   const executionRaw = raw.execution && typeof raw.execution === 'object' ? raw.execution : {};
+  const integrationsRaw = raw.integrations && typeof raw.integrations === 'object' ? raw.integrations : {};
+  const crmEvolutionRaw = integrationsRaw.crm_evolution && typeof integrationsRaw.crm_evolution === 'object' ? integrationsRaw.crm_evolution : {};
 
   const config = {
     openai: {
@@ -205,6 +207,15 @@ function sanitizeTenantRuntimeConfigInput(rawConfig) {
     },
     execution: {
       confirmations_enabled: executionRaw.confirmations_enabled === true
+    },
+    integrations: {
+      crm_evolution: {
+        base_url: typeof crmEvolutionRaw.base_url === 'string' ? crmEvolutionRaw.base_url.trim() : '',
+        api_key: typeof crmEvolutionRaw.api_key === 'string' ? crmEvolutionRaw.api_key.trim() : '',
+        instance_id: typeof crmEvolutionRaw.instance_id === 'string' && crmEvolutionRaw.instance_id.trim().length > 0
+          ? crmEvolutionRaw.instance_id.trim()
+          : 'fabio'
+      }
     }
   };
 
@@ -429,6 +440,13 @@ function createRuntimeConfigSummary(tenantId, configRecord) {
     },
     execution: {
       confirmations_enabled: normalized.execution.confirmations_enabled
+    },
+    integrations: {
+      crm_evolution: {
+        base_url: normalized.integrations.crm_evolution.base_url,
+        api_key: normalized.integrations.crm_evolution.api_key ? '(configured)' : '',
+        instance_id: normalized.integrations.crm_evolution.instance_id
+      }
     },
     updated_at: typeof configRecord?.updated_at === 'string' ? configRecord.updated_at : null
   };
@@ -5027,6 +5045,62 @@ export function createApp(options = {}) {
           status: 'valid',
           queue_item_id: body.queue_item_id
         });
+      }
+
+      if (method === 'GET' && path === '/v1/whatsapp/evolution/qr') {
+        const queryTenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        let baseUrl = '';
+        let apiKey = '';
+        let instanceId = '';
+        if (queryTenantId) {
+          try {
+            const tenantConfig = await resolveTenantRuntimeConfig(queryTenantId);
+            const ce = tenantConfig?.integrations?.crm_evolution;
+            if (ce && typeof ce === 'object') {
+              baseUrl = String(ce.base_url ?? '').trim();
+              apiKey = String(ce.api_key ?? '').trim();
+              instanceId = String(ce.instance_id ?? 'fabio').trim() || 'fabio';
+            }
+          } catch (_) {}
+        }
+        if (!baseUrl || !apiKey || !instanceId) {
+          baseUrl = String(process.env.EVOLUTION_HTTP_BASE_URL ?? options.evolutionHttpBaseUrl ?? '').trim();
+          apiKey = String(process.env.EVOLUTION_API_KEY ?? options.evolutionApiKey ?? '').trim();
+          instanceId = String(process.env.EVOLUTION_INSTANCE_ID ?? options.evolutionInstanceId ?? 'fabio').trim() || 'fabio';
+        }
+        if (!baseUrl || !apiKey || !instanceId) {
+          return json(res, 503, {
+            error: 'evolution_not_configured',
+            message: 'Configure no menu 06 Configuracoes (Evolution Base URL, API Key, Instance ID) ou env: EVOLUTION_HTTP_BASE_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE_ID.'
+          });
+        }
+        const evolutionConnectUrl = `${baseUrl.replace(/\/$/, '')}/instance/connect/${encodeURIComponent(instanceId)}`;
+        try {
+          const evolutionRes = await fetch(evolutionConnectUrl, {
+            method: 'GET',
+            headers: { apikey: apiKey }
+          });
+          if (!evolutionRes.ok) {
+            const text = await evolutionRes.text();
+            return json(res, evolutionRes.status >= 500 ? 502 : evolutionRes.status, {
+              error: 'evolution_error',
+              status: evolutionRes.status,
+              details: text.slice(0, 500)
+            });
+          }
+          const data = await evolutionRes.json();
+          return json(res, 200, {
+            code: data.code ?? data.base64 ?? null,
+            pairingCode: data.pairingCode ?? null,
+            count: data.count ?? null,
+            instanceId
+          });
+        } catch (err) {
+          return json(res, 502, {
+            error: 'evolution_unreachable',
+            details: String(err?.message ?? err)
+          });
+        }
       }
 
       return json(res, 404, { error: 'not_found' });

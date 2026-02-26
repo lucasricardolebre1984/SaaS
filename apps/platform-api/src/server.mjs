@@ -8,6 +8,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
+try {
+  const envPath = path.join(repoRoot, '.env');
+  const envContent = await fs.readFile(envPath, 'utf8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.replace(/#.*/, '').trim();
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(trimmed);
+    if (match) process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
+  }
+} catch {
+  // .env opcional; env pode vir do sistema
+}
+
 const port = Number(process.env.PORT ?? 4001);
 const host = process.env.HOST ?? '127.0.0.1';
 const serveUnifiedUi = String(process.env.SERVE_UNIFIED_UI ?? '1') !== '0';

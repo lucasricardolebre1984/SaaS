@@ -195,6 +195,7 @@ const cfgGoogleClientSecretInput = document.getElementById('cfgGoogleClientSecre
 const cfgGoogleRefreshTokenInput = document.getElementById('cfgGoogleRefreshToken');
 const cfgEvolutionBaseUrlInput = document.getElementById('cfgEvolutionBaseUrl');
 const cfgEvolutionApiKeyInput = document.getElementById('cfgEvolutionApiKey');
+const cfgEvolutionInstanceIdInput = document.getElementById('cfgEvolutionInstanceId');
 const cfgBillingProviderInput = document.getElementById('cfgBillingProvider');
 const cfgBillingApiKeyInput = document.getElementById('cfgBillingApiKey');
 
@@ -322,7 +323,8 @@ function createDefaultConfig() {
       },
       crm_evolution: {
         base_url: '',
-        api_key: ''
+        api_key: '',
+        instance_id: 'fabio'
       },
       billing: {
         provider: '',
@@ -817,6 +819,13 @@ function buildRuntimeConfigSyncPayload() {
         },
         execution: {
           confirmations_enabled: Boolean(state.config.execution.confirmations_enabled)
+        },
+        integrations: {
+          crm_evolution: {
+            base_url: state.config.integrations.crm_evolution.base_url || '',
+            api_key: state.config.integrations.crm_evolution.api_key || '',
+            instance_id: state.config.integrations.crm_evolution.instance_id || 'fabio'
+          }
         }
       }
     }
@@ -857,6 +866,12 @@ async function pullRuntimeConfigFromBackend() {
   }
   if (body?.execution && typeof body.execution.confirmations_enabled === 'boolean') {
     state.config.execution.confirmations_enabled = body.execution.confirmations_enabled;
+  }
+  if (body?.integrations?.crm_evolution && typeof body.integrations.crm_evolution === 'object') {
+    const ce = body.integrations.crm_evolution;
+    if (typeof ce.base_url === 'string') state.config.integrations.crm_evolution.base_url = ce.base_url;
+    if (typeof ce.instance_id === 'string') state.config.integrations.crm_evolution.instance_id = ce.instance_id || 'fabio';
+    // api_key nao e devolvido pelo backend (seguranca); mantem o valor local.
   }
 
   if (body?.runtime?.openai_configured === true) {
@@ -1782,6 +1797,7 @@ function populateConfigForm() {
   cfgGoogleRefreshTokenInput.value = state.config.integrations.agenda_google.refresh_token;
   cfgEvolutionBaseUrlInput.value = state.config.integrations.crm_evolution.base_url;
   cfgEvolutionApiKeyInput.value = state.config.integrations.crm_evolution.api_key;
+  cfgEvolutionInstanceIdInput.value = state.config.integrations.crm_evolution.instance_id || 'fabio';
   cfgBillingProviderInput.value = state.config.integrations.billing.provider;
   cfgBillingApiKeyInput.value = state.config.integrations.billing.api_key;
 }
@@ -1810,6 +1826,7 @@ function collectConfigForm() {
   state.config.integrations.agenda_google.refresh_token = cfgGoogleRefreshTokenInput.value.trim();
   state.config.integrations.crm_evolution.base_url = cfgEvolutionBaseUrlInput.value.trim();
   state.config.integrations.crm_evolution.api_key = cfgEvolutionApiKeyInput.value.trim();
+  state.config.integrations.crm_evolution.instance_id = (cfgEvolutionInstanceIdInput.value.trim() || 'fabio');
   state.config.integrations.billing.provider = cfgBillingProviderInput.value.trim();
   state.config.integrations.billing.api_key = cfgBillingApiKeyInput.value.trim();
 }

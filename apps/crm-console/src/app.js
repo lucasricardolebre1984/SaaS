@@ -297,6 +297,57 @@ apiBaseInput.addEventListener('blur', () => {
   persistApiBasePreference(apiBaseInput.value);
 });
 
+async function loadWhatsAppQr() {
+  const resultEl = document.getElementById('whatsappQrResult');
+  const statusEl = document.getElementById('whatsappQrStatus');
+  const imageWrap = document.getElementById('whatsappQrImageWrap');
+  const pairingEl = document.getElementById('whatsappPairingCode');
+  const btn = document.getElementById('whatsappQrBtn');
+  if (!resultEl || !statusEl || !imageWrap || !pairingEl || !btn) return;
+  resultEl.hidden = false;
+  statusEl.textContent = 'Buscando QR na Evolution API...';
+  imageWrap.innerHTML = '';
+  pairingEl.textContent = '';
+  btn.disabled = true;
+  try {
+    const tid = tenantId();
+    const url = tid
+      ? `${apiBase()}/v1/whatsapp/evolution/qr?tenant_id=${encodeURIComponent(tid)}`
+      : `${apiBase()}/v1/whatsapp/evolution/qr`;
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      statusEl.textContent = data.message || data.error || `Erro ${res.status}`;
+      if (data.error === 'evolution_not_configured') {
+        pairingEl.textContent = 'Configure no backend: EVOLUTION_HTTP_BASE_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE_ID (ex: fabio para nao conflitar com fabio2).';
+      }
+      return;
+    }
+    statusEl.textContent = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
+    const code = data.code ?? data.base64 ?? '';
+    if (code && (code.startsWith('data:') || code.length > 100)) {
+      const src = code.startsWith('data:') ? code : `data:image/png;base64,${code}`;
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = 'QR Code WhatsApp';
+      img.className = 'whatsapp-qr-img';
+      imageWrap.appendChild(img);
+    }
+    if (data.pairingCode) {
+      pairingEl.textContent = `Codigo de vinculacao: ${data.pairingCode}`;
+    }
+  } catch (e) {
+    statusEl.textContent = `Erro: ${e.message || 'rede'}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+const whatsappQrBtn = document.getElementById('whatsappQrBtn');
+if (whatsappQrBtn) {
+  whatsappQrBtn.addEventListener('click', loadWhatsAppQr);
+}
+
 restoreVisualMode();
 apiBaseInput.value = loadApiBasePreference();
 applyBootstrapFromQuery();
