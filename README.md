@@ -1,13 +1,12 @@
 # fabio
 
-SaaS base institucional da Automania AI (Nx monorepo).
+SaaS base institucional da Automania AI (Nx monorepo). **Modelo universal** para gerar novos SaaS; aprendizado continuo por tenant (rastreavel e auditavel).
 
 ## Status Atual
-- Milestone atual: `Milestone 4 - Next Cycle Definition (in progress)`
-- Slice ativo: `milestone-4-owner-console-approval-queue-ui-slice` (concluído)
-- Checkpoints recentes:
-  - `feat(mod-01): add confirmation queue safeguards and listing endpoint`
-  - `feat(owner-console): add approvals queue UI with approve/reject actions`
+- **Fonte de verdade:** `.specs/project/STATE.md` e `.specs/project/STATUS-ATUAL.md` (atualizados com data para auditoria).
+- Milestone: Milestone 4 (dual-concierge + memoria/contexto/aprendizado).
+- Slice em foco: `milestone-4-dual-concierge-memory-orchestrator-slice` (Specify/Design fechado; tasks M4D-008..012).
+- Checkpoints recentes: confirmation queue, approvals UI, operational_context (IA responde com dados ao vivo: clientes, agenda, leads, cobrancas).
 
 ## Arquitetura Padrão (fixa)
 1. `mod-01-owner-concierge` (chat IA + avatar + memória/contexto)
@@ -109,6 +108,11 @@ Proteção de branch (`main`):
 - detalhe: `.specs/project/GITHUB-BRANCH-PROTECTION.md`
 
 Nota de isolamento: o smoke deste repositório usa stack Docker `fabio-postgres-smoke` e porta host `55432`, sem conflito com `fabio2` (`5432`).
+
+## Specs e rastreabilidade
+- **Ordem de carga (sessao):** `.specs/project/CONTEXT.md` -> PROJECT.md -> ROADMAP.md -> STATE.md -> feature ativa (spec.md, design.md, tasks.md). Ver `AGENTS.md`.
+- **Indice de docs:** STATUS-ATUAL.md, SKILLS-CATALOG.md, GATES.md, METRICS.md, MEMORY-CONTEXT-LEARNING-FLOW.md; features em `.specs/features/<feature>/`. Tudo rastreavel com data/hora onde aplicavel.
+- **Skills:** Project skills (4) em `skills/(project)/`; instalacao: `npm run skills:install` (Codex) ou `npm run skills:install:cursor` (Cursor). Catalogo completo (project + globais): `.specs/project/SKILLS-CATALOG.md`. O agente deve citar o skill em uso como prova.
 
 ## Gerar novo SaaS (starter)
 ```powershell

@@ -39,10 +39,13 @@ Legacy split runtime (3 processes):
 2. `.specs/project/PROJECT.md`
 3. `.specs/project/ROADMAP.md`
 4. `.specs/project/STATE.md`
-5. Active feature docs:
+5. `.specs/project/STATUS-ATUAL.md` (status e aprendizado; rastreabilidade)
+6. Active feature docs:
    - `.specs/features/<feature>/spec.md`
    - `.specs/features/<feature>/design.md`
    - `.specs/features/<feature>/tasks.md`
+
+Skills: cite the skill in use (proof). Catalog: `.specs/project/SKILLS-CATALOG.md`.
 
 ## Workflow Gate
 Phases are mandatory and sequential:
