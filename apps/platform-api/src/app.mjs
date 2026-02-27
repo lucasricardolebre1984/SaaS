@@ -178,6 +178,73 @@ function mergePersonaOverrides(requestOverrides, tenantRuntimeConfig) {
   });
 }
 
+function normalizeApiKeyToken(value) {
+  const rawValue = typeof value === 'string' ? value.trim() : '';
+  if (rawValue.length === 0) return '';
+  // Prevent accidental multi-secret paste (e.g. "sk-... API_KEY=...").
+  return rawValue.split(/\s+/)[0];
+}
+
+function resolveOpenAiApiKey(tenantRuntimeConfig, fallbackApiKey = '') {
+  const tenantApiKey = normalizeApiKeyToken(tenantRuntimeConfig?.openai?.api_key);
+  if (tenantApiKey.length > 0) {
+    return tenantApiKey;
+  }
+  return normalizeApiKeyToken(fallbackApiKey);
+}
+
+function firstNonEmptyString(values = []) {
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed.length > 0) return trimmed;
+  }
+  return '';
+}
+
+function extractEvolutionQrPayload(data) {
+  const code = firstNonEmptyString([
+    data?.code,
+    data?.base64,
+    data?.qr,
+    data?.qrCode,
+    data?.qr_code,
+    data?.qrcode,
+    data?.qrcode?.base64,
+    data?.qrcode?.code,
+    data?.qrcode?.qr,
+    data?.qrcode?.value
+  ]);
+
+  const pairingCode = firstNonEmptyString([
+    data?.pairingCode,
+    data?.pairing_code,
+    data?.pairCode,
+    data?.pair_code,
+    data?.qrcode?.pairingCode,
+    data?.qrcode?.pairing_code
+  ]);
+
+  const countValue = Number(data?.count);
+  const count = Number.isFinite(countValue) ? countValue : null;
+
+  const connectionState = firstNonEmptyString([
+    data?.connectionState,
+    data?.connection_state,
+    data?.state,
+    data?.status,
+    data?.instance?.state,
+    data?.instance?.status
+  ]).toLowerCase();
+
+  return {
+    code: code.length > 0 ? code : null,
+    pairingCode: pairingCode.length > 0 ? pairingCode : null,
+    count,
+    connectionState: connectionState.length > 0 ? connectionState : null
+  };
+}
+
 function sanitizeTenantRuntimeConfigInput(rawConfig) {
   const raw = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
   const openaiRaw = raw.openai && typeof raw.openai === 'object' ? raw.openai : {};
@@ -186,16 +253,9 @@ function sanitizeTenantRuntimeConfigInput(rawConfig) {
   const integrationsRaw = raw.integrations && typeof raw.integrations === 'object' ? raw.integrations : {};
   const crmEvolutionRaw = integrationsRaw.crm_evolution && typeof integrationsRaw.crm_evolution === 'object' ? integrationsRaw.crm_evolution : {};
 
-  const normalizeApiKey = (value) => {
-    const rawValue = typeof value === 'string' ? value.trim() : '';
-    if (rawValue.length === 0) return '';
-    // Prevent accidental multi-secret paste (e.g. "sk-... API_KEY=...").
-    return rawValue.split(/\s+/)[0];
-  };
-
   const config = {
     openai: {
-      api_key: normalizeApiKey(openaiRaw.api_key),
+      api_key: normalizeApiKeyToken(openaiRaw.api_key),
       model: typeof openaiRaw.model === 'string' && openaiRaw.model.trim().length > 0
         ? openaiRaw.model.trim()
         : 'gpt-5.1',
@@ -425,17 +485,20 @@ async function synthesizeSpeechWithOpenAi(input) {
 
 function createRuntimeConfigSummary(tenantId, configRecord) {
   const normalized = sanitizeTenantRuntimeConfigInput(configRecord ?? {});
-  const apiKey = normalized.openai.api_key;
+  const tenantApiKey = normalized.openai.api_key;
+  const globalApiKey = normalizeApiKeyToken(process.env.OPENAI_API_KEY ?? '');
+  const openaiConfigured = tenantApiKey.length > 0 || globalApiKey.length > 0;
+  const ownerResponseMode = openaiConfigured ? 'openai' : 'auto';
   return {
     tenant_id: tenantId,
     status: 'ok',
     runtime: {
-      owner_response_mode: apiKey.length > 0 ? 'openai' : 'auto',
-      openai_configured: apiKey.length > 0,
+      owner_response_mode: ownerResponseMode,
+      openai_configured: openaiConfigured,
       model: normalized.openai.model
     },
     openai: {
-      api_key_configured: apiKey.length > 0,
+      api_key_configured: tenantApiKey.length > 0,
       vision_enabled: normalized.openai.vision_enabled,
       voice_enabled: normalized.openai.voice_enabled,
       image_generation_enabled: normalized.openai.image_generation_enabled,
@@ -1640,14 +1703,14 @@ export function createApp(options = {}) {
   });
   const ownerEmbeddingProviderConfig = {
     mode: options.ownerEmbeddingMode,
-    openaiApiKey: options.openaiApiKey,
+    openaiApiKey: normalizeApiKeyToken(options.openaiApiKey ?? process.env.OPENAI_API_KEY ?? ''),
     openaiModel: options.ownerEmbeddingModel,
     openaiBaseUrl: options.openaiBaseUrl
   };
   const ownerEmbeddingProvider = createEmbeddingProvider(ownerEmbeddingProviderConfig);
   const ownerResponseProviderConfig = {
     mode: options.ownerResponseMode,
-    openaiApiKey: options.openaiApiKey,
+    openaiApiKey: normalizeApiKeyToken(options.openaiApiKey ?? process.env.OPENAI_API_KEY ?? ''),
     openaiModel: options.ownerResponseModel,
     openaiBaseUrl: options.openaiBaseUrl
   };
@@ -1985,9 +2048,12 @@ export function createApp(options = {}) {
         const request = body.request;
         const tenantId = String(request.tenant_id).trim();
         const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
-        const tenantApiKey = String(tenantRuntimeConfig?.openai?.api_key ?? '').trim();
+        const resolvedApiKey = resolveOpenAiApiKey(
+          tenantRuntimeConfig,
+          ownerResponseProviderConfig.openaiApiKey
+        );
 
-        if (tenantApiKey.length === 0) {
+        if (resolvedApiKey.length === 0) {
           return json(res, 400, { error: 'openai_not_configured' });
         }
 
@@ -2002,7 +2068,7 @@ export function createApp(options = {}) {
 
         try {
           const transcription = await transcribeAudioWithOpenAi({
-            apiKey: tenantApiKey,
+            apiKey: resolvedApiKey,
             baseUrl: options.openaiBaseUrl ?? process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
             audioBase64: request.audio_base64,
             mimeType,
@@ -2042,9 +2108,12 @@ export function createApp(options = {}) {
         const request = body.request;
         const tenantId = String(request.tenant_id).trim();
         const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
-        const tenantApiKey = String(tenantRuntimeConfig?.openai?.api_key ?? '').trim();
+        const resolvedApiKey = resolveOpenAiApiKey(
+          tenantRuntimeConfig,
+          ownerResponseProviderConfig.openaiApiKey
+        );
 
-        if (tenantApiKey.length === 0) {
+        if (resolvedApiKey.length === 0) {
           return json(res, 400, { error: 'openai_not_configured' });
         }
 
@@ -2054,7 +2123,7 @@ export function createApp(options = {}) {
 
         try {
           const speech = await synthesizeSpeechWithOpenAi({
-            apiKey: tenantApiKey,
+            apiKey: resolvedApiKey,
             baseUrl: options.openaiBaseUrl ?? process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
             text: String(request.text),
             model: typeof request.model === 'string' ? request.model.trim() : '',
@@ -5081,26 +5150,83 @@ export function createApp(options = {}) {
             message: 'Configure no menu 06 Configuracoes (Evolution Base URL, API Key, Instance ID) ou env: EVOLUTION_HTTP_BASE_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE_ID.'
           });
         }
-        const evolutionConnectUrl = `${baseUrl.replace(/\/$/, '')}/instance/connect/${encodeURIComponent(instanceId)}`;
-        try {
+        const baseUrlSanitized = baseUrl.replace(/\/$/, '');
+        const evolutionConnectUrl = `${baseUrlSanitized}/instance/connect/${encodeURIComponent(instanceId)}`;
+        const evolutionCreateUrl = `${baseUrlSanitized}/instance/create`;
+        const headers = { apikey: apiKey };
+        const connectOnce = async () => {
           const evolutionRes = await fetch(evolutionConnectUrl, {
             method: 'GET',
-            headers: { apikey: apiKey }
+            headers
           });
           if (!evolutionRes.ok) {
             const text = await evolutionRes.text();
-            return json(res, evolutionRes.status >= 500 ? 502 : evolutionRes.status, {
-              error: 'evolution_error',
-              status: evolutionRes.status,
-              details: text.slice(0, 500)
-            });
+            return { ok: false, status: evolutionRes.status, details: text.slice(0, 500) };
           }
           const data = await evolutionRes.json();
+          return { ok: true, data };
+        };
+        try {
+          let connectResult = await connectOnce();
+
+          if (!connectResult.ok) {
+            return json(res, connectResult.status >= 500 ? 502 : connectResult.status, {
+              error: 'evolution_error',
+              status: connectResult.status,
+              details: connectResult.details
+            });
+          }
+
+          let payload = extractEvolutionQrPayload(connectResult.data);
+
+          if (
+            !payload.code &&
+            !payload.pairingCode &&
+            payload.connectionState !== 'open'
+          ) {
+            try {
+              await fetch(evolutionCreateUrl, {
+                method: 'POST',
+                headers: {
+                  ...headers,
+                  'content-type': 'application/json'
+                },
+                body: JSON.stringify({
+                  instanceName: instanceId,
+                  qrcode: true,
+                  integration: 'WHATSAPP-BAILEYS'
+                })
+              });
+            } catch {
+              // no-op: connect retry still attempted below.
+            }
+
+            connectResult = await connectOnce();
+            if (!connectResult.ok) {
+              return json(res, connectResult.status >= 500 ? 502 : connectResult.status, {
+                error: 'evolution_error',
+                status: connectResult.status,
+                details: connectResult.details
+              });
+            }
+            payload = extractEvolutionQrPayload(connectResult.data);
+          }
+
+          let status = 'pending_qr';
+          let message = 'QR ainda nao disponivel. Aguarde alguns segundos e clique novamente.';
+          if (payload.code || payload.pairingCode) {
+            status = 'ready';
+            message = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
+          } else if (payload.connectionState === 'open') {
+            status = 'connected';
+            message = 'Instancia ja conectada no WhatsApp. QR nao e necessario neste estado.';
+          }
+
           return json(res, 200, {
-            code: data.code ?? data.base64 ?? null,
-            pairingCode: data.pairingCode ?? null,
-            count: data.count ?? null,
-            instanceId
+            ...payload,
+            instanceId,
+            status,
+            message
           });
         } catch (err) {
           return json(res, 502, {

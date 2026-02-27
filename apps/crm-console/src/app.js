@@ -323,9 +323,14 @@ async function loadWhatsAppQr() {
       }
       return;
     }
-    statusEl.textContent = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
-    const code = data.code ?? data.base64 ?? '';
-    if (code && (code.startsWith('data:') || code.length > 100)) {
+    const code = String(data.code ?? data.base64 ?? '').trim();
+    const pairingCode = String(data.pairingCode ?? '').trim();
+    const connectionState = String(data.connectionState ?? '').trim().toLowerCase();
+    const backendStatus = String(data.status ?? '').trim().toLowerCase();
+    const backendMessage = String(data.message ?? '').trim();
+
+    const codeLooksLikeImageBase64 = code.startsWith('data:') || code.length > 100;
+    if (codeLooksLikeImageBase64) {
       const src = code.startsWith('data:') ? code : `data:image/png;base64,${code}`;
       const img = document.createElement('img');
       img.src = src;
@@ -333,8 +338,21 @@ async function loadWhatsAppQr() {
       img.className = 'whatsapp-qr-img';
       imageWrap.appendChild(img);
     }
-    if (data.pairingCode) {
-      pairingEl.textContent = `Codigo de vinculacao: ${data.pairingCode}`;
+
+    if (pairingCode) {
+      pairingEl.textContent = `Codigo de vinculacao: ${pairingCode}`;
+    } else if (code && !codeLooksLikeImageBase64) {
+      pairingEl.textContent = `Codigo recebido: ${code}`;
+    }
+
+    if (backendMessage.length > 0) {
+      statusEl.textContent = backendMessage;
+    } else if (backendStatus === 'connected' || connectionState === 'open') {
+      statusEl.textContent = 'Instancia ja conectada no WhatsApp. Se quiser novo QR, desconecte a instancia primeiro.';
+    } else if (codeLooksLikeImageBase64 || pairingCode.length > 0) {
+      statusEl.textContent = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
+    } else {
+      statusEl.textContent = 'QR ainda nao disponivel. Clique novamente em alguns segundos.';
     }
   } catch (e) {
     statusEl.textContent = `Erro: ${e.message || 'rede'}`;

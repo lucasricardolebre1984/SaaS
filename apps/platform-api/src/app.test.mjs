@@ -2718,6 +2718,83 @@ test('POST /v1/owner-concierge/audio/speech streams OpenAI TTS audio with tenant
   }
 });
 
+test('POST /v1/owner-concierge/audio/* uses global OpenAI key fallback when tenant key is missing', async () => {
+  const storageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-owner-audio-fallback-'));
+  let transcribeCalled = false;
+  let speechCalled = false;
+
+  const mockProviderServer = http.createServer(async (req, res) => {
+    const authHeader = String(req.headers.authorization ?? '');
+    if (!authHeader.startsWith('Bearer global-openai-key')) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/audio/transcriptions') {
+      transcribeCalled = true;
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({
+        text: 'transcricao via fallback global',
+        model: 'whisper-1'
+      }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/audio/speech') {
+      speechCalled = true;
+      res.writeHead(200, { 'content-type': 'audio/mpeg' });
+      res.end(Buffer.from('fallback-global-mp3'));
+      return;
+    }
+
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not_found' }));
+  });
+  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = mockProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: storageRoot,
+      tenantRuntimeConfigStorageDir: storageRoot,
+      openaiApiKey: 'global-openai-key',
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const transcribeRes = await fetch(`${appBaseUrl}/v1/owner-concierge/audio/transcribe`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerAudioTranscriptionRequest())
+    });
+    assert.equal(transcribeRes.status, 200);
+    const transcribeBody = await transcribeRes.json();
+    assert.equal(transcribeBody.response.transcription.text, 'transcricao via fallback global');
+    assert.equal(transcribeCalled, true);
+
+    const speechRes = await fetch(`${appBaseUrl}/v1/owner-concierge/audio/speech`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validOwnerAudioSpeechRequest())
+    });
+    assert.equal(speechRes.status, 200);
+    assert.equal(speechRes.headers.get('x-owner-speech-provider'), 'openai');
+    const speechBytes = Buffer.from(await speechRes.arrayBuffer());
+    assert.equal(speechBytes.toString('utf8'), 'fallback-global-mp3');
+    assert.equal(speechCalled, true);
+  } finally {
+    await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(storageRoot, { recursive: true, force: true });
+  }
+});
+
 test('POST /v1/owner-concierge/interaction uses openai response provider in strict mode with mock', async () => {
   let providerCalled = false;
   const mockProviderServer = http.createServer(async (req, res) => {
@@ -3126,4 +3203,64 @@ test('GET /v1/whatsapp/evolution/qr returns 503 when Evolution not configured', 
   assert.equal(res.status, 503);
   const body = await res.json();
   assert.equal(body.error, 'evolution_not_configured');
+});
+
+test('GET /v1/whatsapp/evolution/qr returns pending state when provider has no QR yet', async () => {
+  const storageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-evolution-qr-pending-'));
+  let connectCalls = 0;
+  let createCalls = 0;
+  const mockEvolutionServer = http.createServer(async (req, res) => {
+    if (req.method === 'GET' && req.url === '/instance/connect/fabio') {
+      connectCalls += 1;
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({
+        code: null,
+        pairingCode: null,
+        count: 0,
+        state: 'close'
+      }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/instance/create') {
+      createCalls += 1;
+      res.writeHead(201, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ instance: { instanceName: 'fabio' } }));
+      return;
+    }
+
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not_found' }));
+  });
+  await new Promise((resolve) => mockEvolutionServer.listen(0, '127.0.0.1', resolve));
+  const evolutionAddress = mockEvolutionServer.address();
+  const evolutionBaseUrl = `http://127.0.0.1:${evolutionAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: storageRoot,
+      evolutionHttpBaseUrl: evolutionBaseUrl,
+      evolutionApiKey: 'evo-key',
+      evolutionInstanceId: 'fabio'
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const res = await fetch(`${appBaseUrl}/v1/whatsapp/evolution/qr`, { method: 'GET' });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.status, 'pending_qr');
+    assert.equal(body.code, null);
+    assert.equal(body.pairingCode, null);
+    assert.equal(body.instanceId, 'fabio');
+    assert.equal(createCalls >= 1, true);
+    assert.equal(connectCalls >= 2, true);
+  } finally {
+    await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockEvolutionServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(storageRoot, { recursive: true, force: true });
+  }
 });
