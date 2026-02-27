@@ -170,3 +170,5 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-27,12:45,12:55,0.17,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,done,Hotfix OpenAI audio fallback plus Evolution QR state hardening and CRM QR UX adjustments with green Nx gates
 2026-02-27,12:55,13:05,0.17,Operations,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,done,Deployed main commit 8474a4e to AWS dev via npm run deploy:dev and validated public health endpoint 200
 2026-02-27,13:05,13:15,0.17,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-005,pair,in_progress,Updated AGENTS STATE STATUS PROXIMO-PASSO and slice tasks with auditable timestamped evidence
+2026-02-27,13:55,14:05,0.17,Validate,milestone-5-runtime-stability-hotfix-slice,M5B-006,pair,done,Nx gates green after hotfix: app-platform-api:test plus owner and crm builds
+2026-02-27,13:20,13:55,0.58,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-006,pair,done,Owner/CRM runtime hardening: auto-sync OpenAI config retry, compact provider errors, mobile menu close fix, QR force_new polling and iframe embedded detection

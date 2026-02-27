@@ -28,7 +28,7 @@
         <header class="topbar">
           <div class="topbar__left">
             <button id="mobileMenuBtn" class="menu-btn" type="button" aria-label="Abrir menu">Menu</button>
-            <div>
+            <div class="topbar__context">
               <p class="brand-caption" id="topTenantLabel">tenant_automania</p>
               <h2 id="topModuleTitle">01 Chat IA</h2>
             </div>
@@ -47,10 +47,6 @@
           <section class="chat-panel card">
             <header class="card__header">
               <h3>Chat do Proprietario</h3>
-              <div class="card__actions">
-                <button id="continuousBtn" class="btn btn--ghost" type="button">Ativar Continuo</button>
-                <span id="continuousState" class="status-pill">one-shot</span>
-              </div>
             </header>
 
             <div id="messages" class="messages">
@@ -126,7 +122,12 @@
             </button>
             <header class="card__header">
               <h3>Avatar Continuo</h3>
-              <button id="simulateVoiceBtn" class="btn btn--ghost" type="button">Simular Voz</button>
+              <div class="card__actions">
+                <button id="continuousBtn" class="btn btn--ghost" type="button">Ativar Continuo</button>
+                <span id="continuousState" class="status-pill">one-shot</span>
+                <button id="recoverSessionBtn" class="btn btn--ghost" type="button">Recuperar Sessao</button>
+                <button id="simulateVoiceBtn" class="btn btn--ghost" type="button">Simular Voz</button>
+              </div>
             </header>
 
             <div class="avatar" id="avatar" data-state="idle">

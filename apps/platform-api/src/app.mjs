@@ -202,39 +202,89 @@ function firstNonEmptyString(values = []) {
   return '';
 }
 
+function delayMs(ms) {
+  const value = Number(ms);
+  const safe = Number.isFinite(value) ? Math.max(0, value) : 0;
+  return new Promise((resolve) => setTimeout(resolve, safe));
+}
+
+function sanitizeProviderErrorDetails(error) {
+  const raw = String(error?.message ?? error ?? '').trim();
+  if (!raw) return 'provider_error';
+  const masked = raw.replace(/sk-[A-Za-z0-9_-]{8,}/g, 'sk-***');
+  const lowered = masked.toLowerCase();
+  if (lowered.includes('incorrect api key') || lowered.includes('invalid_api_key')) {
+    return 'openai_invalid_api_key';
+  }
+  if (lowered.includes('openai_not_configured')) {
+    return 'openai_not_configured';
+  }
+  return masked.length > 220 ? `${masked.slice(0, 220)}...` : masked;
+}
+
 function extractEvolutionQrPayload(data) {
-  const code = firstNonEmptyString([
-    data?.code,
-    data?.base64,
-    data?.qr,
-    data?.qrCode,
-    data?.qr_code,
+  const stringCandidates = [];
+  const collectStringCandidate = (value) => {
+    if (typeof value !== 'string') return;
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      stringCandidates.push(trimmed);
+    }
+  };
+
+  collectStringCandidate(data);
+  collectStringCandidate(data?.qrcode);
+  collectStringCandidate(data?.data?.qrcode);
+  collectStringCandidate(data?.response?.qrcode);
+
+  const listPayload = Array.isArray(data?.qrcode) ? data.qrcode
+    : Array.isArray(data?.data?.qrcode) ? data.data.qrcode
+      : Array.isArray(data?.response?.qrcode) ? data.response.qrcode
+        : [];
+
+  const containers = [
+    data,
+    data?.data,
+    data?.response,
+    data?.instance,
+    data?.instance?.data,
     data?.qrcode,
-    data?.qrcode?.base64,
-    data?.qrcode?.code,
-    data?.qrcode?.qr,
-    data?.qrcode?.value
+    data?.data?.qrcode,
+    data?.response?.qrcode,
+    ...listPayload
+  ];
+
+  const code = firstNonEmptyString([
+    ...stringCandidates,
+    ...containers.map((item) => item?.code),
+    ...containers.map((item) => item?.base64),
+    ...containers.map((item) => item?.qr),
+    ...containers.map((item) => item?.qrCode),
+    ...containers.map((item) => item?.qr_code),
+    ...containers.map((item) => item?.value)
   ]);
 
   const pairingCode = firstNonEmptyString([
-    data?.pairingCode,
-    data?.pairing_code,
-    data?.pairCode,
-    data?.pair_code,
-    data?.qrcode?.pairingCode,
-    data?.qrcode?.pairing_code
+    ...containers.map((item) => item?.pairingCode),
+    ...containers.map((item) => item?.pairing_code),
+    ...containers.map((item) => item?.pairCode),
+    ...containers.map((item) => item?.pair_code)
   ]);
 
-  const countValue = Number(data?.count);
-  const count = Number.isFinite(countValue) ? countValue : null;
+  let count = null;
+  for (const item of containers) {
+    const numeric = Number(item?.count);
+    if (Number.isFinite(numeric)) {
+      count = numeric;
+      break;
+    }
+  }
 
   const connectionState = firstNonEmptyString([
-    data?.connectionState,
-    data?.connection_state,
-    data?.state,
-    data?.status,
-    data?.instance?.state,
-    data?.instance?.status
+    ...containers.map((item) => item?.connectionState),
+    ...containers.map((item) => item?.connection_state),
+    ...containers.map((item) => item?.state),
+    ...containers.map((item) => item?.status)
   ]).toLowerCase();
 
   return {
@@ -2086,7 +2136,7 @@ export function createApp(options = {}) {
         } catch (error) {
           return json(res, 502, {
             error: 'owner_audio_transcription_error',
-            details: String(error.message ?? error)
+            details: sanitizeProviderErrorDetails(error)
           });
         }
       }
@@ -2148,7 +2198,7 @@ export function createApp(options = {}) {
         } catch (error) {
           return json(res, 502, {
             error: 'owner_audio_speech_error',
-            details: String(error.message ?? error)
+            details: sanitizeProviderErrorDetails(error)
           });
         }
       }
@@ -4473,6 +4523,44 @@ export function createApp(options = {}) {
         return json(res, 200, response);
       }
 
+      if (method === 'GET' && path === '/v1/owner-concierge/sessions') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+        const limitRaw = Number(parsedUrl.searchParams.get('limit') ?? 20);
+        const limit = Math.max(1, Math.min(Number.isFinite(limitRaw) ? limitRaw : 20, 200));
+        const items = typeof shortMemoryStore.listSessions === 'function'
+          ? shortMemoryStore.listSessions(tenantId, limit)
+          : [];
+        return json(res, 200, {
+          tenant_id: tenantId,
+          items
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/owner-concierge/session-turns') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        const sessionId = String(parsedUrl.searchParams.get('session_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+        if (!sessionId) {
+          return json(res, 400, { error: 'missing_session_id' });
+        }
+        const limitRaw = Number(parsedUrl.searchParams.get('limit') ?? 80);
+        const limit = Math.max(1, Math.min(Number.isFinite(limitRaw) ? limitRaw : 80, 400));
+        const turns = typeof shortMemoryStore.getSessionTurns === 'function'
+          ? shortMemoryStore.getSessionTurns(tenantId, sessionId, limit)
+          : shortMemoryStore.getLastTurns(tenantId, sessionId, limit);
+
+        return json(res, 200, {
+          tenant_id: tenantId,
+          session_id: sessionId,
+          turns: Array.isArray(turns) ? turns : []
+        });
+      }
+
       if (method === 'POST' && path === '/v1/owner-concierge/interaction') {
         const body = await readJsonBody(req);
         if (body === null) {
@@ -4796,7 +4884,7 @@ export function createApp(options = {}) {
           } catch (error) {
             return json(res, 502, {
               error: 'owner_response_provider_error',
-              details: String(error.message ?? error)
+              details: sanitizeProviderErrorDetails(error)
             });
           }
         } else {
@@ -5125,6 +5213,7 @@ export function createApp(options = {}) {
 
       if (method === 'GET' && path === '/v1/whatsapp/evolution/qr') {
         const queryTenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        const forceNewInstance = String(parsedUrl.searchParams.get('force_new') ?? '').trim() === '1';
         let baseUrl = '';
         let apiKey = '';
         let instanceId = '';
@@ -5155,37 +5244,44 @@ export function createApp(options = {}) {
         const evolutionCreateUrl = `${baseUrlSanitized}/instance/create`;
         const headers = { apikey: apiKey };
         const connectOnce = async () => {
-          const evolutionRes = await fetch(evolutionConnectUrl, {
-            method: 'GET',
-            headers
-          });
-          if (!evolutionRes.ok) {
-            const text = await evolutionRes.text();
-            return { ok: false, status: evolutionRes.status, details: text.slice(0, 500) };
+          const tryRequest = async (httpMethod) => {
+            const evolutionRes = await fetch(evolutionConnectUrl, {
+              method: httpMethod,
+              headers
+            });
+            if (!evolutionRes.ok) {
+              const text = await evolutionRes.text();
+              return { ok: false, status: evolutionRes.status, details: text.slice(0, 500) };
+            }
+            const data = await evolutionRes.json();
+            return { ok: true, data };
+          };
+
+          const getAttempt = await tryRequest('GET');
+          if (getAttempt.ok) return getAttempt;
+
+          if (getAttempt.status === 404 || getAttempt.status === 405) {
+            const postAttempt = await tryRequest('POST');
+            if (postAttempt.ok) return postAttempt;
+            return postAttempt;
           }
-          const data = await evolutionRes.json();
-          return { ok: true, data };
+
+          return getAttempt;
         };
         try {
-          let connectResult = await connectOnce();
+          let connectResult = { ok: false, status: 0, details: '' };
+          let payload = { code: null, pairingCode: null, connectionState: null };
 
-          if (!connectResult.ok) {
-            return json(res, connectResult.status >= 500 ? 502 : connectResult.status, {
-              error: 'evolution_error',
-              status: connectResult.status,
-              details: connectResult.details
-            });
+          if (!forceNewInstance) {
+            connectResult = await connectOnce();
+            payload = connectResult.ok
+              ? extractEvolutionQrPayload(connectResult.data)
+              : { code: null, pairingCode: null, connectionState: null };
           }
 
-          let payload = extractEvolutionQrPayload(connectResult.data);
-
-          if (
-            !payload.code &&
-            !payload.pairingCode &&
-            payload.connectionState !== 'open'
-          ) {
+          if (forceNewInstance || !connectResult.ok || (!payload.code && !payload.pairingCode && payload.connectionState !== 'open')) {
             try {
-              await fetch(evolutionCreateUrl, {
+              const createRes = await fetch(evolutionCreateUrl, {
                 method: 'POST',
                 headers: {
                   ...headers,
@@ -5197,19 +5293,38 @@ export function createApp(options = {}) {
                   integration: 'WHATSAPP-BAILEYS'
                 })
               });
+              if (createRes.ok) {
+                const createBody = await createRes.json().catch(() => ({}));
+                const createPayload = extractEvolutionQrPayload(createBody);
+                if (createPayload.code || createPayload.pairingCode || createPayload.connectionState === 'open') {
+                  payload = createPayload;
+                }
+              }
             } catch {
               // no-op: connect retry still attempted below.
             }
 
-            connectResult = await connectOnce();
-            if (!connectResult.ok) {
-              return json(res, connectResult.status >= 500 ? 502 : connectResult.status, {
-                error: 'evolution_error',
-                status: connectResult.status,
-                details: connectResult.details
-              });
+            if (!payload.code && !payload.pairingCode && payload.connectionState !== 'open') {
+              for (let attempt = 0; attempt < 16; attempt += 1) {
+                await delayMs(1200);
+                connectResult = await connectOnce();
+                if (!connectResult.ok) {
+                  continue;
+                }
+                payload = extractEvolutionQrPayload(connectResult.data);
+                if (payload.code || payload.pairingCode || payload.connectionState === 'open') {
+                  break;
+                }
+              }
             }
-            payload = extractEvolutionQrPayload(connectResult.data);
+          }
+
+          if (!payload.code && !payload.pairingCode && payload.connectionState !== 'open' && !connectResult.ok) {
+            return json(res, connectResult.status >= 500 ? 502 : connectResult.status, {
+              error: 'evolution_error',
+              status: connectResult.status,
+              details: connectResult.details
+            });
           }
 
           let status = 'pending_qr';
@@ -5217,7 +5332,7 @@ export function createApp(options = {}) {
           if (payload.code || payload.pairingCode) {
             status = 'ready';
             message = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
-          } else if (payload.connectionState === 'open') {
+          } else if (payload.connectionState === 'open' || payload.connectionState === 'connected') {
             status = 'connected';
             message = 'Instancia ja conectada no WhatsApp. QR nao e necessario neste estado.';
           }

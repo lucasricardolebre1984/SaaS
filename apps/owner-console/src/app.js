@@ -162,6 +162,7 @@ const continuousStateEl = document.getElementById('continuousState');
 const continuousBackBtn = document.getElementById('continuousBackBtn');
 const avatarEl = document.getElementById('avatar');
 const simulateVoiceBtn = document.getElementById('simulateVoiceBtn');
+const recoverSessionBtn = document.getElementById('recoverSessionBtn');
 const lastRunEl = document.getElementById('lastRun');
 const avatarIdleVideoEl = document.querySelector('.avatar__video--idle');
 const avatarSpeakingVideoEl = document.querySelector('.avatar__video--speaking');
@@ -216,6 +217,49 @@ const OPENAI_TTS_DEFAULT_VOICE = 'shimmer';
 const OPENAI_TTS_DEFAULT_SPEED = 1.12;
 const MAX_INLINE_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const MAX_TEXT_EXCERPT_CHARS = 12000;
+
+function isOpenAiNotConfiguredError(payload = {}) {
+  const errorText = String(payload?.error ?? '').toLowerCase();
+  const detailsText = String(payload?.details ?? '').toLowerCase();
+  return errorText.includes('openai_not_configured') || detailsText.includes('openai_not_configured');
+}
+
+function formatBackendErrorMessage(payload = {}, status = 0) {
+  const errorCode = String(payload?.error ?? '').trim();
+  const detailsRaw = String(payload?.details ?? '').trim();
+  const details = detailsRaw.toLowerCase();
+
+  if (errorCode === 'openai_not_configured') {
+    return 'OpenAI nao configurada no backend. Abra 06 Configuracoes e clique em Salvar Config.';
+  }
+  if (details.includes('incorrect api key') || details.includes('invalid_api_key')) {
+    return 'OpenAI API key invalida. Atualize a chave em 06 Configuracoes e salve.';
+  }
+  if (errorCode === 'owner_audio_transcription_error') {
+    return 'Falha na transcricao de audio. Verifique OpenAI key e permissao de voz.';
+  }
+  if (errorCode === 'owner_audio_speech_error') {
+    return 'Falha na sintese de voz. Verifique OpenAI key e configuracao de voz.';
+  }
+
+  const compactDetails = detailsRaw.length > 180 ? `${detailsRaw.slice(0, 180)}...` : detailsRaw;
+  if (errorCode && compactDetails) return `${errorCode}: ${compactDetails}`;
+  if (errorCode) return errorCode;
+  if (compactDetails) return compactDetails;
+  return `Erro HTTP ${status || 'rede'}`;
+}
+
+async function trySyncRuntimeConfigForOpenAi(reason = 'runtime') {
+  const apiKey = String(state?.config?.openai?.api_key ?? '').trim();
+  if (!apiKey) return false;
+  try {
+    await pushRuntimeConfigToBackend();
+    return true;
+  } catch {
+    updateConfigStatus(`Sync OpenAI falhou (${reason}).`);
+    return false;
+  }
+}
 
 function createDefaultMetrics() {
   return {
@@ -1473,7 +1517,7 @@ function stopContinuousSpeechOutput(resetSpeaking = true) {
 }
 
 async function synthesizeAssistantSpeech(text) {
-  const response = await fetch(`${apiBase()}/v1/owner-concierge/audio/speech`, {
+  const submitSpeech = () => fetch(`${apiBase()}/v1/owner-concierge/audio/speech`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -1490,18 +1534,21 @@ async function synthesizeAssistantSpeech(text) {
     })
   });
 
+  let response = await submitSpeech();
+  let responseBody = null;
   if (!response.ok) {
-    let details = '';
-    try {
-      const body = await response.json();
-      details = body?.details ? ` (${body.details})` : '';
-      throw new Error(`${body?.error ?? response.status}${details}`);
-    } catch (jsonError) {
-      if (jsonError instanceof Error) {
-        throw jsonError;
+    responseBody = await response.json().catch(() => ({}));
+    if (isOpenAiNotConfiguredError(responseBody)) {
+      const synced = await trySyncRuntimeConfigForOpenAi('audio-speech');
+      if (synced) {
+        response = await submitSpeech();
+        responseBody = response.ok ? null : await response.json().catch(() => ({}));
       }
-      throw new Error(`speech_http_${response.status}`);
     }
+  }
+
+  if (!response.ok) {
+    throw new Error(formatBackendErrorMessage(responseBody ?? {}, response.status));
   }
 
   const speechBlob = await response.blob();
@@ -1672,11 +1719,11 @@ function applyVisualMode(layout, palette, persist = true) {
 }
 
 function setActiveModule(moduleId) {
+  closeMobileMenu();
+
   if (moduleId === 'mod-06-configuracoes' && !requestSettingsAccess()) {
     return;
   }
-
-  closeMobileMenu();
 
   state.activeModuleId = moduleId;
   renderModuleNav();
@@ -1789,6 +1836,68 @@ function appendMessage(text, role = 'assistant') {
   el.textContent = text;
   messagesEl.appendChild(el);
   messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function resetMessagesForRecoveredSession() {
+  messagesEl.innerHTML = '';
+}
+
+async function listRecoverableSessions(limit = 12) {
+  const tenant = tenantId();
+  if (!tenant) return [];
+  const body = await fetchJsonOrThrow(
+    `/v1/owner-concierge/sessions?tenant_id=${encodeURIComponent(tenant)}&limit=${encodeURIComponent(limit)}`
+  );
+  return Array.isArray(body?.items) ? body.items : [];
+}
+
+async function fetchSessionTurnsForRecovery(recoverSessionId, limit = 80) {
+  const tenant = tenantId();
+  if (!tenant || !recoverSessionId) return [];
+  const body = await fetchJsonOrThrow(
+    `/v1/owner-concierge/session-turns?tenant_id=${encodeURIComponent(tenant)}&session_id=${encodeURIComponent(recoverSessionId)}&limit=${encodeURIComponent(limit)}`
+  );
+  return Array.isArray(body?.turns) ? body.turns : [];
+}
+
+async function recoverLatestSession() {
+  try {
+    const sessions = await listRecoverableSessions(12);
+    if (sessions.length === 0) {
+      appendMessage('Nenhuma sessao anterior encontrada para este tenant.', 'assistant');
+      updateConfigStatus('Recuperacao: sem sessoes anteriores.');
+      return;
+    }
+
+    const selected = sessions[0];
+    const recoverSessionId = String(selected?.session_id ?? '').trim();
+    if (!recoverSessionId) {
+      appendMessage('Sessao invalida para recuperacao.', 'assistant');
+      return;
+    }
+
+    const turns = await fetchSessionTurnsForRecovery(recoverSessionId, 100);
+    state.config.runtime.session_id = recoverSessionId;
+    cfgSessionIdInput.value = recoverSessionId;
+    persistConfig();
+
+    resetMessagesForRecoveredSession();
+    if (turns.length === 0) {
+      appendMessage('Sessao recuperada, mas sem mensagens armazenadas.', 'assistant');
+    } else {
+      for (const turn of turns) {
+        const role = turn?.role === 'user' ? 'owner' : 'assistant';
+        appendMessage(String(turn?.content ?? ''), role);
+      }
+    }
+
+    const totalTurns = Number(selected?.turn_count ?? turns.length) || turns.length;
+    updateConfigStatus(`Sessao recuperada: ${recoverSessionId} (${totalTurns} turnos).`);
+    setModuleStatus(confirmationsStatusEl, `Sessao ativa recuperada: ${recoverSessionId}.`);
+  } catch (error) {
+    appendMessage(`Falha ao recuperar sessao: ${error.message}`, 'assistant');
+    updateConfigStatus(`Recuperacao falhou: ${error.message}`);
+  }
 }
 
 function populateConfigForm() {
@@ -2138,7 +2247,7 @@ async function sendInteraction(text, attachments = []) {
   }
 
   try {
-    const response = await fetch(`${apiBase()}/v1/owner-concierge/interaction`, {
+    const submitInteraction = () => fetch(`${apiBase()}/v1/owner-concierge/interaction`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -2153,12 +2262,21 @@ async function sendInteraction(text, attachments = []) {
       })
     });
 
-    const body = await response.json();
+    let response = await submitInteraction();
+    let body = await response.json().catch(() => ({}));
+    if (!response.ok && isOpenAiNotConfiguredError(body)) {
+      const synced = await trySyncRuntimeConfigForOpenAi('interaction');
+      if (synced) {
+        response = await submitInteraction();
+        body = await response.json().catch(() => ({}));
+      }
+    }
+
     if (!response.ok) {
-      const details = body?.details ? ` (${body.details})` : '';
-      appendMessage(`Erro runtime: ${body.error ?? response.status}${details}`);
+      const compactError = formatBackendErrorMessage(body, response.status);
+      appendMessage(`Erro runtime: ${compactError}`);
       setAssistantProviderStatus('error', {
-        errorDetails: `${body?.error ?? response.status}${details}`
+        errorDetails: compactError
       });
       return;
     }
@@ -2249,7 +2367,7 @@ async function transcribeRecordedAudioAndSend(blob, mimeType, fileName) {
   audioRecordBtn.textContent = 'Transcrevendo...';
   try {
     const audioBase64 = await blobToBase64(blob);
-    const response = await fetch(`${apiBase()}/v1/owner-concierge/audio/transcribe`, {
+    const submitTranscription = () => fetch(`${apiBase()}/v1/owner-concierge/audio/transcribe`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -2265,10 +2383,18 @@ async function transcribeRecordedAudioAndSend(blob, mimeType, fileName) {
       })
     });
 
-    const body = await response.json();
+    let response = await submitTranscription();
+    let body = await response.json().catch(() => ({}));
+    if (!response.ok && isOpenAiNotConfiguredError(body)) {
+      const synced = await trySyncRuntimeConfigForOpenAi('audio-transcription');
+      if (synced) {
+        response = await submitTranscription();
+        body = await response.json().catch(() => ({}));
+      }
+    }
+
     if (!response.ok) {
-      const details = body?.details ? ` (${body.details})` : '';
-      throw new Error(`${body?.error ?? response.status}${details}`);
+      throw new Error(formatBackendErrorMessage(body, response.status));
     }
 
     const transcript = String(body?.response?.transcription?.text ?? '').trim();
@@ -2419,12 +2545,17 @@ function setupEvents() {
     setActiveModule(target.dataset.moduleId);
   });
 
-  openSettingsBtn.addEventListener('click', () => {
+  openSettingsBtn?.addEventListener('click', () => {
     setActiveModule('mod-06-configuracoes');
   });
 
-  healthBtn.addEventListener('click', callHealth);
-  continuousBtn.addEventListener('click', toggleContinuousMode);
+  healthBtn?.addEventListener('click', callHealth);
+  continuousBtn?.addEventListener('click', toggleContinuousMode);
+  if (recoverSessionBtn) {
+    recoverSessionBtn.addEventListener('click', () => {
+      recoverLatestSession();
+    });
+  }
   if (continuousBackBtn) {
     continuousBackBtn.addEventListener('click', () => {
       if (state.continuous) {
@@ -2432,7 +2563,7 @@ function setupEvents() {
       }
     });
   }
-  simulateVoiceBtn.addEventListener('click', () => startSpeakingPulse(1800));
+  simulateVoiceBtn?.addEventListener('click', () => startSpeakingPulse(1800));
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && bodyEl.classList.contains('menu-open')) {
       closeMobileMenu();

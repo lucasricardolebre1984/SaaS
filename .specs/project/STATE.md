@@ -619,3 +619,5 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - PR aberto: https://github.com/lucasricardolebre1984/fabio/pull/3
 - CI check Preprod Validate bloqueado por billing account lock no GitHub Actions (run 22451808265).
 - Deploy readiness DNS check failed on 2026-02-26: dev.automaniaai.com not resolved yet (report deploy-aws-readiness-20260226-134747.log).
+
+- 2026-02-27 M5B-006 hotfix aplicado: owner chat menos poluido (erros compactos), auto-sync de runtime OpenAI em falhas openai_not_configured, recuperacao de sessao no modulo 01, fechamento de menu mobile robusto e QR Evolution com force_new + polling extendido + parser tolerante.

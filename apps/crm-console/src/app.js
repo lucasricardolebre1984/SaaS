@@ -128,7 +128,14 @@ function applyBootstrapFromQuery() {
   const palette = params.get('palette');
   const embedded = params.get('embedded');
 
-  embeddedMode = embedded === '1' || embedded === 'true';
+  const inIframe = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return false;
+    }
+  })();
+  embeddedMode = embedded === '1' || embedded === 'true' || inIframe;
   if (embeddedMode) {
     rootEl.dataset.embedded = '1';
     bodyEl.classList.add('embedded-mode');
@@ -311,23 +318,46 @@ async function loadWhatsAppQr() {
   btn.disabled = true;
   try {
     const tid = tenantId();
-    const url = tid
+    const baseQrUrl = tid
       ? `${apiBase()}/v1/whatsapp/evolution/qr?tenant_id=${encodeURIComponent(tid)}`
       : `${apiBase()}/v1/whatsapp/evolution/qr`;
-    const res = await fetch(url);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      statusEl.textContent = data.message || data.error || `Erro ${res.status}`;
-      if (data.error === 'evolution_not_configured') {
+    const url = `${baseQrUrl}${baseQrUrl.includes('?') ? '&' : '?'}force_new=1`;
+
+    let finalResponse = null;
+    let finalPayload = {};
+    const maxAttempts = 16;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      statusEl.textContent = `Buscando QR na Evolution API... (${attempt}/${maxAttempts})`;
+      const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+      finalResponse = res;
+      finalPayload = data;
+
+      const code = String(data.code ?? data.base64 ?? '').trim();
+      const pairingCode = String(data.pairingCode ?? '').trim();
+      const backendStatus = String(data.status ?? '').trim().toLowerCase();
+      const connectionState = String(data.connectionState ?? '').trim().toLowerCase();
+      const ready = code.length > 0 || pairingCode.length > 0 || backendStatus === 'connected' || connectionState === 'open';
+
+      if (!res.ok || ready || attempt === maxAttempts) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+    }
+
+    if (!finalResponse?.ok) {
+      statusEl.textContent = finalPayload.message || finalPayload.error || `Erro ${finalResponse?.status ?? 'rede'}`;
+      if (finalPayload.error === 'evolution_not_configured') {
         pairingEl.textContent = 'Configure no backend: EVOLUTION_HTTP_BASE_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE_ID (ex: fabio para nao conflitar com fabio2).';
       }
       return;
     }
-    const code = String(data.code ?? data.base64 ?? '').trim();
-    const pairingCode = String(data.pairingCode ?? '').trim();
-    const connectionState = String(data.connectionState ?? '').trim().toLowerCase();
-    const backendStatus = String(data.status ?? '').trim().toLowerCase();
-    const backendMessage = String(data.message ?? '').trim();
+
+    const code = String(finalPayload.code ?? finalPayload.base64 ?? '').trim();
+    const pairingCode = String(finalPayload.pairingCode ?? '').trim();
+    const connectionState = String(finalPayload.connectionState ?? '').trim().toLowerCase();
+    const backendStatus = String(finalPayload.status ?? '').trim().toLowerCase();
+    const backendMessage = String(finalPayload.message ?? '').trim();
 
     const codeLooksLikeImageBase64 = code.startsWith('data:') || code.length > 100;
     if (codeLooksLikeImageBase64) {
@@ -347,12 +377,12 @@ async function loadWhatsAppQr() {
 
     if (backendMessage.length > 0) {
       statusEl.textContent = backendMessage;
-    } else if (backendStatus === 'connected' || connectionState === 'open') {
+    } else if (backendStatus === 'connected' || connectionState === 'open' || connectionState === 'connected') {
       statusEl.textContent = 'Instancia ja conectada no WhatsApp. Se quiser novo QR, desconecte a instancia primeiro.';
     } else if (codeLooksLikeImageBase64 || pairingCode.length > 0) {
       statusEl.textContent = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
     } else {
-      statusEl.textContent = 'QR ainda nao disponivel. Clique novamente em alguns segundos.';
+      statusEl.textContent = 'QR ainda nao disponivel. Aguarde alguns segundos e clique novamente (ou valide Evolution Base URL/API Key/Instance no menu 06).';
     }
   } catch (e) {
     statusEl.textContent = `Erro: ${e.message || 'rede'}`;
