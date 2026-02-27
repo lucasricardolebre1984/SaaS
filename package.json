@@ -15,6 +15,7 @@
     "release:dry-run": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/release-dry-run.ps1",
     "rollback:drill": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/rollback-drill.ps1",
     "deploy:aws:readiness": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/deploy-aws-readiness.ps1",
+    "deploy:dev": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/deploy-dev.ps1",
     "generate:saas-starter": "node ./tools/generate-saas-starter.mjs",
     "skills:install": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/install-project-skills.ps1 -Agent codex -Force",
     "init:day": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -ForceSkills",

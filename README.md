@@ -86,6 +86,17 @@ Gate de readiness para deploy AWS:
 npm run deploy:aws:readiness
 ```
 
+Deploy dev direto (push local + pull/restart no Ubuntu):
+```powershell
+npm run deploy:dev
+```
+
+Opcoes uteis:
+```powershell
+npm run deploy:dev -- -RunPreprod
+npm run deploy:dev -- -Host 54.233.196.148 -ServiceName saas.service
+```
+
 Drills operacionais:
 ```powershell
 npm run release:dry-run

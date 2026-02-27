@@ -165,3 +165,4 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-26,18:45,19:20,0.58,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-001..003,pair,done,Opened hotfix slice docs restored context chain cleaned remote branches and re-applied main branch protection
 2026-02-26,19:20,19:30,0.17,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,in_progress,Pending AWS host pull and runtime validation for provider openai and mobile
 2026-02-27,09:00,09:25,0.42,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,in_progress,Re-loaded init-day context audited AGENTS+README+project docs and aligned README/STATE/STATUS with PR4 and CI billing blocker
+2026-02-27,11:45,12:05,0.33,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,done,Added tools/deploy-dev.ps1 and npm deploy:dev command for one-step local push plus ubuntu pull/restart workflow
