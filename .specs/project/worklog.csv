@@ -167,3 +167,6 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-27,09:00,09:25,0.42,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,in_progress,Re-loaded init-day context audited AGENTS+README+project docs and aligned README/STATE/STATUS with PR4 and CI billing blocker
 2026-02-27,11:45,12:05,0.33,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,done,Added tools/deploy-dev.ps1 and npm deploy:dev command for one-step local push plus ubuntu pull/restart workflow
 2026-02-27,12:05,12:20,0.25,Validate,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,done,Fixed deploy-dev PowerShell interpolation/retry and validated end-to-end push+ubuntu deploy with health checks
+2026-02-27,12:45,12:55,0.17,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,done,Hotfix OpenAI audio fallback plus Evolution QR state hardening and CRM QR UX adjustments with green Nx gates
+2026-02-27,12:55,13:05,0.17,Operations,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,done,Deployed main commit 8474a4e to AWS dev via npm run deploy:dev and validated public health endpoint 200
+2026-02-27,13:05,13:15,0.17,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-005,pair,in_progress,Updated AGENTS STATE STATUS PROXIMO-PASSO and slice tasks with auditable timestamped evidence

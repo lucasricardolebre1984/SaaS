@@ -163,3 +163,6 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-27,internal,engineering-time,local,0.00,0.00,governance,M5B-004 context reload plus docs audit and PR4 blocker trace alignment
 2026-02-27,internal,engineering-time,local,0.00,0.00,operations,M5B-004 one-step deploy-dev script and npm command
 2026-02-27,internal,engineering-time,local,0.00,0.00,operations,M5B-004 deploy-dev script bugfix and end-to-end validation
+2026-02-27,internal,engineering-time,local,0.00,0.00,implementation,M5B-004 openai audio fallback plus evolution qr state hardening and crm qr ux fix
+2026-02-27,internal,engineering-time,local,0.00,0.00,operations,M5B-004 aws dev deploy via deploy-dev and health validation
+2026-02-27,internal,engineering-time,local,0.00,0.00,governance,M5B-005 docs and protocol alignment with timestamped rollout evidence

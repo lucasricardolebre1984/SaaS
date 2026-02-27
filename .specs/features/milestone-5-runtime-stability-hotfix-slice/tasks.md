@@ -1,7 +1,7 @@
 # Tasks - milestone-5-runtime-stability-hotfix-slice
 
 Status: In progress
-Date: 2026-02-26
+Date: 2026-02-27
 
 ## M5B-001 - Sanitizacao de API key tenant runtime
 - Status: completed
@@ -26,15 +26,27 @@ Date: 2026-02-26
   - Branch protection da `main` restaurada.
 
 ## M5B-004 - Rollout AWS dev e validacao operacional
+- Status: completed
+- Output:
+  - fallback de API key global aplicado para `audio/transcribe` e `audio/speech` no backend.
+  - endpoint de QR Evolution robustecido com estados `ready|connected|pending_qr` e retry de create.
+  - UX do CRM atualizada para exibir QR/pairing/status em vez de area vazia.
+  - deploy executado em AWS dev (`/srv/SaaS`) com `saas.service` ativo e health `200`.
+
+## M5B-005 - UAT operacional OpenAI + Evolution (dev)
 - Status: pending
 - Output esperado:
-  - aplicar ultimo commit no host (`/srv/SaaS`).
-  - limpar valor legado de `tenant-runtime-config.json` no servidor (se necessario).
-  - validar `provider: openai` + audio transcribe/speech.
+  - validar voice/whisper em runtime dev com chave OpenAI valida por tenant.
+  - validar `Gerar QR Code` do modulo 02 com instance Evolution ativa.
+  - registrar evidencias finais de UAT em `STATUS-ATUAL.md`.
 
 ## Evidence
 - Branch: `main` (via PR #3 mergeado em 2026-02-26T21:56:05Z)
-- Commit local de hotfix: `56af922` (incluido no merge squash de `main`)
+- Commit de runtime hotfix: `8474a4e` (main)
 - Gate local:
   - `npx nx run app-platform-api:test` (pass)
+  - `npx nx run app-crm-console:build` (pass)
   - `npx nx run app-owner-console:build` (pass)
+- Deploy dev:
+  - `npm run deploy:dev` (pass)
+  - `https://dev.automaniaai.com.br/api/health` (200)

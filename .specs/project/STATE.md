@@ -42,7 +42,12 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 ## Session Notes
 - 2026-02-27: `init:day` executado e contexto obrigatorio recarregado via `project-context-loader`.
 - 2026-02-27: auditoria de docs identificou divergencia de slice no `README.md` e higiene remota no `STATUS-ATUAL.md`; ambos alinhados.
-- 2026-02-27: PR `#4` segue aberta (`feat/m5-runtime-audit-fix`) com bloqueio externo de CI (`Preprod Validate` nao inicia por lock de billing no GitHub Actions).
+- 2026-02-27: higiene remota consolidada; estado atual somente `origin/main`.
+- 2026-02-27 12:45-12:55 BRT: hotfix runtime aplicado no `main` (`8474a4e`) com:
+  - fallback global OpenAI key em `audio/transcribe` e `audio/speech`.
+  - QR Evolution com status operacional (`ready|connected|pending_qr`) e retry de create/connect.
+  - UX CRM para QR/pairing/state sem area vazia.
+- 2026-02-27 12:55 BRT: deploy executado via `npm run deploy:dev`; `saas.service` ativo e `https://dev.automaniaai.com.br/api/health` retornando 200.
 - Opened stabilization slice `milestone-5-runtime-stability-hotfix-slice` to restore audit continuity after AWS bootstrap.
 - Root cause for `provider:error` identified in dev runtime config: tenant `openai.api_key` persisted with concatenated extra token (`... API_KEY=...`), generating OpenAI 401.
 - Defensive sanitization implemented in backend runtime-config input/store to keep only first token of API key.

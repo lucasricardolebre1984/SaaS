@@ -1,7 +1,7 @@
 # Status Atual — Fabio SaaS (Modelo Universal)
 
 **Documento:** STATUS-ATUAL  
-**Ultima atualizacao:** 2026-02-26 (rastreabilidade e auditoria: data/hora em decisoes e artefatos)  
+**Ultima atualizacao:** 2026-02-27 (rastreabilidade e auditoria: data/hora em decisoes e artefatos)  
 **Objetivo:** Snapshot rastreavel do estado do repositorio, modelo de aprendizado continuo e conformidade com specs.
 
 ---
@@ -24,7 +24,7 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
 
 ---
 
-## 3. Status por area (2026-02-26)
+## 3. Status por area (2026-02-27)
 
 ### 3.1 Modulos e produto
 
@@ -51,6 +51,21 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
 - **Ja implementado:** short + episodios + promocao para long memory com evento auditavel.
 - **Foco atual:** deploy AWS dev do SaaS matriz com Postgres + Evolution server-side + DNS `dev.automaniaai.com`.
 - **Referencia:** `.specs/project/PROXIMO-PASSO.md`.
+
+### 3.4 Runtime stability hotfix (M5B)
+
+- OpenAI audio runtime:
+  - fallback global key aplicado em `audio/transcribe` e `audio/speech` quando chave tenant nao existe.
+  - cobertura automatizada adicionada em `app-platform-api:test`.
+- Evolution QR runtime:
+  - endpoint retorna estado explicito (`ready`, `connected`, `pending_qr`) com mensagem operacional.
+  - retry de create/connect para reduzir falso negativo de QR vazio.
+- CRM UI:
+  - modulo 02 agora renderiza corretamente QR, pairing code e mensagens de estado.
+- Deploy:
+  - commit `8474a4e` em `main`.
+  - rollout executado com `npm run deploy:dev`.
+  - health publico validado (`https://dev.automaniaai.com.br/api/health` = `200`).
 
 ---
 
@@ -85,16 +100,16 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 ## 6. Proximo passo natural
 
 - **Slice ativo:** `milestone-5-runtime-stability-hotfix-slice`.
-- **Objetivo imediato:** validar em AWS dev as correcoes de runtime OpenAI e UX mobile.
-- **Gate principal:** `npx nx run app-platform-api:test` + `npx nx run app-owner-console:build` + validacao manual em `dev.automaniaai.com.br`.
+- **Objetivo imediato:** fechar UAT real de OpenAI voz/whisper e Evolution QR no ambiente AWS dev.
+- **Gate principal:** `npx nx run app-platform-api:test` + `npx nx run app-crm-console:build` + `npx nx run app-owner-console:build` + validacao manual em `dev.automaniaai.com.br`.
 - **Runbook:** `apps/platform-api/RUNBOOK-aws-deploy-dev.md`.
 
 ---
 
-## 7. Higiene de repositorio (2026-02-26)
+## 7. Higiene de repositorio (2026-02-27)
 
 - PR de bootstrap AWS mergeado em `main`: `#3`.
 - Branches remotas antigas removidas.
-- Estado remoto atual (2026-02-27): `origin/main` + `origin/feat/m5-runtime-audit-fix` (PR `#4` aberta).
-- PR `#4` bloqueada por CI externo: check `Preprod Validate` nao inicia por lock de billing no GitHub Actions.
+- Estado remoto atual: somente `origin/main` (branches antigas removidas).
+- Fluxo operacional atual aprovado: codar/validar local -> `git push origin main` -> `npm run deploy:dev` (pull/restart no Ubuntu).
 - Branch protection reaplicada na `main` (status check + review + enforce admins).

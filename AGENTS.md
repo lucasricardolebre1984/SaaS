@@ -95,7 +95,7 @@ See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
 - Active feature: `milestone-5-runtime-stability-hotfix-slice`
-- Active phase: Implement + Validate (rollout AWS dev pendente)
+- Active phase: Implement + Validate (UAT OpenAI voz/whisper + Evolution QR em AWS dev)
 
 ### Produto: memoria/contexto/aprendizado
 - **Fonte:** `.specs/project/PROXIMO-PASSO.md` — memoria, contexto e aprendizado estao **fechados**. Eixo ativo agora: deploy dev AWS do SaaS matriz com Postgres, Evolution server-side e gates de producao.
