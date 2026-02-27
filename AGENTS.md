@@ -80,6 +80,13 @@ Trigger matrix and installation runbook:
 - `.specs/features/agent-skills-cli-mvp/TRIGGERS.md`
 - `.specs/features/agent-skills-cli-mvp/RUNBOOK.md`
 
+## Repository and Environments (Single Source of Truth)
+- **GitHub (deploy / código oficial):** https://github.com/lucasricardolebre1984/SaaS — clone, push e CI referenciam este repo. Sem branches sandbox no GitHub; fluxo enxuto (ex.: `main`).
+- **Ubuntu (AWS dev):** caminhos no servidor:
+  - App SaaS: `/srv/Saas` (mesmo código do repo SaaS; `git pull` a partir daqui).
+  - Evolution API: `/srv/evolution` (WhatsApp provider; o app em `/srv/Saas` chama via `EVOLUTION_HTTP_BASE_URL` no `.env`).
+- **Local:** workspace pode ser `C:\projetos\fabio` ou `C:\projetos\SaaS`. Comandos diários e runtime (`init:day`, `resume:day`, `serve:saas`, `deploy:dev`) devem ser executados a partir do diretório do repo (SaaS ou clone equivalente). Para arrumar Evolution no AWS, acessar o Ubuntu via SSH (runbook: `apps/platform-api/RUNBOOK-aws-deploy-dev.md`; script de diagnóstico: `tools/evolution-aws-check.sh`).
+
 ## Legacy Quarantine Rule (Critical)
 - Source system: `C:\projetos\fabio2`
 - Legacy code is behavior reference only.

@@ -56,6 +56,10 @@ Depois, no SaaS (CRM Console), clique de novo em **Gerar QR Code**.
 3. No painel **Conectar WhatsApp**, clique em **Gerar QR Code**.
 4. Escaneie o QR com o WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao, se aparecer.
 
+### Versao da Evolution e QR via API
+
+A imagem **atendai/evolution-api:v2.1.1** tem bug no `GET /instance/connect`: retorna apenas `{"count":0}` (issue [#2385](https://github.com/EvolutionAPI/evolution-api/issues/2385)). **Recomendado:** usar **evoapicloud/evolution-api:v2.3.5** no `docker-compose` da Evolution; essa versao retorna `code`, `base64` (QR em data:image/png;base64) e `count:1`, e o CRM exibe o QR ao clicar em Gerar QR Code.
+
 ## Endpoints usados
 
 - **GET /v1/whatsapp/evolution/qr** — retorna `code` (QR), `pairingCode` e `instanceId`. O front exibe o QR e o codigo no proprio CRM.

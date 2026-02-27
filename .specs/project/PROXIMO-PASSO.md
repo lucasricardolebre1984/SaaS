@@ -16,17 +16,19 @@
 
 ## Proximo passo unico (ativo)
 
-Fechar UAT operacional OpenAI + Evolution no AWS dev (`dev.automaniaai.com.br`) apos hotfix de runtime:
+Fechar UAT operacional Evolution no AWS dev (`dev.automaniaai.com.br`):
 
-1. Validar `audio/transcribe` e `audio/speech` no modulo 01 com chave OpenAI tenant valida.
-2. Validar `Gerar QR Code` no modulo 02 com Evolution instance ativa e leitura de estado (`ready|connected|pending_qr`).
+1. ~~Validar `audio/transcribe` e `audio/speech` no modulo 01~~ — OK (confirmado).
+2. **Validar `Gerar QR Code` no modulo 02** com Evolution ativa no servidor (`/srv/Saas` + `/srv/evolution`): no Ubuntu, `cd /srv/Saas`, conferir `EVOLUTION_*` no `.env`, rodar `tools/evolution-aws-check.sh` ou equivalentes; garantir instancia `fabio` e leitura de estado `ready|connected|pending_qr`.
 3. Registrar evidencias finais de UAT em `STATE.md`, `STATUS-ATUAL.md`, `worklog.csv`, `costlog.csv`.
+
+Repo e ambientes já documentados em AGENTS.md (GitHub SaaS, Ubuntu /srv/Saas e /srv/evolution).
 
 ---
 
 ## Resumo (leigo)
 
-O SaaS matriz ja esta no AWS dev com hotfix aplicado. Agora o foco e fechar UAT real de voz OpenAI e QR Evolution para encerrar o slice com evidencias operacionais.
+O SaaS matriz esta no AWS dev com hotfix aplicado; audio OpenAI considerado OK. Foco atual: UAT do QR Evolution no servidor (acesso SSH, `/srv/Saas` e `/srv/evolution`) e registrar evidencias para encerrar o slice.
 
 ---
 

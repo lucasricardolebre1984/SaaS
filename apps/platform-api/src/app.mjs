@@ -223,72 +223,58 @@ function sanitizeProviderErrorDetails(error) {
 }
 
 function extractEvolutionQrPayload(data) {
-  const stringCandidates = [];
-  const collectStringCandidate = (value) => {
-    if (typeof value !== 'string') return;
-    const trimmed = value.trim();
-    if (trimmed.length > 0) {
-      stringCandidates.push(trimmed);
-    }
-  };
-
-  collectStringCandidate(data);
-  collectStringCandidate(data?.qrcode);
-  collectStringCandidate(data?.data?.qrcode);
-  collectStringCandidate(data?.response?.qrcode);
-
-  const listPayload = Array.isArray(data?.qrcode) ? data.qrcode
-    : Array.isArray(data?.data?.qrcode) ? data.data.qrcode
-      : Array.isArray(data?.response?.qrcode) ? data.response.qrcode
-        : [];
-
-  const containers = [
-    data,
-    data?.data,
-    data?.response,
-    data?.instance,
-    data?.instance?.data,
-    data?.qrcode,
-    data?.data?.qrcode,
-    data?.response?.qrcode,
-    ...listPayload
-  ];
-
+  const raw = data && typeof data === 'object' ? data : {};
+  const nested = raw?.data && typeof raw.data === 'object' ? raw.data : raw?.result && typeof raw.result === 'object' ? raw.result : raw;
   const code = firstNonEmptyString([
-    ...stringCandidates,
-    ...containers.map((item) => item?.code),
-    ...containers.map((item) => item?.base64),
-    ...containers.map((item) => item?.qr),
-    ...containers.map((item) => item?.qrCode),
-    ...containers.map((item) => item?.qr_code),
-    ...containers.map((item) => item?.value)
+    nested?.code,
+    raw?.code,
+    nested?.qr,
+    nested?.qrCode,
+    nested?.qr_code,
+    nested?.qrcode,
+    nested?.qrcode?.code,
+    nested?.qrcode?.qr,
+    nested?.qrcode?.value
+  ]);
+
+  const base64Image = firstNonEmptyString([
+    nested?.base64,
+    raw?.base64,
+    nested?.qrcode?.base64
   ]);
 
   const pairingCode = firstNonEmptyString([
-    ...containers.map((item) => item?.pairingCode),
-    ...containers.map((item) => item?.pairing_code),
-    ...containers.map((item) => item?.pairCode),
-    ...containers.map((item) => item?.pair_code)
+    nested?.pairingCode,
+    raw?.pairingCode,
+    nested?.pairing_code,
+    raw?.pairing_code,
+    nested?.pairCode,
+    nested?.pair_code,
+    nested?.qrcode?.pairingCode,
+    nested?.qrcode?.pairing_code
   ]);
 
-  let count = null;
-  for (const item of containers) {
-    const numeric = Number(item?.count);
-    if (Number.isFinite(numeric)) {
-      count = numeric;
-      break;
-    }
-  }
+  const countValue = Number(nested?.count ?? raw?.count);
+  const count = Number.isFinite(countValue) ? countValue : null;
 
   const connectionState = firstNonEmptyString([
-    ...containers.map((item) => item?.connectionState),
-    ...containers.map((item) => item?.connection_state),
-    ...containers.map((item) => item?.state),
-    ...containers.map((item) => item?.status)
+    nested?.connectionState,
+    raw?.connectionState,
+    nested?.connection_state,
+    raw?.connection_state,
+    nested?.state,
+    raw?.state,
+    nested?.status,
+    raw?.status,
+    nested?.instance?.state,
+    raw?.instance?.state,
+    nested?.instance?.status,
+    raw?.instance?.status
   ]).toLowerCase();
 
   return {
     code: code.length > 0 ? code : null,
+    base64: base64Image.length > 0 ? base64Image : null,
     pairingCode: pairingCode.length > 0 ? pairingCode : null,
     count,
     connectionState: connectionState.length > 0 ? connectionState : null
@@ -5363,7 +5349,7 @@ export function createApp(options = {}) {
 
           let status = 'pending_qr';
           let message = 'QR ainda nao disponivel. Aguarde alguns segundos e clique novamente.';
-          if (payload.code || payload.pairingCode) {
+          if (payload.base64 || payload.code || payload.pairingCode) {
             status = 'ready';
             message = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
           } else if (payload.connectionState === 'open' || payload.connectionState === 'connected') {

@@ -351,26 +351,46 @@ async function loadWhatsAppQr() {
       }
       return;
     }
-
     const code = String(finalPayload.code ?? finalPayload.base64 ?? '').trim();
+    const base64FromBackend = String(finalPayload.base64 ?? '').trim();
     const pairingCode = String(finalPayload.pairingCode ?? '').trim();
     const connectionState = String(finalPayload.connectionState ?? '').trim().toLowerCase();
     const backendStatus = String(finalPayload.status ?? '').trim().toLowerCase();
     const backendMessage = String(finalPayload.message ?? '').trim();
 
-    const codeLooksLikeImageBase64 = code.startsWith('data:') || code.length > 100;
-    if (codeLooksLikeImageBase64) {
-      const src = code.startsWith('data:') ? code : `data:image/png;base64,${code}`;
+    const hasBase64Image = base64FromBackend.startsWith('data:');
+    const isDataUrl = code.startsWith('data:');
+    const looksLikeBase64Image = hasBase64Image || isDataUrl || (code.length > 100 && /^[A-Za-z0-9+/=]+$/.test(code));
+    const isEvolutionQrPayload = code.length > 20 && !looksLikeBase64Image;
+
+    if (hasBase64Image) {
+      const img = document.createElement('img');
+      img.src = base64FromBackend;
+      img.alt = 'QR Code WhatsApp';
+      img.className = 'whatsapp-qr-img';
+      imageWrap.appendChild(img);
+    } else if (looksLikeBase64Image) {
+      const src = isDataUrl ? code : `data:image/png;base64,${code}`;
       const img = document.createElement('img');
       img.src = src;
       img.alt = 'QR Code WhatsApp';
       img.className = 'whatsapp-qr-img';
       imageWrap.appendChild(img);
+    } else if (isEvolutionQrPayload && typeof window.QRCode !== 'undefined') {
+      window.QRCode.toDataURL(code, { margin: 2, width: 280 }, function (err, dataUrl) {
+        if (!err && dataUrl) {
+          const img = document.createElement('img');
+          img.src = dataUrl;
+          img.alt = 'QR Code WhatsApp';
+          img.className = 'whatsapp-qr-img';
+          imageWrap.appendChild(img);
+        }
+      });
     }
 
     if (pairingCode) {
       pairingEl.textContent = `Codigo de vinculacao: ${pairingCode}`;
-    } else if (code && !codeLooksLikeImageBase64) {
+    } else if (code && !looksLikeBase64Image && !isEvolutionQrPayload) {
       pairingEl.textContent = `Codigo recebido: ${code}`;
     }
 
@@ -378,7 +398,7 @@ async function loadWhatsAppQr() {
       statusEl.textContent = backendMessage;
     } else if (backendStatus === 'connected' || connectionState === 'open' || connectionState === 'connected') {
       statusEl.textContent = 'Instancia ja conectada no WhatsApp. Se quiser novo QR, desconecte a instancia primeiro.';
-    } else if (codeLooksLikeImageBase64 || pairingCode.length > 0) {
+    } else if (looksLikeBase64Image || isEvolutionQrPayload || pairingCode.length > 0) {
       statusEl.textContent = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
     } else {
       statusEl.textContent = 'QR ainda nao disponivel. Aguarde alguns segundos e clique novamente (ou valide Evolution Base URL/API Key/Instance no menu 06).';

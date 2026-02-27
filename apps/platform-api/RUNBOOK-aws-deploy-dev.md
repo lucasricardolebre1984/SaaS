@@ -25,10 +25,12 @@ Scope: `dev.automaniaai.com` (environment dev), single deploy multi-tenant
    - node 20+
    - npm
    - nginx
-2. Clone repo in host:
+2. Clone repo in host (repo oficial: https://github.com/lucasricardolebre1984/SaaS):
    - `git clone https://github.com/lucasricardolebre1984/SaaS.git /srv/SaaS`
+   - **Nota:** No Ubuntu em uso, o app está em `/srv/SaaS` e a Evolution API em `/srv/evolution`. Para novos deploys, seguir o path do clone acima; para comandos no servidor existente, usar `cd /srv/SaaS`.
+- **Evolution no servidor:** docker-compose em `/srv/evolution` deve usar a imagem **evoapicloud/evolution-api:v2.3.5** (retorna QR no endpoint connect; v2.1.1 tem bug) e expor a API em `0.0.0.0:8080`. O `.env` do app em `/srv/SaaS` usa `EVOLUTION_HTTP_BASE_URL=http://127.0.0.1:8080` (mesmo host). No `.env` da Evolution: `SERVER_URL=https://dev.automaniaai.com.br/evolution-api` (URL pública para webhooks/links); opcional `CONFIG_SESSION_PHONE_VERSION=2.3000.1033703022` (compatibilidade WhatsApp). **Nginx:** `location /evolution-api/` com `proxy_pass http://127.0.0.1:8080/` (Evolution acessível em `https://dev.automaniaai.com.br/evolution-api/`). SSH: `ubuntu@ec2-54-233-196-148.sa-east-1.compute.amazonaws.com` (54.233.196.148).
 3. Checkout branch:
-   - `cd /srv/SaaS && git checkout main && git pull origin main`
+   - `cd /srv/SaaS && git checkout main && git pull origin main` (ou `cd /srv/Saas` no servidor atual)
 4. Install dependencies:
    - `npm ci`
 
@@ -57,8 +59,14 @@ server {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 30s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
   }
 }
+```
+
+If you see **502 Bad Gateway** when calling `/v1/whatsapp/evolution/qr` or other API routes, ensure the block above includes the timeout directives and run `sudo nginx -t && sudo systemctl reload nginx`. On the same host, keep `EVOLUTION_HTTP_BASE_URL=http://127.0.0.1:8080` in `/srv/SaaS/.env`.
 ```
 
 After enabling site:

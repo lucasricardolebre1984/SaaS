@@ -66,6 +66,11 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
   - commit `8474a4e` em `main`.
   - rollout executado com `npm run deploy:dev`.
   - health publico validado (`https://dev.automaniaai.com.br/api/health` = `200`).
+- Repo e ambientes (2026-02-27):
+  - GitHub oficial: https://github.com/lucasricardolebre1984/SaaS (deploy/CI; sem branches sandbox).
+  - Ubuntu AWS dev: app em `/srv/SaaS`, Evolution em `/srv/evolution` (documentado em AGENTS.md e RUNBOOK-aws-deploy-dev.md).
+  - Script de diagnóstico Evolution: `tools/evolution-aws-check.sh` (SAAS_ROOT default `/srv/Saas`).
+- Evolution no Ubuntu (2026-02-27): configurado via SSH — Evolution em `0.0.0.0:8080`; `/srv/SaaS/.env` com `EVOLUTION_HTTP_BASE_URL=http://127.0.0.1:8080`; nginx com timeouts 30s; Evolution `.env` com `SERVER_URL=https://dev.automaniaai.com.br/evolution-api`, `CONFIG_SESSION_PHONE_VERSION=2.3000.1033703022`; nginx `location /evolution-api/` proxy para 8080; Evolution acessível em `https://dev.automaniaai.com.br/evolution-api/`.
 
 ---
 
@@ -113,3 +118,4 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 - Estado remoto atual: somente `origin/main` (branches antigas removidas).
 - Fluxo operacional atual aprovado: codar/validar local -> `git push origin main` -> `npm run deploy:dev` (pull/restart no Ubuntu).
 - Branch protection reaplicada na `main` (status check + review + enforce admins).
+- Repo SaaS no GitHub e caminhos Ubuntu documentados em AGENTS.md (seção "Repository and Environments"); runbook e script Evolution alinhados.
