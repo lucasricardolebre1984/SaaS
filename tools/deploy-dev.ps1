@@ -1,12 +1,14 @@
 param(
   [string]$Branch = "main",
-  [string]$Host = "54.233.196.148",
+  [string]$RemoteHost = "54.233.196.148",
   [string]$User = "ubuntu",
   [string]$KeyPath = "C:\Users\Lucas\Documents\jarviskey.pem",
   [string]$RemotePath = "/srv/SaaS",
   [string]$ServiceName = "saas.service",
   [string]$PublicHealthUrl = "https://dev.automaniaai.com.br/api/health",
   [int]$RemotePort = 4001,
+  [int]$HealthRetries = 20,
+  [int]$HealthRetryDelaySeconds = 2,
   [switch]$RunPreprod,
   [switch]$SkipNpmCi
 )
@@ -26,12 +28,26 @@ function Invoke-Remote {
   $sshArgs = @(
     "-i", $KeyPath,
     "-o", "StrictHostKeyChecking=accept-new",
-    "$User@$Host",
+    "$User@$RemoteHost",
     $Command
   )
   & ssh @sshArgs
   if ($LASTEXITCODE -ne 0) {
     throw "Remote command failed: $Command"
+  }
+}
+
+function Wait-RemoteHealth {
+  for ($i = 1; $i -le $HealthRetries; $i++) {
+    try {
+      Invoke-Remote "curl -fsS http://127.0.0.1:$RemotePort/api/health"
+      return
+    } catch {
+      if ($i -eq $HealthRetries) {
+        throw
+      }
+      Start-Sleep -Seconds $HealthRetryDelaySeconds
+    }
   }
 }
 
@@ -42,7 +58,7 @@ if (-not (Test-Path $KeyPath)) {
 Write-Step "Deploy dev bootstrap"
 Write-Host "Repo: $repoRoot"
 Write-Host "Branch: $Branch"
-Write-Host "Remote: $User@$Host:$RemotePath"
+Write-Host "Remote: $User@${RemoteHost}:$RemotePath"
 Write-Host "Service: $ServiceName"
 
 Write-Step "Local checks"
@@ -74,7 +90,7 @@ if (-not $SkipNpmCi) {
 Write-Step "Restarting service"
 Invoke-Remote "sudo systemctl daemon-reload && sudo systemctl restart $ServiceName"
 Invoke-Remote "sudo systemctl is-active $ServiceName"
-Invoke-Remote "curl -fsS http://127.0.0.1:$RemotePort/api/health"
+Wait-RemoteHealth
 
 if (-not [string]::IsNullOrWhiteSpace($PublicHealthUrl)) {
   Write-Step "Public health check"
@@ -87,5 +103,4 @@ if (-not [string]::IsNullOrWhiteSpace($PublicHealthUrl)) {
 }
 
 Write-Step "Deploy done"
-Write-Host "Branch '$Branch' pushed and deployed to $Host."
-
+Write-Host "Branch '$Branch' pushed and deployed to $RemoteHost."
