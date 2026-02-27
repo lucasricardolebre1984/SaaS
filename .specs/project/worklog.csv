@@ -162,3 +162,6 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-26,13:40,13:45,0.08,Governance,milestone-5-aws-production-bootstrap-slice,M5A-004b,pair,done,Created PR 3 for protected main and recorded CI billing lock evidence
 2026-02-26,13:46,13:48,0.03,Governance,milestone-5-aws-production-bootstrap-slice,M5A-DEPLOY-001,pair,done,Executed DNS readiness check and recorded domain not resolved blocker
 2026-02-26,15:10,15:20,0.17,Research,milestone-5-aws-production-bootstrap-slice,M5A-RESEARCH-001,pair,done,Published official-source AWS+Ubuntu deployment research baseline with auditable checklist and references in RESEARCH-AWS-UBUNTU-EC2-2026-02-26.md
+2026-02-26,18:45,19:20,0.58,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-001..003,pair,done,Opened hotfix slice docs restored context chain cleaned remote branches and re-applied main branch protection
+2026-02-26,19:20,19:30,0.17,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,in_progress,Pending AWS host pull and runtime validation for provider openai and mobile
+2026-02-27,09:00,09:25,0.42,Governance,milestone-5-runtime-stability-hotfix-slice,M5B-004,pair,in_progress,Re-loaded init-day context audited AGENTS+README+project docs and aligned README/STATE/STATUS with PR4 and CI billing blocker

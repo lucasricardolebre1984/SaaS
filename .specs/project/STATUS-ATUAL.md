@@ -84,7 +84,17 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 
 ## 6. Proximo passo natural
 
-- **Slice ativo:** `milestone-5-aws-production-bootstrap-slice`.
-- **Objetivo imediato:** readiness + deploy dev AWS do SaaS matriz.
-- **Gate principal:** `npm run deploy:aws:readiness`.
+- **Slice ativo:** `milestone-5-runtime-stability-hotfix-slice`.
+- **Objetivo imediato:** validar em AWS dev as correcoes de runtime OpenAI e UX mobile.
+- **Gate principal:** `npx nx run app-platform-api:test` + `npx nx run app-owner-console:build` + validacao manual em `dev.automaniaai.com.br`.
 - **Runbook:** `apps/platform-api/RUNBOOK-aws-deploy-dev.md`.
+
+---
+
+## 7. Higiene de repositorio (2026-02-26)
+
+- PR de bootstrap AWS mergeado em `main`: `#3`.
+- Branches remotas antigas removidas.
+- Estado remoto atual (2026-02-27): `origin/main` + `origin/feat/m5-runtime-audit-fix` (PR `#4` aberta).
+- PR `#4` bloqueada por CI externo: check `Preprod Validate` nao inicia por lock de billing no GitHub Actions.
+- Branch protection reaplicada na `main` (status check + review + enforce admins).

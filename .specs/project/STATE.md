@@ -1,8 +1,8 @@
 # STATE
 
-Last update: 2026-02-26
-Active phase: Implement checkpoint closed (milestone-5-aws-production-bootstrap-slice)
-Active feature: milestone-5-aws-production-bootstrap-slice
+Last update: 2026-02-27
+Active phase: Implement + Validate (milestone-5-runtime-stability-hotfix-slice)
+Active feature: milestone-5-runtime-stability-hotfix-slice
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -40,6 +40,20 @@ Active feature: milestone-5-aws-production-bootstrap-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-02-27: `init:day` executado e contexto obrigatorio recarregado via `project-context-loader`.
+- 2026-02-27: auditoria de docs identificou divergencia de slice no `README.md` e higiene remota no `STATUS-ATUAL.md`; ambos alinhados.
+- 2026-02-27: PR `#4` segue aberta (`feat/m5-runtime-audit-fix`) com bloqueio externo de CI (`Preprod Validate` nao inicia por lock de billing no GitHub Actions).
+- Opened stabilization slice `milestone-5-runtime-stability-hotfix-slice` to restore audit continuity after AWS bootstrap.
+- Root cause for `provider:error` identified in dev runtime config: tenant `openai.api_key` persisted with concatenated extra token (`... API_KEY=...`), generating OpenAI 401.
+- Defensive sanitization implemented in backend runtime-config input/store to keep only first token of API key.
+- Owner Console mobile stability hotfix implemented:
+  - sidebar backdrop + close semantics
+  - menu auto-close on module switch
+  - avatar video fallback for mobile decode failures.
+- Remote branch hygiene completed:
+  - PR #3 merged into `main` at `2026-02-26T21:56:05Z`
+  - old remote branches removed
+  - branch protection restored on `main` (required check + review + enforce admins).
 - fabio repo initialized and linked to GitHub.
 - fabio2 analyzed for stack, architecture, integrations, and tests.
 - .specs baseline created in fabio.

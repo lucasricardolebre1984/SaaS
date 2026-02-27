@@ -16,21 +16,20 @@
 
 ## Proximo passo unico (ativo)
 
-Executar bootstrap de deploy do SaaS matriz em AWS dev (`dev.automaniaai.com`) com persistencia Postgres e operacao multi-tenant.
+Fechar estabilizacao operacional do deploy AWS dev (`dev.automaniaai.com.br`) apos bootstrap:
 
-Isso inclui:
-1. Rodar gate tecnico completo (`preprod:validate`) e gate de readiness AWS (`deploy:aws:readiness`).
-2. Subir backend unificado (`/owner`, `/crm`, `/api`) em host AWS com Nginx reverse proxy.
-3. Ligar banco RDS Postgres (`ORCHESTRATION_STORE_BACKEND=postgres`).
-4. Ligar Evolution server-side e registrar configuracao por tenant no modulo 06.
-5. Validar fluxo ponta-a-ponta em tenant real de dev.
+1. Atualizar host para `main` mais recente (hotfix mobile + sanitizacao de `openai.api_key`).
+2. Limpar eventual chave tenant legado concatenada em `tenant-runtime-config.json` no servidor.
+3. Validar `provider: openai` sem erro 401 no modulo 01 (texto + audio).
+4. Validar UX mobile (drawer fecha corretamente; avatar continuo sem tela preta).
+5. Registrar evidencias finais em `STATE.md`, `STATUS-ATUAL.md`, `worklog.csv`, `costlog.csv`.
 
 ---
 
 ## Resumo (leigo)
 
-A memoria da IA ja esta pronta. O proximo passo agora e colocar esse SaaS matriz no servidor AWS de desenvolvimento, com banco de dados real e dominio `dev.automaniaai.com`, para virar base operacional de onboarding dos proximos clientes (um tenant por cliente).
+O SaaS matriz ja foi para AWS dev. Agora o foco e estabilizar a operacao real: corrigir de vez o erro de provider OpenAI no ambiente remoto, garantir mobile funcionando direito e fechar rastreabilidade completa da entrega.
 
 ---
 
-*Feature ativa: `milestone-5-aws-production-bootstrap-slice`.*
+*Feature ativa: `milestone-5-runtime-stability-hotfix-slice`.*
