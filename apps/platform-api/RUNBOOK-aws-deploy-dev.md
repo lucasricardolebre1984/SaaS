@@ -26,14 +26,14 @@ Scope: `dev.automaniaai.com` (environment dev), single deploy multi-tenant
    - npm
    - nginx
 2. Clone repo in host:
-   - `git clone https://github.com/lucasricardolebre1984/fabio.git /srv/fabio`
+   - `git clone https://github.com/lucasricardolebre1984/SaaS.git /srv/SaaS`
 3. Checkout branch:
-   - `cd /srv/fabio && git checkout main && git pull origin main`
+   - `cd /srv/SaaS && git checkout main && git pull origin main`
 4. Install dependencies:
    - `npm ci`
 
 ## 4. Environment configuration
-1. Create `/srv/fabio/.env` from `.env.aws.example`.
+1. Create `/srv/SaaS/.env` from `.env.aws.example`.
 2. Required baseline:
    - `ORCHESTRATION_STORE_BACKEND=postgres`
    - `ORCHESTRATION_PG_DSN=<RDS_DSN>`
@@ -69,18 +69,18 @@ TLS:
 - certbot for `dev.automaniaai.com`.
 
 ## 6. App process management
-Recommended: systemd service `fabio-dev.service`.
+Recommended: systemd service `saas.service`.
 
 Minimal unit command:
 - `ExecStart=/usr/bin/npm run serve:saas`
-- `WorkingDirectory=/srv/fabio`
-- `EnvironmentFile=/srv/fabio/.env`
+- `WorkingDirectory=/srv/SaaS`
+- `EnvironmentFile=/srv/SaaS/.env`
 
 Then:
 - `sudo systemctl daemon-reload`
-- `sudo systemctl enable fabio-dev`
-- `sudo systemctl restart fabio-dev`
-- `sudo systemctl status fabio-dev`
+- `sudo systemctl enable saas.service`
+- `sudo systemctl restart saas.service`
+- `sudo systemctl status saas.service`
 
 ## 7. Mandatory gates before and after deploy
 Before deploy (local or server):
@@ -93,7 +93,7 @@ Post-deploy checks:
 - test one interaction + one CRM lead + one reminder + one charge
 
 ## 8. Operational constraints
-- Do not share fabio2 infra state with fabio.
+- Do not share fabio2 infra state with SaaS matriz.
 - Use dedicated Postgres DB/schema for this repo.
 - Keep one deploy and separate customers by `tenant_id`.
 - Keep institutional site (`www.automaniaai.com.br`) independent from SaaS runtime.

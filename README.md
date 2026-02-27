@@ -1,4 +1,4 @@
-# fabio
+# SaaS
 
 SaaS base institucional da Automania AI (Nx monorepo). **Modelo universal** para gerar novos SaaS; aprendizado continuo por tenant (rastreavel e auditavel).
 
@@ -27,7 +27,7 @@ Observacao modulo 02:
 
 ## Fluxo Diário (obrigatório)
 ```powershell
-cd C:\projetos\fabio
+cd C:\projetos\SaaS
 npm run init:day
 ```
 

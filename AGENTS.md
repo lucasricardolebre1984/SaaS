@@ -3,7 +3,7 @@
 This repository follows strict spec-driven execution to prevent scope drift and legacy contamination.
 
 ## Daily Commands (Mandatory)
-Run from `C:\projetos\fabio`.
+Run from `C:\projetos\SaaS`.
 
 1. New day / clean bootstrap:
    - `npm run init:day`
@@ -18,7 +18,7 @@ Raw PowerShell equivalents:
 - `.\tools\end-day.ps1 -ShowPending`
 
 ## Runtime Commands (SaaS Local)
-Run from `C:\projetos\fabio`.
+Run from `C:\projetos\SaaS`.
 
 Recommended unified runtime (single endpoint):
 - `npm run serve:saas`

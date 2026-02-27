@@ -7,7 +7,7 @@ Scope: `app-platform-api` + módulos SaaS padrão
 ## 1. Deploy Flow (controlled)
 
 ### 1.1 Pre-deploy gate (mandatory)
-Execute in `C:\projetos\fabio`:
+Execute in `C:\projetos\SaaS`:
 
 ```powershell
 npm run preprod:validate
