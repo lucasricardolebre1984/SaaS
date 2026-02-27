@@ -5241,6 +5241,7 @@ export function createApp(options = {}) {
         }
         const baseUrlSanitized = baseUrl.replace(/\/$/, '');
         const evolutionConnectUrl = `${baseUrlSanitized}/instance/connect/${encodeURIComponent(instanceId)}`;
+        const evolutionConnectionStateUrl = `${baseUrlSanitized}/instance/connectionState/${encodeURIComponent(instanceId)}`;
         const evolutionCreateUrl = `${baseUrlSanitized}/instance/create`;
         const headers = { apikey: apiKey };
         const connectOnce = async () => {
@@ -5268,6 +5269,27 @@ export function createApp(options = {}) {
 
           return getAttempt;
         };
+        const fetchConnectionState = async () => {
+          try {
+            const stateRes = await fetch(evolutionConnectionStateUrl, {
+              method: 'GET',
+              headers
+            });
+            if (!stateRes.ok) {
+              return null;
+            }
+            const stateData = await stateRes.json().catch(() => null);
+            const rawState = firstNonEmptyString([
+              stateData?.instance?.state,
+              stateData?.state,
+              stateData?.connectionState,
+              stateData?.status
+            ]);
+            return rawState ? rawState.toLowerCase() : null;
+          } catch {
+            return null;
+          }
+        };
         try {
           let connectResult = { ok: false, status: 0, details: '' };
           let payload = { code: null, pairingCode: null, connectionState: null };
@@ -5277,9 +5299,14 @@ export function createApp(options = {}) {
             payload = connectResult.ok
               ? extractEvolutionQrPayload(connectResult.data)
               : { code: null, pairingCode: null, connectionState: null };
+            if (connectResult.ok && !payload.connectionState) {
+              payload.connectionState = await fetchConnectionState();
+            }
           }
 
-          if (forceNewInstance || !connectResult.ok || (!payload.code && !payload.pairingCode && payload.connectionState !== 'open')) {
+          const shouldCreateInstance = forceNewInstance || !connectResult.ok;
+
+          if (shouldCreateInstance) {
             try {
               const createRes = await fetch(evolutionCreateUrl, {
                 method: 'POST',
@@ -5296,6 +5323,9 @@ export function createApp(options = {}) {
               if (createRes.ok) {
                 const createBody = await createRes.json().catch(() => ({}));
                 const createPayload = extractEvolutionQrPayload(createBody);
+                if (!createPayload.connectionState) {
+                  createPayload.connectionState = await fetchConnectionState();
+                }
                 if (createPayload.code || createPayload.pairingCode || createPayload.connectionState === 'open') {
                   payload = createPayload;
                 }
@@ -5304,17 +5334,21 @@ export function createApp(options = {}) {
               // no-op: connect retry still attempted below.
             }
 
-            if (!payload.code && !payload.pairingCode && payload.connectionState !== 'open') {
-              for (let attempt = 0; attempt < 16; attempt += 1) {
-                await delayMs(1200);
-                connectResult = await connectOnce();
-                if (!connectResult.ok) {
-                  continue;
-                }
-                payload = extractEvolutionQrPayload(connectResult.data);
-                if (payload.code || payload.pairingCode || payload.connectionState === 'open') {
-                  break;
-                }
+          }
+
+          if (!payload.code && !payload.pairingCode && payload.connectionState !== 'open') {
+            for (let attempt = 0; attempt < 16; attempt += 1) {
+              await delayMs(1200);
+              connectResult = await connectOnce();
+              if (!connectResult.ok) {
+                continue;
+              }
+              payload = extractEvolutionQrPayload(connectResult.data);
+              if (!payload.connectionState) {
+                payload.connectionState = await fetchConnectionState();
+              }
+              if (payload.code || payload.pairingCode || payload.connectionState === 'open') {
+                break;
               }
             }
           }

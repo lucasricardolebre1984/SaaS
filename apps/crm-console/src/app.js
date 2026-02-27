@@ -318,10 +318,9 @@ async function loadWhatsAppQr() {
   btn.disabled = true;
   try {
     const tid = tenantId();
-    const baseQrUrl = tid
+    const url = tid
       ? `${apiBase()}/v1/whatsapp/evolution/qr?tenant_id=${encodeURIComponent(tid)}`
       : `${apiBase()}/v1/whatsapp/evolution/qr`;
-    const url = `${baseQrUrl}${baseQrUrl.includes('?') ? '&' : '?'}force_new=1`;
 
     let finalResponse = null;
     let finalPayload = {};

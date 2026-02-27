@@ -621,3 +621,4 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - Deploy readiness DNS check failed on 2026-02-26: dev.automaniaai.com not resolved yet (report deploy-aws-readiness-20260226-134747.log).
 
 - 2026-02-27 M5B-006 hotfix aplicado: owner chat menos poluido (erros compactos), auto-sync de runtime OpenAI em falhas openai_not_configured, recuperacao de sessao no modulo 01, fechamento de menu mobile robusto e QR Evolution com force_new + polling extendido + parser tolerante.
+- 2026-02-27 M5B-007 hotfix aplicado: endpoint QR da Evolution nao recria instancia quando connect responde 200 sem QR; agora consulta `connectionState` explicito e faz polling de connect/state, reduzindo loops de startup e falso pending por reset agressivo.

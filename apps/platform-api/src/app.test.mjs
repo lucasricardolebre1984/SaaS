@@ -3256,7 +3256,7 @@ test('GET /v1/whatsapp/evolution/qr returns pending state when provider has no Q
     assert.equal(body.code, null);
     assert.equal(body.pairingCode, null);
     assert.equal(body.instanceId, 'fabio');
-    assert.equal(createCalls >= 1, true);
+    assert.equal(createCalls, 0);
     assert.equal(connectCalls >= 2, true);
   } finally {
     await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
