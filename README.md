@@ -5,7 +5,7 @@ SaaS base institucional da Automania AI (Nx monorepo). **Modelo universal** para
 ## Status Atual
 - **Fonte de verdade:** `.specs/project/STATE.md` e `.specs/project/STATUS-ATUAL.md` (atualizados com data para auditoria).
 - Milestone atual: **Milestone 5** (AWS deployment bootstrap do SaaS matriz).
-- Slice em foco: `milestone-5-aws-production-bootstrap-slice`.
+- Slice em foco: `milestone-5-runtime-stability-hotfix-slice`.
 - Eixo memoria/contexto/aprendizado: **fechado** no produto; foco atual em deploy dev com Postgres e gates de producao.
 
 ## Arquitetura Padrão (fixa)

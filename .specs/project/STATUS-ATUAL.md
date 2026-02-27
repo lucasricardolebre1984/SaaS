@@ -95,5 +95,6 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 
 - PR de bootstrap AWS mergeado em `main`: `#3`.
 - Branches remotas antigas removidas.
-- Estado remoto atual: apenas `origin/main`.
+- Estado remoto atual (2026-02-27): `origin/main` + `origin/feat/m5-runtime-audit-fix` (PR `#4` aberta).
+- PR `#4` bloqueada por CI externo: check `Preprod Validate` nao inicia por lock de billing no GitHub Actions.
 - Branch protection reaplicada na `main` (status check + review + enforce admins).
