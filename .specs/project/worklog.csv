@@ -176,3 +176,4 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-27,16:45,16:55,0.17,Validate,milestone-5-runtime-stability-hotfix-slice,M5B-007,pair,done,Nx gates green after QR stabilization (app-platform-api:test + owner/crm build) and health endpoint checked on dev
 2026-02-28,,,0.25,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-path,pair,done,Unificado path servidor para /srv/SaaS (commit 87435e6); deploy:dev executado; Ubuntu atualizado
 2026-02-28,,,0.17,Validate,milestone-5-runtime-stability-hotfix-slice,M5B-UAT-EVO,pair,done,UAT Evolution no AWS dev: evolution-aws-check.sh via SSH; Evolution 200 OK; instancia tenant_automania state open; health publico 200
+2026-02-28,07:04,07:04,0.08,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-doc-audit,pair,done,Doc drift cleanup after sync: repo reference moved to lucasricardolebre1984/SaaS and legacy PR link marked as historical

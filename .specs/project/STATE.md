@@ -626,7 +626,7 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 
 - agent-skills-cli-mvp MVP completed (skills + trigger matrix + runbook + installer test).
 - Checkpoint M5 commit: 57558f4 (branch feat/m5-aws-production-bootstrap).
-- PR aberto: https://github.com/lucasricardolebre1984/fabio/pull/3
+- PR historico (repo legado) encerrado antes da migracao para o repositorio SaaS-only.
 - CI check Preprod Validate bloqueado por billing account lock no GitHub Actions (run 22451808265).
 - Deploy readiness DNS check failed on 2026-02-26: dev.automaniaai.com not resolved yet (report deploy-aws-readiness-20260226-134747.log).
 
