@@ -171,3 +171,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-02-28,internal,engineering-time,local,0.00,0.00,operations,M5B path /srv/SaaS unify and deploy:dev to Ubuntu
 2026-02-28,internal,engineering-time,local,0.00,0.00,validation,M5B UAT Evolution AWS dev evolution-aws-check.sh instance state open
 2026-02-28,internal,engineering-time,local,0.00,0.00,governance,M5B doc drift cleanup and 3-environment audit (local/github/ubuntu)
+2026-02-28,internal,engineering-time,local,0.00,0.00,implementation,M5B-008 runtime-config secret-preservation + CRM force_new QR fallback
+2026-02-28,internal,engineering-time,local,0.00,0.00,validation,M5B-008 Nx validation gates green

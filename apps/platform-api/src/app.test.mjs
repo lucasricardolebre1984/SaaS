@@ -2405,6 +2405,86 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
   }
 });
 
+test('POST /v1/owner-concierge/runtime-config preserves secret keys when omitted in follow-up update', async () => {
+  const runtimeStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-runtime-config-preserve-secrets-'));
+  const runtimeServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: runtimeStorageDir,
+      tenantRuntimeConfigStorageDir: runtimeStorageDir
+    })
+  );
+  await new Promise((resolve) => runtimeServer.listen(0, '127.0.0.1', resolve));
+  const runtimeAddress = runtimeServer.address();
+  const runtimeBaseUrl = `http://127.0.0.1:${runtimeAddress.port}`;
+
+  try {
+    const firstUpsertRes = await fetch(`${runtimeBaseUrl}/v1/owner-concierge/runtime-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: 'preserve-secrets-upsert-1',
+          tenant_id: 'tenant_automania',
+          config: {
+            openai: {
+              api_key: 'tenant-openai-key',
+              model: 'gpt-5.1-mini',
+              vision_enabled: true,
+              voice_enabled: true,
+              image_generation_enabled: true,
+              image_read_enabled: true
+            },
+            integrations: {
+              crm_evolution: {
+                base_url: 'http://127.0.0.1:8080',
+                api_key: 'tenant-evolution-key',
+                instance_id: 'tenant_automania'
+              }
+            }
+          }
+        }
+      })
+    });
+    assert.equal(firstUpsertRes.status, 200);
+
+    const secondUpsertRes = await fetch(`${runtimeBaseUrl}/v1/owner-concierge/runtime-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: 'preserve-secrets-upsert-2',
+          tenant_id: 'tenant_automania',
+          config: {
+            openai: {
+              model: 'gpt-5.1'
+            },
+            integrations: {
+              crm_evolution: {
+                base_url: 'http://127.0.0.1:8080',
+                instance_id: 'tenant_automania'
+              }
+            }
+          }
+        }
+      })
+    });
+    assert.equal(secondUpsertRes.status, 200);
+
+    const getRes = await fetch(
+      `${runtimeBaseUrl}/v1/owner-concierge/runtime-config?tenant_id=tenant_automania`
+    );
+    assert.equal(getRes.status, 200);
+    const getBody = await getRes.json();
+    assert.equal(getBody.openai.api_key_configured, true);
+    assert.equal(getBody.runtime.model, 'gpt-5.1');
+    assert.equal(getBody.integrations.crm_evolution.api_key, '(configured)');
+    assert.equal(getBody.integrations.crm_evolution.instance_id, 'tenant_automania');
+  } finally {
+    await new Promise((resolve, reject) => runtimeServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(runtimeStorageDir, { recursive: true, force: true });
+  }
+});
+
 test('tenant runtime config applies OpenAI response and disables confirmation workflow', async () => {
   const policyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-runtime-tenant-openai-'));
   const routingPolicyPath = path.join(policyDir, 'task-routing.policy.json');

@@ -281,48 +281,91 @@ function extractEvolutionQrPayload(data) {
   };
 }
 
-function sanitizeTenantRuntimeConfigInput(rawConfig) {
-  const raw = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
-  const openaiRaw = raw.openai && typeof raw.openai === 'object' ? raw.openai : {};
-  const personasRaw = raw.personas && typeof raw.personas === 'object' ? raw.personas : {};
-  const executionRaw = raw.execution && typeof raw.execution === 'object' ? raw.execution : {};
-  const integrationsRaw = raw.integrations && typeof raw.integrations === 'object' ? raw.integrations : {};
-  const crmEvolutionRaw = integrationsRaw.crm_evolution && typeof integrationsRaw.crm_evolution === 'object' ? integrationsRaw.crm_evolution : {};
+function stringOrFallback(value, fallback = '') {
+  if (typeof value === 'string') return value.trim();
+  return fallback;
+}
 
-  const config = {
+function boolOrFallback(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  return fallback;
+}
+
+function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
+  const raw = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
+  const fallback = fallbackConfig && typeof fallbackConfig === 'object' ? fallbackConfig : {};
+
+  const openaiRaw = raw.openai && typeof raw.openai === 'object' ? raw.openai : {};
+  const openaiFallback = fallback.openai && typeof fallback.openai === 'object' ? fallback.openai : {};
+  const personasRaw = raw.personas && typeof raw.personas === 'object' ? raw.personas : {};
+  const personasFallback = fallback.personas && typeof fallback.personas === 'object' ? fallback.personas : {};
+  const executionRaw = raw.execution && typeof raw.execution === 'object' ? raw.execution : {};
+  const executionFallback = fallback.execution && typeof fallback.execution === 'object' ? fallback.execution : {};
+  const integrationsRaw = raw.integrations && typeof raw.integrations === 'object' ? raw.integrations : {};
+  const integrationsFallback =
+    fallback.integrations && typeof fallback.integrations === 'object' ? fallback.integrations : {};
+  const crmEvolutionRaw =
+    integrationsRaw.crm_evolution && typeof integrationsRaw.crm_evolution === 'object'
+      ? integrationsRaw.crm_evolution
+      : {};
+  const crmEvolutionFallback =
+    integrationsFallback.crm_evolution && typeof integrationsFallback.crm_evolution === 'object'
+      ? integrationsFallback.crm_evolution
+      : {};
+
+  const fallbackModel = stringOrFallback(openaiFallback.model, 'gpt-5.1') || 'gpt-5.1';
+  const fallbackEvolutionInstance = stringOrFallback(crmEvolutionFallback.instance_id, 'fabio') || 'fabio';
+
+  return {
     openai: {
-      api_key: normalizeApiKeyToken(openaiRaw.api_key),
-      model: typeof openaiRaw.model === 'string' && openaiRaw.model.trim().length > 0
-        ? openaiRaw.model.trim()
-        : 'gpt-5.1',
-      vision_enabled: openaiRaw.vision_enabled !== false,
-      voice_enabled: openaiRaw.voice_enabled !== false,
-      image_generation_enabled: openaiRaw.image_generation_enabled !== false,
-      image_read_enabled: openaiRaw.image_read_enabled !== false
+      // Preserve existing tenant key when frontend sends config without api_key.
+      api_key: normalizeApiKeyToken(
+        Object.prototype.hasOwnProperty.call(openaiRaw, 'api_key')
+          ? openaiRaw.api_key
+          : openaiFallback.api_key
+      ),
+      model: stringOrFallback(openaiRaw.model, fallbackModel) || 'gpt-5.1',
+      vision_enabled: boolOrFallback(openaiRaw.vision_enabled, boolOrFallback(openaiFallback.vision_enabled, true)),
+      voice_enabled: boolOrFallback(openaiRaw.voice_enabled, boolOrFallback(openaiFallback.voice_enabled, true)),
+      image_generation_enabled: boolOrFallback(
+        openaiRaw.image_generation_enabled,
+        boolOrFallback(openaiFallback.image_generation_enabled, true)
+      ),
+      image_read_enabled: boolOrFallback(
+        openaiRaw.image_read_enabled,
+        boolOrFallback(openaiFallback.image_read_enabled, true)
+      )
     },
     personas: {
-      owner_concierge_prompt: typeof personasRaw.owner_concierge_prompt === 'string'
-        ? personasRaw.owner_concierge_prompt.trim()
-        : '',
-      whatsapp_agent_prompt: typeof personasRaw.whatsapp_agent_prompt === 'string'
-        ? personasRaw.whatsapp_agent_prompt.trim()
-        : ''
+      owner_concierge_prompt: stringOrFallback(
+        personasRaw.owner_concierge_prompt,
+        stringOrFallback(personasFallback.owner_concierge_prompt, '')
+      ),
+      whatsapp_agent_prompt: stringOrFallback(
+        personasRaw.whatsapp_agent_prompt,
+        stringOrFallback(personasFallback.whatsapp_agent_prompt, '')
+      )
     },
     execution: {
-      confirmations_enabled: executionRaw.confirmations_enabled === true
+      confirmations_enabled: boolOrFallback(
+        executionRaw.confirmations_enabled,
+        boolOrFallback(executionFallback.confirmations_enabled, false)
+      )
     },
     integrations: {
       crm_evolution: {
-        base_url: typeof crmEvolutionRaw.base_url === 'string' ? crmEvolutionRaw.base_url.trim() : '',
-        api_key: typeof crmEvolutionRaw.api_key === 'string' ? crmEvolutionRaw.api_key.trim() : '',
-        instance_id: typeof crmEvolutionRaw.instance_id === 'string' && crmEvolutionRaw.instance_id.trim().length > 0
-          ? crmEvolutionRaw.instance_id.trim()
-          : 'fabio'
+        base_url: stringOrFallback(
+          crmEvolutionRaw.base_url,
+          stringOrFallback(crmEvolutionFallback.base_url, '')
+        ),
+        api_key: stringOrFallback(
+          crmEvolutionRaw.api_key,
+          stringOrFallback(crmEvolutionFallback.api_key, '')
+        ),
+        instance_id: stringOrFallback(crmEvolutionRaw.instance_id, fallbackEvolutionInstance) || 'fabio'
       }
     }
   };
-
-  return config;
 }
 
 function validateTenantRuntimeConfigRequest(body) {
@@ -2047,7 +2090,16 @@ export function createApp(options = {}) {
 
         const request = body.request;
         const tenantId = String(request.tenant_id).trim();
-        const normalizedConfig = sanitizeTenantRuntimeConfigInput(request.config);
+        let existingConfig = null;
+        try {
+          existingConfig = await resolveTenantRuntimeConfig(tenantId);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+        const normalizedConfig = sanitizeTenantRuntimeConfigInput(request.config, existingConfig);
 
         let updated;
         try {

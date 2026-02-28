@@ -323,6 +323,20 @@ async function loadWhatsAppQr() {
       ? `${apiBase()}/v1/whatsapp/evolution/qr?tenant_id=${encodeURIComponent(tid)}`
       : `${apiBase()}/v1/whatsapp/evolution/qr`;
 
+    const hasQrOrConnected = (resOk, payload) => {
+      if (!resOk) return false;
+      const code = String(payload.code ?? payload.base64 ?? '').trim();
+      const pairingCode = String(payload.pairingCode ?? '').trim();
+      const backendStatus = String(payload.status ?? '').trim().toLowerCase();
+      const connectionState = String(payload.connectionState ?? '').trim().toLowerCase();
+      return (
+        code.length > 0 ||
+        pairingCode.length > 0 ||
+        backendStatus === 'connected' ||
+        connectionState === 'open'
+      );
+    };
+
     let finalResponse = null;
     let finalPayload = {};
     const maxAttempts = 16;
@@ -333,16 +347,26 @@ async function loadWhatsAppQr() {
       finalResponse = res;
       finalPayload = data;
 
-      const code = String(data.code ?? data.base64 ?? '').trim();
-      const pairingCode = String(data.pairingCode ?? '').trim();
-      const backendStatus = String(data.status ?? '').trim().toLowerCase();
-      const connectionState = String(data.connectionState ?? '').trim().toLowerCase();
-      const ready = code.length > 0 || pairingCode.length > 0 || backendStatus === 'connected' || connectionState === 'open';
-
+      const ready = hasQrOrConnected(res.ok, data);
       if (!res.ok || ready || attempt === maxAttempts) {
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 1200));
+    }
+
+    // Fallback: if still pending after polling, force re-create instance once.
+    if (finalResponse?.ok && !hasQrOrConnected(finalResponse.ok, finalPayload)) {
+      const forceUrl = `${url}${url.includes('?') ? '&' : '?'}force_new=1`;
+      statusEl.textContent = 'QR pendente. Recriando instancia para gerar novo QR...';
+      const forceRes = await fetch(forceUrl);
+      const forcePayload = await forceRes.json().catch(() => ({}));
+      if (forceRes.ok) {
+        finalResponse = forceRes;
+        finalPayload = forcePayload;
+      } else if (!finalResponse.ok) {
+        finalResponse = forceRes;
+        finalPayload = forcePayload;
+      }
     }
 
     if (!finalResponse?.ok) {
