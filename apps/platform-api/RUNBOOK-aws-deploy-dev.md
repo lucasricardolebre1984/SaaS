@@ -29,10 +29,13 @@ Scope: `dev.automaniaai.com` (environment dev), single deploy multi-tenant
    - `git clone https://github.com/lucasricardolebre1984/SaaS.git /srv/SaaS`
    - **Nota:** No Ubuntu em uso, o app está em `/srv/SaaS` e a Evolution API em `/srv/evolution`. Para novos deploys, seguir o path do clone acima; para comandos no servidor existente, usar `cd /srv/SaaS`.
 - **Evolution no servidor:** docker-compose em `/srv/evolution` deve usar a imagem **evoapicloud/evolution-api:v2.3.5** (retorna QR no endpoint connect; v2.1.1 tem bug) e expor a API em `0.0.0.0:8080`. O `.env` do app em `/srv/SaaS` usa `EVOLUTION_HTTP_BASE_URL=http://127.0.0.1:8080` (mesmo host). No `.env` da **Evolution** (`/srv/evolution`): `SERVER_URL=https://dev.automaniaai.com.br/evolution-api` (URL pública para webhooks/links); **para o celular exibir "Evolution API" (ou nome do produto) na conexao:** `CONFIG_SESSION_PHONE_CLIENT=Evolution API` e `CONFIG_SESSION_PHONE_NAME=Evolution API` (ver RUNBOOK-EVOLUTION-WHATSAPP.md). Opcional: `CONFIG_SESSION_PHONE_VERSION=2.3000.1033703022` (compatibilidade WhatsApp). **Nginx:** `location /evolution-api/` com `proxy_pass http://127.0.0.1:8080/` (Evolution acessível em `https://dev.automaniaai.com.br/evolution-api/`). SSH: `ubuntu@ec2-54-233-196-148.sa-east-1.compute.amazonaws.com` (54.233.196.148).
-3. Checkout branch:
+3. Checkout branch e remote:
+   - `cd /srv/SaaS && git remote set-url origin https://github.com/lucasricardolebre1984/SaaS.git` (se estiver apontando para fabio)
    - `cd /srv/SaaS && git checkout main && git pull origin main`
 4. Install dependencies:
    - `npm ci`
+5. (Opcional) SASS (CSS preprocessor) no servidor para compilacao SCSS:
+   - `sudo npm install -g sass` — ja aplicado no Ubuntu dev; versao: `sass --version`. O projeto inclui `sass` em devDependencies para builds que usem SCSS.
 
 ## 4. Environment configuration
 1. Create `/srv/SaaS/.env` from `.env.aws.example`.

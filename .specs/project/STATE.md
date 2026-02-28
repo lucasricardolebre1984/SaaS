@@ -45,6 +45,8 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-02-28: Ubuntu atualizado: remote do git em /srv/SaaS alterado de fabio para https://github.com/lucasricardolebre1984/SaaS.git; pull origin main, npm ci, restart; health 200; servico ativo.
+- 2026-02-28: Proximo passo iniciado: deploy 87435e6 (path /srv/SaaS unificado) via npm run deploy:dev; UAT Evolution executado via SSH (tools/evolution-aws-check.sh): Evolution API 200 OK, instancia tenant_automania state open; health publico dev.automaniaai.com.br/api/health 200; evidencias em worklog, costlog, STATE, STATUS, PROXIMO-PASSO.
 - 2026-02-28: Baseline Personas e runtime-config documentado em `.specs/project/BASELINE-PERSONAS-RUNTIME-CONFIG.md` (Persona 1/2, prompts menu 06, GET/POST runtime-config, API natural gpt-5.1, sem prompt rage, rollback); STATUS-ATUAL e STATE atualizados; slice CRM modern inbox aprovado.
 - 2026-02-27: `init:day` executado e contexto obrigatorio recarregado via `project-context-loader`.
 - 2026-02-27: auditoria de docs identificou divergencia de slice no `README.md` e higiene remota no `STATUS-ATUAL.md`; ambos alinhados.

@@ -149,6 +149,7 @@ const healthStatusEl = document.getElementById('healthStatus');
 const assistantProviderStatusEl = document.getElementById('assistantProviderStatus');
 const messagesEl = document.getElementById('messages');
 const chatForm = document.getElementById('chatForm');
+const chatSendBtn = document.getElementById('chatSendBtn');
 const messageInput = document.getElementById('messageInput');
 const pendingAttachmentsEl = document.getElementById('pendingAttachments');
 const confirmationsStatusEl = document.getElementById('confirmationsStatus');
@@ -2213,9 +2214,17 @@ async function toggleContinuousMode() {
   }
 }
 
+function setChatSendLoading(loading) {
+  if (chatSendBtn) {
+    chatSendBtn.disabled = !!loading;
+    chatSendBtn.textContent = loading ? 'Processando...' : 'Enviar';
+  }
+}
+
 async function sendInteraction(text, attachments = []) {
   const outgoingText = text.trim().length > 0 ? text.trim() : '[anexo]';
 
+  setChatSendLoading(true);
   appendMessage(outgoingText, 'owner');
   if (attachments.length > 0) {
     appendMessage(`Anexos enviados: ${attachments.map((item) => item.filename).join(', ')}`, 'owner');
@@ -2312,6 +2321,8 @@ async function sendInteraction(text, attachments = []) {
   } catch (error) {
     appendMessage(`Falha de conexao com API (${apiBase()}): ${error.message}`);
     setAssistantProviderStatus('error', { errorDetails: error.message });
+  } finally {
+    setChatSendLoading(false);
   }
 }
 
@@ -2673,10 +2684,22 @@ function setupEvents() {
   });
 }
 
+function setupAvatarMobilePlay() {
+  if (!avatarEl) return;
+  const playOnInteraction = () => {
+    ensureAvatarPlayback();
+    avatarEl.removeEventListener('click', playOnInteraction);
+    avatarEl.removeEventListener('touchstart', playOnInteraction, { passive: true });
+  };
+  avatarEl.addEventListener('click', playOnInteraction);
+  avatarEl.addEventListener('touchstart', playOnInteraction, { passive: true });
+}
+
 async function bootstrap() {
   registerAvatarVideoFallback(avatarIdleVideoEl);
   registerAvatarVideoFallback(avatarSpeakingVideoEl);
   applyAvatarVideoSource();
+  setupAvatarMobilePlay();
   bootstrapConfig();
   syncCrmEmbeddedFrame();
   renderModuleNav();

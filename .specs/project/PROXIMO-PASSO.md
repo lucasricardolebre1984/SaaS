@@ -2,7 +2,7 @@
 
 **Foco:** produto e operacao do SaaS matriz em ambiente real (dev AWS), com rastreabilidade.
 
-**Ultima atualizacao:** 2026-02-27
+**Ultima atualizacao:** 2026-02-28
 
 ---
 
@@ -19,16 +19,18 @@
 Fechar UAT operacional Evolution no AWS dev (`dev.automaniaai.com.br`):
 
 1. ~~Validar `audio/transcribe` e `audio/speech` no modulo 01~~ — OK (confirmado).
-2. **Validar `Gerar QR Code` no modulo 02** com Evolution ativa no servidor (`/srv/SaaS` + `/srv/evolution`): no Ubuntu, `cd /srv/SaaS`, conferir `EVOLUTION_*` no `.env`, rodar `tools/evolution-aws-check.sh` ou equivalentes; garantir instancia `fabio` e leitura de estado `ready|connected|pending_qr`.
-3. Registrar evidencias finais de UAT em `STATE.md`, `STATUS-ATUAL.md`, `worklog.csv`, `costlog.csv`.
+2. ~~Validar Evolution no modulo 02~~ — OK (2026-02-28): `evolution-aws-check.sh` no Ubuntu; Evolution 200 OK; instancia `tenant_automania` state `open`; health publico 200.
+3. ~~Registrar evidencias finais de UAT~~ — OK: `STATE.md`, `STATUS-ATUAL.md`, `worklog.csv`, `costlog.csv` atualizados.
 
-Repo e ambientes já documentados em AGENTS.md (GitHub SaaS, Ubuntu /srv/SaaS e /srv/evolution).
+**Proximo passo natural:** Encerrar slice `milestone-5-runtime-stability-hotfix-slice` (exit checklist) ou validar manualmente no browser: abrir `https://dev.automaniaai.com.br/crm/`, Gerar QR Code e fluxo completo; depois fechar fase em STATE/ROADMAP.
+
+Repo e ambientes documentados em AGENTS.md (GitHub SaaS, Ubuntu /srv/SaaS e /srv/evolution).
 
 ---
 
 ## Resumo (leigo)
 
-O SaaS matriz esta no AWS dev com hotfix aplicado; audio OpenAI considerado OK. Foco atual: UAT do QR Evolution no servidor (acesso SSH, `/srv/SaaS` e `/srv/evolution`) e registrar evidencias para encerrar o slice.
+O SaaS matriz esta no AWS dev com hotfix aplicado; audio OpenAI e Evolution (instancia conectada, state open) validados. UAT Evolution registrada (2026-02-28). Proximo: encerrar slice (exit checklist) ou validar no browser CRM + QR e fechar fase.
 
 ---
 

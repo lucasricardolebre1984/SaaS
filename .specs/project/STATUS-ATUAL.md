@@ -79,6 +79,7 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
 - **API natural:** modelo padrão backend `gpt-5.1`; prompts opcionais (vazios = baseline neutro; sem prompt rage).
 - **Documento auditável:** `.specs/project/BASELINE-PERSONAS-RUNTIME-CONFIG.md` — referência única para rollback e rastreabilidade.
 - **Slice CRM modern inbox:** feature `crm-modern-inbox-2026-slice` aprovada; spec/design/tasks em `.specs/features/crm-modern-inbox-2026-slice/`.
+- **UAT Evolution AWS dev (2026-02-28):** deploy 87435e6 em `/srv/SaaS`; `evolution-aws-check.sh` via SSH: Evolution 200 OK, instancia `tenant_automania` state `open`; health publico 200. Evidencias em worklog/costlog/STATE/PROXIMO-PASSO.
 
 ---
 
