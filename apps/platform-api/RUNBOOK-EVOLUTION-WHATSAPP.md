@@ -60,6 +60,24 @@ Depois, no SaaS (CRM Console), clique de novo em **Gerar QR Code**.
 
 A imagem **atendai/evolution-api:v2.1.1** tem bug no `GET /instance/connect`: retorna apenas `{"count":0}` (issue [#2385](https://github.com/EvolutionAPI/evolution-api/issues/2385)). **Recomendado:** usar **evoapicloud/evolution-api:v2.3.5** no `docker-compose` da Evolution; essa versao retorna `code`, `base64` (QR em data:image/png;base64) e `count:1`, e o CRM exibe o QR ao clicar em Gerar QR Code.
 
+## Nome exibido no celular (dispositivo vinculado)
+
+No WhatsApp, ao escanear o QR, o dispositivo vinculado mostra um nome (ex.: "Google Chrome"). Para aparecer **Evolution API** ou o nome do seu produto (ex.: "Automania CRM"), configure no **.env do container/servidor da Evolution** (nao no SaaS):
+
+| Variavel | Descricao | Exemplo |
+|----------|-----------|---------|
+| `CONFIG_SESSION_PHONE_CLIENT` | Nome exibido na conexao no celular | `Evolution API` ou `Automania CRM` |
+| `CONFIG_SESSION_PHONE_NAME`     | "Nome do navegador" exibido (Chrome, Firefox, Edge, Opera, Safari) | `Evolution API` ou `Chrome` |
+
+Exemplo no `.env` da Evolution (em `/srv/evolution` no servidor):
+
+```env
+CONFIG_SESSION_PHONE_CLIENT=Evolution API
+CONFIG_SESSION_PHONE_NAME=Evolution API
+```
+
+Depois reinicie o container Evolution (`docker compose restart` em `/srv/evolution`). **Novas** vinculacoes passam a mostrar esse nome; sessoes ja vinculadas mantem o nome antigo ate reconectar.
+
 ## Endpoints usados
 
 - **GET /v1/whatsapp/evolution/qr** — retorna `code` (QR), `pairingCode` e `instanceId`. O front exibe o QR e o codigo no proprio CRM.

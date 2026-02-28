@@ -305,6 +305,7 @@ apiBaseInput.addEventListener('blur', () => {
 });
 
 async function loadWhatsAppQr() {
+  stopQrConnectionPolling();
   const resultEl = document.getElementById('whatsappQrResult');
   const statusEl = document.getElementById('whatsappQrStatus');
   const imageWrap = document.getElementById('whatsappQrImageWrap');
@@ -400,6 +401,7 @@ async function loadWhatsAppQr() {
       statusEl.textContent = 'Instancia ja conectada no WhatsApp. Se quiser novo QR, desconecte a instancia primeiro.';
     } else if (looksLikeBase64Image || isEvolutionQrPayload || pairingCode.length > 0) {
       statusEl.textContent = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
+      startQrConnectionPolling(url, statusEl, imageWrap, pairingEl, btn);
     } else {
       statusEl.textContent = 'QR ainda nao disponivel. Aguarde alguns segundos e clique novamente (ou valide Evolution Base URL/API Key/Instance no menu 06).';
     }
@@ -408,6 +410,43 @@ async function loadWhatsAppQr() {
   } finally {
     btn.disabled = false;
   }
+}
+
+let qrPollingTimer = null;
+const QR_POLL_INTERVAL_MS = 3000;
+const QR_POLL_MAX_DURATION_MS = 5 * 60 * 1000;
+
+function stopQrConnectionPolling() {
+  if (qrPollingTimer != null) {
+    clearInterval(qrPollingTimer);
+    qrPollingTimer = null;
+  }
+}
+
+function startQrConnectionPolling(url, statusEl, imageWrap, pairingEl, btn) {
+  stopQrConnectionPolling();
+  const startedAt = Date.now();
+  qrPollingTimer = setInterval(async () => {
+    if (Date.now() - startedAt > QR_POLL_MAX_DURATION_MS) {
+      stopQrConnectionPolling();
+      return;
+    }
+    try {
+      const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+      const connectionState = String(data.connectionState ?? '').trim().toLowerCase();
+      const backendStatus = String(data.status ?? '').trim().toLowerCase();
+      if (connectionState === 'open' || connectionState === 'connected' || backendStatus === 'connected') {
+        stopQrConnectionPolling();
+        statusEl.textContent = 'Instancia ja conectada no WhatsApp. Se quiser novo QR, desconecte a instancia primeiro.';
+        imageWrap.innerHTML = '<p class="whatsapp-qr-connected">WhatsApp conectado.</p>';
+        if (pairingEl) pairingEl.textContent = '';
+        if (btn) btn.disabled = false;
+      }
+    } catch {
+      // ignore network errors during poll
+    }
+  }, QR_POLL_INTERVAL_MS);
 }
 
 const whatsappQrBtn = document.getElementById('whatsappQrBtn');
