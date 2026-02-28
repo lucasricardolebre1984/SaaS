@@ -1,7 +1,7 @@
 # Status Atual — Fabio SaaS (Modelo Universal)
 
 **Documento:** STATUS-ATUAL  
-**Ultima atualizacao:** 2026-02-27 (rastreabilidade e auditoria: data/hora em decisoes e artefatos)  
+**Ultima atualizacao:** 2026-02-28 (rastreabilidade e auditoria: data/hora em decisoes e artefatos)  
 **Objetivo:** Snapshot rastreavel do estado do repositorio, modelo de aprendizado continuo e conformidade com specs.
 
 ---
@@ -72,6 +72,14 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
   - Script de diagnóstico Evolution: `tools/evolution-aws-check.sh` (SAAS_ROOT default `/srv/Saas`).
 - Evolution no Ubuntu (2026-02-27): configurado via SSH — Evolution em `0.0.0.0:8080`; `/srv/SaaS/.env` com `EVOLUTION_HTTP_BASE_URL=http://127.0.0.1:8080`; nginx com timeouts 30s; Evolution `.env` com `SERVER_URL=https://dev.automaniaai.com.br/evolution-api`, `CONFIG_SESSION_PHONE_VERSION=2.3000.1033703022`; nginx `location /evolution-api/` proxy para 8080; Evolution acessível em `https://dev.automaniaai.com.br/evolution-api/`.
 
+### 3.5 Baseline Personas e runtime-config (2026-02-28)
+
+- **Persona 1 (Owner Concierge)** e **Persona 2 (WhatsApp)** já existem no banco/runtime; campos de prompt no **menu 06 Configurações** persistem por tenant.
+- **Endpoints obrigatórios:** `GET` e `POST /v1/owner-concierge/runtime-config` — funcionam; config inclui `personas.owner_concierge_prompt` e `personas.whatsapp_agent_prompt`; persistência via `tenantRuntimeConfigStore`.
+- **API natural:** modelo padrão backend `gpt-5.1`; prompts opcionais (vazios = baseline neutro; sem prompt rage).
+- **Documento auditável:** `.specs/project/BASELINE-PERSONAS-RUNTIME-CONFIG.md` — referência única para rollback e rastreabilidade.
+- **Slice CRM modern inbox:** feature `crm-modern-inbox-2026-slice` aprovada; spec/design/tasks em `.specs/features/crm-modern-inbox-2026-slice/`.
+
 ---
 
 ## 4. Skills em uso (prova e rastreabilidade)
@@ -97,6 +105,7 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 | CHECKUP-DOCS.md | Checkup dos docs. |
 | METRICS.md | worklog, costlog. |
 | RUNBOOK-aws-deploy-dev.md | Deploy dev AWS + DNS + reverse proxy. |
+| BASELINE-PERSONAS-RUNTIME-CONFIG.md | Persona 1/2, prompts menu 06, endpoints runtime-config, rollback (auditável). |
 | RESEARCH-CONTINUOUS-LEARNING-CRM-2026.md | Pesquisa aprendizado continuo. |
 | features/*/spec.md, design.md, tasks.md | Por feature. |
 

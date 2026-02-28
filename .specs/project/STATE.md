@@ -1,6 +1,6 @@
 # STATE
 
-Last update: 2026-02-27
+Last update: 2026-02-28
 Active phase: Implement + Validate (milestone-5-runtime-stability-hotfix-slice)
 Active feature: milestone-5-runtime-stability-hotfix-slice
 
@@ -45,6 +45,7 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-02-28: Baseline Personas e runtime-config documentado em `.specs/project/BASELINE-PERSONAS-RUNTIME-CONFIG.md` (Persona 1/2, prompts menu 06, GET/POST runtime-config, API natural gpt-5.1, sem prompt rage, rollback); STATUS-ATUAL e STATE atualizados; slice CRM modern inbox aprovado.
 - 2026-02-27: `init:day` executado e contexto obrigatorio recarregado via `project-context-loader`.
 - 2026-02-27: auditoria de docs identificou divergencia de slice no `README.md` e higiene remota no `STATUS-ATUAL.md`; ambos alinhados.
 - 2026-02-27: higiene remota consolidada; estado atual somente `origin/main`.
@@ -80,6 +81,7 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - Nx workspace runtime skeleton bootstrapped with project graph and target wiring.
 - Contract checks automated via Nx target `contract-tests:contract-checks`.
 - Executable contract tests available via Nx target `contract-tests:test`.
+- 2026-02-28: **MUDANCA CRITICA** solicitada: “CRM completo institucional (inbox + conversas + mensagens + IA)”. Para evitar poluicao de escopo no slice ativo (milestone-5-runtime-stability-hotfix-slice), foi criado o slice **draft** `crm-modern-inbox-2026-slice` com `spec/design/tasks` em `.specs/features/crm-modern-inbox-2026-slice/`. Implementacao fica **ESTACIONADA** ate aprovacao de tasks e/ou troca formal de fase/slice.
 - Foundation tasks FND-002..FND-006 finalized with explicit evidence.
 - Runtime dual concierge slice implemented in app-platform-api with contract-validated endpoints.
 - Runtime tests added and passing via `nx run app-platform-api:test`.
