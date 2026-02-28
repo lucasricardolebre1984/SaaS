@@ -39,7 +39,7 @@ Define the best practical baseline for AWS dev deployment with production-aligne
    - RDS: 5432 only from EC2 SG.
 3. Point DNS in Hostinger:
    - `A dev.automaniaai.com -> EC2_PUBLIC_IP`.
-4. Deploy code in `/srv/fabio` and configure `.env` from `.env.aws.example`.
+4. Deploy code in `/srv/SaaS` (clone repo SaaS) and configure `.env` from `.env.aws.example`.
 5. Set `ORCHESTRATION_STORE_BACKEND=postgres` and valid `ORCHESTRATION_PG_DSN`.
 6. Configure Nginx reverse proxy + certbot TLS.
 7. Start service by systemd (`npm run serve:saas`).

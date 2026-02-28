@@ -69,7 +69,7 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
 - Repo e ambientes (2026-02-27):
   - GitHub oficial: https://github.com/lucasricardolebre1984/SaaS (deploy/CI; sem branches sandbox).
   - Ubuntu AWS dev: app em `/srv/SaaS`, Evolution em `/srv/evolution` (documentado em AGENTS.md e RUNBOOK-aws-deploy-dev.md).
-  - Script de diagnóstico Evolution: `tools/evolution-aws-check.sh` (SAAS_ROOT default `/srv/Saas`).
+  - Script de diagnóstico Evolution: `tools/evolution-aws-check.sh` (SAAS_ROOT default `/srv/SaaS`).
 - Evolution no Ubuntu (2026-02-27): configurado via SSH — Evolution em `0.0.0.0:8080`; `/srv/SaaS/.env` com `EVOLUTION_HTTP_BASE_URL=http://127.0.0.1:8080`; nginx com timeouts 30s; Evolution `.env` com `SERVER_URL=https://dev.automaniaai.com.br/evolution-api`, `CONFIG_SESSION_PHONE_VERSION=2.3000.1033703022`; nginx `location /evolution-api/` proxy para 8080; Evolution acessível em `https://dev.automaniaai.com.br/evolution-api/`.
 
 ### 3.5 Baseline Personas e runtime-config (2026-02-28)
@@ -104,7 +104,8 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 | GATES.md | Portas de qualidade. |
 | CHECKUP-DOCS.md | Checkup dos docs. |
 | METRICS.md | worklog, costlog. |
-| RUNBOOK-aws-deploy-dev.md | Deploy dev AWS + DNS + reverse proxy. |
+| RUNBOOK-aws-deploy-dev.md | Deploy dev AWS + DNS + reverse proxy; sec. 7.1 verify/backup/update no Ubuntu + checklist CRM. |
+| tools/ubuntu-verify-backup-update.sh | Script para rodar no servidor: verificar, backup, git pull, npm ci, restart, checklist CRM. |
 | BASELINE-PERSONAS-RUNTIME-CONFIG.md | Persona 1/2, prompts menu 06, endpoints runtime-config, rollback (auditável). |
 | RESEARCH-CONTINUOUS-LEARNING-CRM-2026.md | Pesquisa aprendizado continuo. |
 | features/*/spec.md, design.md, tasks.md | Por feature. |

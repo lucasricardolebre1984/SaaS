@@ -30,7 +30,7 @@ Scope: `dev.automaniaai.com` (environment dev), single deploy multi-tenant
    - **Nota:** No Ubuntu em uso, o app está em `/srv/SaaS` e a Evolution API em `/srv/evolution`. Para novos deploys, seguir o path do clone acima; para comandos no servidor existente, usar `cd /srv/SaaS`.
 - **Evolution no servidor:** docker-compose em `/srv/evolution` deve usar a imagem **evoapicloud/evolution-api:v2.3.5** (retorna QR no endpoint connect; v2.1.1 tem bug) e expor a API em `0.0.0.0:8080`. O `.env` do app em `/srv/SaaS` usa `EVOLUTION_HTTP_BASE_URL=http://127.0.0.1:8080` (mesmo host). No `.env` da **Evolution** (`/srv/evolution`): `SERVER_URL=https://dev.automaniaai.com.br/evolution-api` (URL pública para webhooks/links); **para o celular exibir "Evolution API" (ou nome do produto) na conexao:** `CONFIG_SESSION_PHONE_CLIENT=Evolution API` e `CONFIG_SESSION_PHONE_NAME=Evolution API` (ver RUNBOOK-EVOLUTION-WHATSAPP.md). Opcional: `CONFIG_SESSION_PHONE_VERSION=2.3000.1033703022` (compatibilidade WhatsApp). **Nginx:** `location /evolution-api/` com `proxy_pass http://127.0.0.1:8080/` (Evolution acessível em `https://dev.automaniaai.com.br/evolution-api/`). SSH: `ubuntu@ec2-54-233-196-148.sa-east-1.compute.amazonaws.com` (54.233.196.148).
 3. Checkout branch:
-   - `cd /srv/SaaS && git checkout main && git pull origin main` (ou `cd /srv/Saas` no servidor atual)
+   - `cd /srv/SaaS && git checkout main && git pull origin main`
 4. Install dependencies:
    - `npm ci`
 
@@ -106,6 +106,28 @@ Post-deploy checks:
 - open `https://dev.automaniaai.com/owner/`
 - open `https://dev.automaniaai.com/crm/`
 - test one interaction + one CRM lead + one reminder + one charge
+
+## 7.1 Verificar, backup e atualizar no Ubuntu (SSH)
+
+Executar **no servidor** apos conectar por SSH (ex.: `ssh ubuntu@54.233.196.148`). O script faz: verificacao pre-update, backup de `.env` e `.runtime-data`, `git pull origin main`, `npm ci`, restart do servico, verificacao pos-update e exibe o checklist CRM.
+
+1. Copiar o script para o servidor (se ainda nao estiver la):
+   - O script esta em `tools/ubuntu-verify-backup-update.sh` no repo. Apos `git pull`, ele estara em `$SAAS_ROOT/tools/ubuntu-verify-backup-update.sh`.
+2. No servidor, ir para a raiz do app: `cd /srv/SaaS`
+3. Executar (backup + update): `bash tools/ubuntu-verify-backup-update.sh`
+4. Opcionais: `--skip-backup` (nao fazer backup); `--skip-pull` (nao atualizar git/npm).
+5. Backup fica em `/srv/backups/saas-YYYYMMDD-HHMMSS/` (`.env`, `.runtime-data`, `git-head.txt`).
+
+### Checklist CRM (deixar perfeito e configurado)
+
+| Onde | O que conferir |
+|------|----------------|
+| **App** (`/srv/SaaS/.env`) | `EVOLUTION_HTTP_BASE_URL=http://127.0.0.1:8080`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE_ID=fabio`, `CORS_ALLOW_ORIGINS` com os dominios do front (ex.: `https://dev.automaniaai.com.br`) |
+| **Evolution** (`/srv/evolution`) | `.env` com `SERVER_URL=https://dev.automaniaai.com.br/evolution-api` (webhook do SaaS). `CONFIG_SESSION_PHONE_CLIENT` e `CONFIG_SESSION_PHONE_NAME` para nome no celular. Imagem recomendada: `evoapicloud/evolution-api:v2.3.5`. |
+| **Nginx** | `location /evolution-api/` proxy para `http://127.0.0.1:8080`; `location /` proxy para `http://127.0.0.1:4001`; timeouts 30s. |
+| **URLs publicas** | `https://dev.automaniaai.com.br/api/health`, `/owner/`, `/crm/` retornando 200. No CRM: Gerar QR Code e escanear para vincular WhatsApp. |
+
+Detalhes Evolution e QR: `apps/platform-api/RUNBOOK-EVOLUTION-WHATSAPP.md` e `tools/evolution-aws-check.sh`.
 
 ## 8. Operational constraints
 - Do not share fabio2 infra state with SaaS matriz.

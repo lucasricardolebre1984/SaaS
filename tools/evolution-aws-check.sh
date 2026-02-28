@@ -2,10 +2,10 @@
 # Evolution API check on AWS dev — run on server (e.g. after ssh ubuntu@<IP>)
 # Repo: https://github.com/lucasricardolebre1984/SaaS
 # Usage: bash evolution-aws-check.sh   (from app root or set SAAS_ROOT)
-# On current Ubuntu: app at /srv/Saas, Evolution at /srv/evolution.
+# On Ubuntu: app at /srv/SaaS (repo SaaS), Evolution at /srv/evolution.
 
 set -e
-SAAS_ROOT="${SAAS_ROOT:-/srv/Saas}"
+SAAS_ROOT="${SAAS_ROOT:-/srv/SaaS}"
 cd "$SAAS_ROOT"
 
 echo "=== 1. .env Evolution vars ==="

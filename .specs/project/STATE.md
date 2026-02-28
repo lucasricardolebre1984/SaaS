@@ -6,7 +6,7 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 
 ## Repo e ambientes (fonte: AGENTS.md)
 - GitHub deploy: https://github.com/lucasricardolebre1984/SaaS (sem branches sandbox).
-- Ubuntu AWS dev: app em `/srv/Saas`, Evolution API em `/srv/evolution`.
+- Ubuntu AWS dev: app em `/srv/SaaS`, Evolution API em `/srv/evolution`.
 - Local: workspace `C:\projetos\fabio` ou `C:\projetos\SaaS`; Evolution no AWS via SSH + `tools/evolution-aws-check.sh`.
 
 ## Current Decisions
@@ -49,7 +49,7 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - 2026-02-27: `init:day` executado e contexto obrigatorio recarregado via `project-context-loader`.
 - 2026-02-27: auditoria de docs identificou divergencia de slice no `README.md` e higiene remota no `STATUS-ATUAL.md`; ambos alinhados.
 - 2026-02-27: higiene remota consolidada; estado atual somente `origin/main`.
-- 2026-02-27: repo e ambientes documentados em AGENTS.md — GitHub (lucasricardolebre1984/SaaS), Ubuntu (/srv/Saas, /srv/evolution), local fabio/SaaS; RUNBOOK-aws-deploy-dev e tools/evolution-aws-check.sh alinhados aos caminhos.
+- 2026-02-27: repo e ambientes documentados em AGENTS.md — GitHub (lucasricardolebre1984/SaaS), Ubuntu (/srv/SaaS, /srv/evolution), local c:\projetos\fabio (clone SaaS); RUNBOOK-aws-deploy-dev e tools/evolution-aws-check.sh alinhados aos caminhos.
 - 2026-02-27 12:45-12:55 BRT: hotfix runtime aplicado no `main` (`8474a4e`) com:
   - fallback global OpenAI key em `audio/transcribe` e `audio/speech`.
   - QR Evolution com status operacional (`ready|connected|pending_qr`) e retry de create/connect.
