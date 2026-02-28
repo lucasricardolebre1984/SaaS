@@ -81,3 +81,30 @@ Depois reinicie o container Evolution (`docker compose restart` em `/srv/evoluti
 ## Endpoints usados
 
 - **GET /v1/whatsapp/evolution/qr** — retorna `code` (QR), `pairingCode` e `instanceId`. O front exibe o QR e o codigo no proprio CRM.
+
+---
+
+## Status e diagnostico (AWS dev, 2026-02-28)
+
+**Problemas verificados e correcoes aplicadas:**
+
+1. **CRM nao atualizava para "conectado" apos escanear o QR**  
+   - Causa: o codigo de polling (reconsultar o endpoint a cada 3s apos exibir o QR) nao estava no commit deployado.  
+   - Correcao: commit `ca45bfd` com `startQrConnectionPolling` no CRM; deploy com `git pull` e `systemctl restart saas.service`.  
+   - Prova: no servidor, `GET /v1/whatsapp/evolution/qr` retorna `"status":"connected","connectionState":"open"` quando a instancia esta vinculada.
+
+2. **Celular nao mostrava "Evolution API" na conexao**  
+   - Causa: `.env` da Evolution tinha `CONFIG_SESSION_PHONE_CLIENT=Chrome`; `docker compose restart` nao recria o container, entao o env antigo continuava.  
+   - Correcao: alterar no `.env` para `CONFIG_SESSION_PHONE_CLIENT=Evolution API` e `CONFIG_SESSION_PHONE_NAME=Evolution API`; depois `docker compose up -d --force-recreate evolution_api` em `/srv/evolution`.  
+   - Prova: `docker exec evolution_api env | grep CONFIG_SESSION` mostra `Evolution API`. **Novas** vinculacoes passam a exibir "Evolution API" no celular; sessoes ja vinculadas mantem o nome antigo ate desvincular e escanear de novo.
+
+**Comandos uteis no servidor (SSH em `/srv/SaaS` e `/srv/evolution`):**
+
+- Estado da instancia Evolution:  
+  `curl -sS -H 'apikey: <API_KEY>' 'http://127.0.0.1:8080/instance/connectionState/<INSTANCE_ID>'`
+- Resposta do backend (estado QR/conexao):  
+  `curl -sS 'http://127.0.0.1:4001/v1/whatsapp/evolution/qr'`
+- Variaveis do container Evolution:  
+  `sudo docker exec evolution_api env | grep CONFIG_SESSION`
+- Recriar container para carregar .env novo:  
+  `cd /srv/evolution && sudo docker compose up -d --force-recreate evolution_api`
