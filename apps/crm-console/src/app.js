@@ -207,6 +207,12 @@ function safeText(value) {
   ));
 }
 
+function normalizeBrandText(value) {
+  const raw = String(value ?? '');
+  if (!raw) return raw;
+  return raw.replace(/fc\s*s(o|ó)lu(c|ç)(o|õ)es/gi, 'SaaS');
+}
+
 function formatTime(value) {
   if (!value) return '--';
   const date = new Date(value);
@@ -320,13 +326,14 @@ function renderConversations(items) {
       const isActive = conversation.conversation_id === selectedConversationId;
       const title = conversation.display_name || conversation.contact_e164;
       const unread = Number(conversation.unread_count ?? 0);
+      const preview = normalizeBrandText(conversation.last_message_preview || 'Sem mensagens');
       return `
       <button class="conversation-item ${isActive ? 'is-active' : ''}" type="button" data-conversation-id="${safeText(conversation.conversation_id)}">
         <div class="conversation-item__top">
           <span class="conversation-item__name">${safeText(title)}</span>
           ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
         </div>
-        <p class="conversation-item__preview">${safeText(conversation.last_message_preview || 'Sem mensagens')}</p>
+        <p class="conversation-item__preview">${safeText(preview)}</p>
         <div class="conversation-item__meta">
           <span>${safeText(conversation.lead_stage || 'sem stage')}</span>
           <span>${safeText(formatTime(conversation.last_message_at))}</span>
@@ -378,7 +385,7 @@ function renderThreadMessages() {
       const isOutbound = message.direction === 'outbound';
       const cssClass = isOutbound ? 'is-outbound' : 'is-inbound';
       const directionLabel = isOutbound ? 'saida' : 'entrada';
-      const text = String(message.text ?? '').trim()
+      const text = normalizeBrandText(String(message.text ?? '').trim())
         || (message.message_type && message.message_type !== 'text'
           ? `(mensagem ${message.message_type})`
           : '(sem texto)');
