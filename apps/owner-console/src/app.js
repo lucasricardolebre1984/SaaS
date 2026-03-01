@@ -21,14 +21,14 @@ const MODULE_COST_LABELS = {
 };
 
 const VALID_LAYOUTS = ['fabio2', 'studio'];
-const VALID_PALETTES = ['ocean', 'forest', 'sunset'];
+const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
 const CONFIG_STORAGE_KEY = 'owner_console_config_v1';
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const SETTINGS_ADMIN_PASSWORD = '191530';
 const SETTINGS_UNLOCK_SESSION_KEY = 'owner_console_settings_admin_unlock_v1';
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'fabio2', palette: 'ocean' },
+  tenant_automania: { layout: 'studio', palette: 'darkgreen' },
   tenant_clinica: { layout: 'studio', palette: 'forest' },
   tenant_comercial: { layout: 'studio', palette: 'sunset' }
 };
@@ -354,8 +354,8 @@ function createDefaultConfig() {
       api_base_url: deriveDefaultApiBase(),
       tenant_id: 'tenant_automania',
       session_id: crypto.randomUUID(),
-      layout: 'fabio2',
-      palette: 'ocean'
+      layout: 'studio',
+      palette: 'darkgreen'
     },
     openai: {
       api_key: '',
@@ -403,7 +403,7 @@ function normalizeLayout(layout) {
 }
 
 function normalizePalette(palette) {
-  return VALID_PALETTES.includes(palette) ? palette : 'ocean';
+  return VALID_PALETTES.includes(palette) ? palette : 'darkgreen';
 }
 
 function safeNumber(value, fallback = 0) {

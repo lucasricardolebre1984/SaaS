@@ -45,6 +45,12 @@ Active feature: crm-modern-inbox-2026-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-01: deploy dev executado apos v2 visual (`npm run deploy:dev -- -SkipNpmCi`); `/srv/SaaS` atualizado, `saas.service` ativo e health publico `https://dev.automaniaai.com.br/api/health` confirmado `200/ok`.
+- 2026-03-01: v2 do layout CRM (slice `crm-krayin-reference-modernization-slice`) aplicada: toolbar de filtros (busca/stage/canal), agrupamento de pipeline por `stage` ou `channel`, cards de atividade no detalhe com badges (direcao/delivery) e navegação de views `Inbox/Pipeline/Leads`; builds owner/crm continuam verdes.
+- 2026-03-01: progresso visual no `crm-krayin-reference-modernization-slice`: CRM recebeu abas `Inbox/Pipeline/Leads`, kanban por stage, painel lateral de detalhe/atividades e defaults `studio + darkgreen`; Owner/CRM `studio` recoloridos para acento por token (sem hardcode azul). Builds `app-crm-console` e `app-owner-console` verdes.
+- 2026-03-01: implementacao iniciada no slice `crm-krayin-reference-modernization-slice` (T0/T1). Benchmark Krayin atualizado por pull e instalacao local de referencia (npm + composer via Docker com `--ignore-platform-reqs`), e tema institucional `darkgreen` aplicado em Owner/CRM com default `studio + darkgreen`; builds owner/crm validados.
+- 2026-03-01: owner solicitou layout CRM no padrao do demo Krayin e expansao visual para todo SaaS com tema dark/green. Avaliacao registrada: link demo exige autenticacao; referencia validada por repositorio/documentacao oficial. Slice `crm-krayin-reference-modernization-slice` atualizado com escopo SaaS-wide (01..06), tokens dark/green e alinhamento explicito Persona 1/Persona 2.
+- 2026-03-01: **MUDANCA CRITICA** solicitada: elevar CRM para nivel enterprise com referencia no projeto open source Krayin (`krayin/laravel-crm`). Avaliacao tecnica concluida: adotar benchmark de capacidade/UX sem clonar runtime Laravel. Aberto slice draft `crm-krayin-reference-modernization-slice` com `spec/design/tasks`.
 - 2026-03-01: **MUDANCA CRITICA** solicitada pelo owner: ativar IA operacional da Persona 2 no CRM thread (sugestao, qualificacao e execucao assistida). Aberta feature `crm-persona2-ai-execution-slice` com `spec/design/tasks` em Draft para aprovacao formal antes de implementar.
 - 2026-03-01: **MUDANCA CRITICA** aplicada por solicitação do owner: CRM operacional no nivel inbox/thread/qualificacao; troca de foco para `crm-modern-inbox-2026-slice` em Implement+Validate.
 - 2026-03-01: implementado MVP de inbox CRM WhatsApp:

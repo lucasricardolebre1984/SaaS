@@ -1,10 +1,10 @@
 const VALID_LAYOUTS = ['fabio2', 'studio'];
-const VALID_PALETTES = ['ocean', 'forest', 'sunset'];
+const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const API_BASE_STORAGE_KEY = 'crm_console_api_base_v1';
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'fabio2', palette: 'ocean' },
+  tenant_automania: { layout: 'studio', palette: 'darkgreen' },
   tenant_clinica: { layout: 'studio', palette: 'forest' },
   tenant_comercial: { layout: 'studio', palette: 'sunset' }
 };
@@ -56,6 +56,24 @@ const threadAiSuggestBtn = document.getElementById('threadAiSuggestBtn');
 const threadQualifyBtn = document.getElementById('threadQualifyBtn');
 const threadAiExecuteBtn = document.getElementById('threadAiExecuteBtn');
 const threadUpdateStageBtn = document.getElementById('threadUpdateStageBtn');
+const viewInboxBtn = document.getElementById('viewInboxBtn');
+const viewPipelineBtn = document.getElementById('viewPipelineBtn');
+const viewLeadsBtn = document.getElementById('viewLeadsBtn');
+const inboxViewCardEl = document.getElementById('inboxViewCard');
+const pipelineViewCardEl = document.getElementById('pipelineViewCard');
+const leadsViewCardEl = document.getElementById('leadsViewCard');
+const pipelineBoardEl = document.getElementById('pipelineBoard');
+const leadSearchInput = document.getElementById('leadSearchInput');
+const leadStageFilter = document.getElementById('leadStageFilter');
+const leadChannelFilter = document.getElementById('leadChannelFilter');
+const leadGroupBy = document.getElementById('leadGroupBy');
+const leadClearFiltersBtn = document.getElementById('leadClearFiltersBtn');
+const detailLeadNameEl = document.getElementById('detailLeadName');
+const detailLeadStageEl = document.getElementById('detailLeadStage');
+const detailLeadPhoneEl = document.getElementById('detailLeadPhone');
+const detailLeadChannelEl = document.getElementById('detailLeadChannel');
+const detailLeadIdEl = document.getElementById('detailLeadId');
+const detailActivityListEl = document.getElementById('detailActivityList');
 
 const kpis = {
   new: document.getElementById('kpi-new'),
@@ -75,13 +93,31 @@ let latestAiQualifySuggestion = null;
 let inboxPollingTimer = null;
 let inboxPollingInFlight = false;
 const INBOX_POLL_INTERVAL_MS = 5000;
+let currentMainView = 'inbox';
+const filters = {
+  search: '',
+  stage: 'all',
+  channel: 'all',
+  groupBy: 'stage'
+};
+
+const PIPELINE_COLUMNS = [
+  { id: 'new', label: 'New' },
+  { id: 'contacted', label: 'Contacted' },
+  { id: 'qualified', label: 'Qualified' },
+  { id: 'proposal', label: 'Proposal' },
+  { id: 'negotiation', label: 'Negotiation' },
+  { id: 'won', label: 'Won' },
+  { id: 'lost', label: 'Lost' },
+  { id: 'nurturing', label: 'Nurturing' }
+];
 
 function normalizeLayout(layout) {
   return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
 }
 
 function normalizePalette(palette) {
-  return VALID_PALETTES.includes(palette) ? palette : 'ocean';
+  return VALID_PALETTES.includes(palette) ? palette : 'darkgreen';
 }
 
 function applyVisualMode({ layout, palette, persist = true }) {
@@ -251,10 +287,186 @@ function applyThreadMeta(conversation) {
   threadMetaEl.textContent = `${conversation.contact_e164} | stage: ${stage}`;
 }
 
+function getLinkedLeadForConversation(conversation) {
+  if (!conversation) return null;
+  return getLeadById(conversation.lead_id) ?? getLeadByPhone(conversation.contact_e164);
+}
+
+function renderDetailPanel() {
+  const conversation = selectedConversation();
+  const linkedLead = getLinkedLeadForConversation(conversation);
+  const fallbackName = conversation?.display_name || conversation?.contact_e164 || '--';
+  const leadStage = linkedLead?.stage || conversation?.lead_stage || '--';
+  const leadPhone = linkedLead?.phone_e164 || conversation?.contact_e164 || '--';
+  const leadChannel = linkedLead?.source_channel || 'whatsapp';
+  const leadId = linkedLead?.lead_id || '--';
+
+  detailLeadNameEl.textContent = fallbackName;
+  detailLeadStageEl.textContent = leadStage;
+  detailLeadPhoneEl.textContent = leadPhone;
+  detailLeadChannelEl.textContent = leadChannel;
+  detailLeadIdEl.textContent = leadId;
+
+  if (!selectedThreadMessages.length) {
+    detailActivityListEl.innerHTML = '<li class="empty">Sem atividades.</li>';
+    return;
+  }
+
+  const activities = [...selectedThreadMessages]
+    .sort((a, b) => new Date(b.created_at || b.occurred_at || 0).getTime() - new Date(a.created_at || a.occurred_at || 0).getTime())
+    .slice(0, 6)
+    .map((message) => {
+      const outbound = message.direction === 'outbound';
+      const direction = outbound ? 'Saida' : 'Entrada';
+      const text = normalizeBrandText(String(message.text ?? '').trim()) || '(sem texto)';
+      const delivery = String(message.delivery_state || 'unknown');
+      return `
+        <li>
+          <article class="detail-activity-card">
+            <div class="detail-activity-card__top">
+              <span class="detail-activity-badge ${outbound ? 'is-outbound' : 'is-inbound'}">${safeText(direction)}</span>
+              <span class="detail-activity-badge">${safeText(delivery)}</span>
+              <span class="detail-activity-time">${safeText(formatTime(message.created_at || message.occurred_at))}</span>
+            </div>
+            <div class="detail-activity-text">${safeText(text)}</div>
+          </article>
+        </li>
+      `;
+    })
+    .join('');
+
+  detailActivityListEl.innerHTML = activities;
+}
+
+function switchMainView(nextView) {
+  const validViews = new Set(['inbox', 'pipeline', 'leads']);
+  currentMainView = validViews.has(nextView) ? nextView : 'inbox';
+
+  inboxViewCardEl.classList.toggle('hidden', currentMainView !== 'inbox');
+  pipelineViewCardEl.classList.toggle('hidden', currentMainView !== 'pipeline');
+  leadsViewCardEl.classList.toggle('hidden', currentMainView !== 'leads');
+
+  viewInboxBtn.classList.toggle('is-active', currentMainView === 'inbox');
+  viewPipelineBtn.classList.toggle('is-active', currentMainView === 'pipeline');
+  viewLeadsBtn.classList.toggle('is-active', currentMainView === 'leads');
+}
+
+function getFilteredLeads(sourceLeads = []) {
+  return sourceLeads.filter((lead) => {
+    const stagePass = filters.stage === 'all' || String(lead.stage || '').toLowerCase() === filters.stage;
+    const channelPass = filters.channel === 'all' || String(lead.source_channel || '').toLowerCase() === filters.channel;
+    const rawSearch = filters.search.trim().toLowerCase();
+    if (!stagePass || !channelPass) return false;
+    if (!rawSearch) return true;
+    const haystack = [
+      String(lead.display_name || ''),
+      String(lead.phone_e164 || ''),
+      String(lead.lead_id || ''),
+      String(lead.stage || ''),
+      String(lead.source_channel || '')
+    ].join(' ').toLowerCase();
+    return haystack.includes(rawSearch);
+  });
+}
+
+function updateChannelFilterOptions(sourceLeads = []) {
+  const currentValue = String(leadChannelFilter.value || 'all').toLowerCase();
+  const channels = [...new Set(sourceLeads.map((lead) => String(lead.source_channel || '').toLowerCase()).filter(Boolean))].sort();
+  const options = ['<option value="all">Todos</option>']
+    .concat(channels.map((channel) => `<option value="${safeText(channel)}">${safeText(channel)}</option>`))
+    .join('');
+  leadChannelFilter.innerHTML = options;
+  if (channels.includes(currentValue)) {
+    leadChannelFilter.value = currentValue;
+  } else {
+    leadChannelFilter.value = 'all';
+    filters.channel = 'all';
+  }
+}
+
+function getPipelineColumnsForCurrentGroup(leads = []) {
+  if (filters.groupBy === 'channel') {
+    const dynamic = [...new Set(leads.map((lead) => String(lead.source_channel || '').trim()).filter(Boolean))]
+      .sort((left, right) => left.localeCompare(right, 'pt-BR'));
+    return dynamic.length
+      ? dynamic.map((channel) => ({ id: channel, label: channel }))
+      : [{ id: 'whatsapp', label: 'whatsapp' }];
+  }
+  return PIPELINE_COLUMNS;
+}
+
+function getLeadBucketValue(lead) {
+  if (filters.groupBy === 'channel') {
+    return String(lead.source_channel || 'whatsapp').trim() || 'whatsapp';
+  }
+  return String(lead.stage || 'new').trim() || 'new';
+}
+
+function renderPipeline(leads = []) {
+  if (!leads.length) {
+    pipelineBoardEl.innerHTML = '<p class="empty">Sem leads para renderizar pipeline.</p>';
+    return;
+  }
+
+  const columns = getPipelineColumnsForCurrentGroup(leads);
+  const grouped = new Map(columns.map((column) => [column.id, []]));
+  leads.forEach((lead) => {
+    const bucketKey = getLeadBucketValue(lead);
+    const bucket = grouped.get(bucketKey) ?? grouped.get(columns[0].id);
+    if (bucket) bucket.push(lead);
+  });
+
+  pipelineBoardEl.innerHTML = columns.map((column) => {
+    const columnLeads = grouped.get(column.id) ?? [];
+    const cards = columnLeads.length
+      ? columnLeads.map((lead) => {
+        return `
+          <article class="pipeline-lead" data-open-phone="${safeText(lead.phone_e164)}">
+            <div class="pipeline-lead__name">${safeText(lead.display_name || lead.phone_e164)}</div>
+            <div class="pipeline-lead__meta">${safeText(lead.phone_e164)}</div>
+            <div class="pipeline-lead__meta">${safeText(lead.source_channel || 'whatsapp')}</div>
+            <div class="pipeline-lead__stage">${safeText(lead.stage || '--')}</div>
+          </article>
+        `;
+      }).join('')
+      : '<p class="empty">Sem leads</p>';
+
+    return `
+      <section class="pipeline-column">
+        <header class="pipeline-column__header">
+          <span class="pipeline-column__title">${safeText(column.label)}</span>
+          <span class="pipeline-column__count">${columnLeads.length}</span>
+        </header>
+        <div class="pipeline-column__body">${cards}</div>
+      </section>
+    `;
+  }).join('');
+
+  pipelineBoardEl.querySelectorAll('[data-open-phone]').forEach((node) => {
+    node.addEventListener('click', () => {
+      const phone = node.getAttribute('data-open-phone') || '';
+      const conversation = conversationsCache.find((item) => item.contact_e164 === phone);
+      if (conversation) {
+        switchMainView('inbox');
+        openConversation(conversation.conversation_id, { markRead: true });
+      } else {
+        formStatus.textContent = `Lead ${phone} sem conversa ativa ainda.`;
+      }
+    });
+  });
+}
+
+function refreshLeadViews() {
+  const filtered = getFilteredLeads(leadsCache);
+  renderLeads(filtered);
+  renderPipeline(filtered);
+}
+
 function renderLeads(items) {
+  const totalLeads = leadsCache.length;
   if (!items.length) {
     leadRows.innerHTML = '<tr><td colspan="5" class="empty">Sem leads para este tenant.</td></tr>';
-    leadCount.textContent = '0 items';
+    leadCount.textContent = totalLeads > 0 ? `0 de ${totalLeads}` : '0 items';
     Object.values(kpis).forEach((el) => { el.textContent = '0'; });
     return;
   }
@@ -279,7 +491,7 @@ function renderLeads(items) {
     })
     .join('');
 
-  leadCount.textContent = `${items.length} items`;
+  leadCount.textContent = totalLeads === items.length ? `${items.length} items` : `${items.length} de ${totalLeads}`;
 
   const counts = { new: 0, qualified: 0, proposal: 0, won: 0, lost: 0 };
   items.forEach((lead) => {
@@ -294,6 +506,7 @@ function renderLeads(items) {
       const phone = button.getAttribute('data-open-phone') || '';
       const conversation = conversationsCache.find((item) => item.contact_e164 === phone);
       if (conversation) {
+        switchMainView('inbox');
         openConversation(conversation.conversation_id, { markRead: true });
       }
     });
@@ -314,6 +527,7 @@ function renderConversations(items) {
       renderThreadMessages();
       applyThreadMeta(null);
     }
+    renderDetailPanel();
     return;
   }
 
@@ -349,16 +563,19 @@ function renderConversations(items) {
       openConversation(conversationId, { markRead: true });
     });
   });
+  renderDetailPanel();
 }
 
 function renderThreadMessages() {
   if (!selectedConversationId) {
     threadMessagesEl.innerHTML = '<p class="empty">Sem conversa selecionada.</p>';
+    renderDetailPanel();
     return;
   }
 
   if (!selectedThreadMessages.length) {
     threadMessagesEl.innerHTML = '<p class="empty">Sem mensagens nesta conversa.</p>';
+    renderDetailPanel();
     return;
   }
 
@@ -399,6 +616,7 @@ function renderThreadMessages() {
     .join('');
 
   threadMessagesEl.scrollTop = threadMessagesEl.scrollHeight;
+  renderDetailPanel();
 }
 
 async function loadConversations() {
@@ -442,7 +660,7 @@ async function openConversation(conversationId, options = { markRead: false }) {
         method: 'POST'
       });
       await loadConversations();
-      renderLeads(leadsCache);
+      refreshLeadViews();
       applyThreadMeta(selectedConversation());
     }
   } catch (error) {
@@ -459,11 +677,13 @@ async function loadLeads() {
       throw new Error(body.error ?? `HTTP ${response.status}`);
     }
     leadsCache = body.items ?? [];
-    renderLeads(leadsCache);
+    updateChannelFilterOptions(leadsCache);
+    refreshLeadViews();
     formStatus.textContent = 'Leads atualizados.';
   } catch (error) {
     leadsCache = [];
-    renderLeads([]);
+    updateChannelFilterOptions([]);
+    refreshLeadViews();
     formStatus.textContent = `Erro ao carregar: ${error.message}`;
   }
 }
@@ -593,7 +813,7 @@ async function sendThreadMessage(event) {
     formStatus.textContent = 'Mensagem enviada para WhatsApp.';
     await openConversation(conversation.conversation_id, { markRead: false });
     await loadConversations();
-    renderLeads(leadsCache);
+    refreshLeadViews();
   } catch (error) {
     formStatus.textContent = `Falha no envio: ${error.message}`;
   }
@@ -729,7 +949,7 @@ async function handleAiExecute() {
       latestAiDraftReply = '';
       await openConversation(conversation.conversation_id, { markRead: false });
       await loadConversations();
-      renderLeads(leadsCache);
+      refreshLeadViews();
       formStatus.textContent = 'Resposta IA executada e enviada no WhatsApp.';
       return;
     }
@@ -797,6 +1017,36 @@ paletteSelect.addEventListener('change', (event) => {
 });
 
 applyTenantThemeBtn.addEventListener('click', applyTenantTheme);
+viewInboxBtn.addEventListener('click', () => switchMainView('inbox'));
+viewPipelineBtn.addEventListener('click', () => switchMainView('pipeline'));
+viewLeadsBtn.addEventListener('click', () => switchMainView('leads'));
+leadSearchInput.addEventListener('input', () => {
+  filters.search = leadSearchInput.value.trim();
+  refreshLeadViews();
+});
+leadStageFilter.addEventListener('change', () => {
+  filters.stage = String(leadStageFilter.value || 'all').toLowerCase();
+  refreshLeadViews();
+});
+leadChannelFilter.addEventListener('change', () => {
+  filters.channel = String(leadChannelFilter.value || 'all').toLowerCase();
+  refreshLeadViews();
+});
+leadGroupBy.addEventListener('change', () => {
+  filters.groupBy = String(leadGroupBy.value || 'stage').toLowerCase();
+  refreshLeadViews();
+});
+leadClearFiltersBtn.addEventListener('click', () => {
+  filters.search = '';
+  filters.stage = 'all';
+  filters.channel = 'all';
+  filters.groupBy = 'stage';
+  leadSearchInput.value = '';
+  leadStageFilter.value = 'all';
+  leadChannelFilter.value = 'all';
+  leadGroupBy.value = 'stage';
+  refreshLeadViews();
+});
 tenantIdInput.addEventListener('blur', () => {
   const tenant = tenantId().toLowerCase();
   if (TENANT_THEME_PRESETS[tenant]) {
@@ -1015,5 +1265,6 @@ window.addEventListener('beforeunload', () => {
 restoreVisualMode();
 apiBaseInput.value = loadApiBasePreference();
 applyBootstrapFromQuery();
+switchMainView(currentMainView);
 loadAllData();
 startInboxPolling();

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-layout="fabio2" data-palette="ocean">
+<html lang="pt-BR" data-layout="studio" data-palette="darkgreen">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -53,6 +53,7 @@
             <label>
               Paleta
               <select id="paletteSelect">
+                <option value="darkgreen">Dark Green</option>
                 <option value="ocean">Ocean</option>
                 <option value="forest">Forest</option>
                 <option value="sunset">Sunset</option>
@@ -73,7 +74,54 @@
               <article class="kpi card"><h3>Lost</h3><strong id="kpi-lost">0</strong></article>
             </section>
 
-            <section class="card leads-card">
+            <section class="card crm-view-tabs">
+              <button id="viewInboxBtn" class="view-tab is-active" type="button" data-view="inbox">Inbox</button>
+              <button id="viewPipelineBtn" class="view-tab" type="button" data-view="pipeline">Pipeline</button>
+              <button id="viewLeadsBtn" class="view-tab" type="button" data-view="leads">Leads</button>
+            </section>
+
+            <section class="card crm-toolbar">
+              <label>Buscar
+                <input id="leadSearchInput" type="search" placeholder="Nome, telefone ou ID..." />
+              </label>
+              <label>Stage
+                <select id="leadStageFilter">
+                  <option value="all">Todos</option>
+                  <option value="new">new</option>
+                  <option value="contacted">contacted</option>
+                  <option value="qualified">qualified</option>
+                  <option value="proposal">proposal</option>
+                  <option value="negotiation">negotiation</option>
+                  <option value="won">won</option>
+                  <option value="lost">lost</option>
+                  <option value="nurturing">nurturing</option>
+                </select>
+              </label>
+              <label>Canal
+                <select id="leadChannelFilter">
+                  <option value="all">Todos</option>
+                </select>
+              </label>
+              <label>Agrupar Pipeline
+                <select id="leadGroupBy">
+                  <option value="stage">Por stage</option>
+                  <option value="channel">Por canal</option>
+                </select>
+              </label>
+              <button id="leadClearFiltersBtn" class="btn btn--ghost" type="button">Limpar filtros</button>
+            </section>
+
+            <section id="pipelineViewCard" class="card pipeline-card hidden">
+              <header class="card__header">
+                <h3>Pipeline Kanban</h3>
+                <span class="status-pill">Krayin-like</span>
+              </header>
+              <div id="pipelineBoard" class="pipeline-board">
+                <p class="empty">Sem leads para renderizar pipeline.</p>
+              </div>
+            </section>
+
+            <section id="leadsViewCard" class="card leads-card hidden">
               <header class="card__header">
                 <h3>Leads</h3>
                 <span id="leadCount" class="status-pill">0 items</span>
@@ -97,7 +145,7 @@
               </div>
             </section>
 
-            <section class="card inbox-card">
+            <section id="inboxViewCard" class="card inbox-card">
               <header class="card__header">
                 <h3>Inbox WhatsApp</h3>
                 <span id="conversationCount" class="status-pill">0 conversas</span>
@@ -136,6 +184,29 @@
                     <button class="btn" type="submit">Enviar</button>
                   </form>
                 </section>
+                <aside class="detail-panel">
+                  <header class="detail-panel__header">
+                    <h4>Detalhe do Lead</h4>
+                  </header>
+                  <dl class="detail-grid">
+                    <dt>Nome</dt>
+                    <dd id="detailLeadName">--</dd>
+                    <dt>Stage</dt>
+                    <dd id="detailLeadStage">--</dd>
+                    <dt>Telefone</dt>
+                    <dd id="detailLeadPhone">--</dd>
+                    <dt>Canal</dt>
+                    <dd id="detailLeadChannel">--</dd>
+                    <dt>ID</dt>
+                    <dd id="detailLeadId">--</dd>
+                  </dl>
+                  <section class="detail-activities">
+                    <h5>Atividades</h5>
+                    <ul id="detailActivityList">
+                      <li class="empty">Sem atividades.</li>
+                    </ul>
+                  </section>
+                </aside>
               </div>
             </section>
           </section>

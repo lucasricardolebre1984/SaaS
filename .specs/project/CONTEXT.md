@@ -22,6 +22,13 @@ Fixed menu and modules:
 - Tenant-specific persona packs (core remains neutral)
 - RAG + semantic memory with auditable promotion pipeline
 
+## UI Direction (institutional)
+- Target visual baseline: enterprise CRM style (Krayin-like interaction model) with SaaS identity.
+- Default template theme: dark/green with configurable tenant overrides in Module 06.
+- Visual consistency required across all modules (01..06), preserving persona roles:
+  - Persona 1: owner cockpit/orchestration view.
+  - Persona 2: CRM WhatsApp execution/inbox/pipeline view.
+
 ## Legacy Position
 Source system `fabio2` is behavior reference only.
 No direct copy of mixed orchestration/persona/runtime code.

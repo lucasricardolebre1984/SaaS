@@ -33,6 +33,9 @@ Build a reusable SaaS base that can be cloned for future products, with strict p
 - Milestone 3 planning and production-readiness closure completed.
 - Milestone 4 memory/context/aprendizado closure completed.
 - Milestone 5 AWS bootstrap in progress (deploy dev + Postgres + operational gates).
+- CRM/UI modernization stream in planning:
+  - Krayin-like enterprise CRM layout as reference,
+  - dark/green institutional visual baseline across modules 01..06.
 - Canonical standard lock:
   - Persona 1 as full SaaS orchestrator (module-aware across 01..06).
   - Persona 2 as WhatsApp CRM execution specialist (lead capture/follow-up/conversion).

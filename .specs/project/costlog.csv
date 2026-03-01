@@ -191,3 +191,9 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,persist auto_reply_use_ai in tenant runtime config store
 2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,neutralized SaaS template branding and AI auto-reply context
 2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,legacy brand neutralization in CRM UI render path
+2026-03-01,internal,engineering-time,local,0.00,0.00,specification,crm-krayin-reference-modernization-slice avaliacao Krayin + blueprint contract-first
+2026-03-01,internal,engineering-time,local,0.00,0.00,specification,crm-krayin-reference-modernization-slice detalhamento visual dark-green e contexto institucional
+2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T0 benchmark Krayin instalado e T1 darkgreen owner/crm
+2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice UI v1 krayin-like e darkgreen studio tokens
+2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T6-v2 filtros pipeline e activities detail
+2026-03-01,internal,engineering-time,local,0.00,0.00,operations,crm-krayin-reference-modernization-slice deploy dev e validacao health
