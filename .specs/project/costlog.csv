@@ -188,3 +188,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,crm timeline timestamp normalization in UI to surface latest inbound at bottom
 2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,webhook inbound timestamp normalization for realtime CRM visibility
 2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,whatsapp inbound auto-reply switched from static-only to configurable AI-first mode
+2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,persist auto_reply_use_ai in tenant runtime config store

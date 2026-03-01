@@ -59,6 +59,7 @@ function normalizeIntegrationsCrmEvolution(input = {}, fallback = {}) {
     api_key: asString(raw.api_key, asString(fb.api_key, '')),
     instance_id: asString(raw.instance_id, asString(fb.instance_id, 'fabio')) || 'fabio',
     auto_reply_enabled: asBool(raw.auto_reply_enabled, asBool(fb.auto_reply_enabled, false)),
+    auto_reply_use_ai: asBool(raw.auto_reply_use_ai, asBool(fb.auto_reply_use_ai, false)),
     auto_reply_text: asString(
       raw.auto_reply_text,
       asString(fb.auto_reply_text, 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.')
