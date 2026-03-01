@@ -45,6 +45,7 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-01: refinamento de compatibilidade `sendText` (fallback com `text` + `textMessage.text`) publicado no commit `596c456`; deploy dev executado (`npm run deploy:dev -- -SkipNpmCi`), Ubuntu `/srv/SaaS` atualizado, `saas.service` ativo e health local/publico OK.
 - 2026-03-01: M5B-006 concluido no backend (`app-platform-api`): webhook Evolution inbound agora tenta auto-resposta via `message/sendText/{instance}` com fallback de payload (`text` -> `textMessage.text`) e diagnostico `auto_reply` no retorno sem quebrar `status=accepted`; testes verdes em `npx nx run app-platform-api:test` e `npx nx run contract-tests:contract-checks`.
 - 2026-02-28: Ubuntu atualizado: remote do git em /srv/SaaS alterado de fabio para https://github.com/lucasricardolebre1984/SaaS.git; pull origin main, npm ci, restart; health 200; servico ativo.
 - 2026-02-28: Proximo passo iniciado: deploy 87435e6 (path /srv/SaaS unificado) via npm run deploy:dev; UAT Evolution executado via SSH (tools/evolution-aws-check.sh): Evolution API 200 OK, instancia tenant_automania state open; health publico dev.automaniaai.com.br/api/health 200; evidencias em worklog, costlog, STATE, STATUS, PROXIMO-PASSO.

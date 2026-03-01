@@ -36,7 +36,7 @@ Date: 2026-02-26
    - no fluxo `message.inbound`, apos normalizacao e upsert de lead, tentar envio outbound em Evolution:
      - endpoint: `POST /message/sendText/{instanceId}`
      - tentativa 1 payload: `{ number, text }`
-     - fallback compatibilidade: `{ number, textMessage: { text } }`
+     - fallback compatibilidade: `{ number, text, textMessage: { text } }`
    - configuracao:
      - habilitacao por env `EVOLUTION_AUTO_REPLY_ENABLED` (default `true`)
      - template por env `EVOLUTION_AUTO_REPLY_TEXT` (default institucional curto)

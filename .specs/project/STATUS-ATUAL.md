@@ -64,7 +64,7 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
   - modulo 02 agora renderiza corretamente QR, pairing code e mensagens de estado.
 - Webhook inbound auto-reply (2026-03-01):
   - `POST /provider/evolution/webhook` agora tenta envio outbound via Evolution `message/sendText/{instance}`;
-  - fallback de compatibilidade de payload (`text` -> `textMessage.text`);
+  - fallback de compatibilidade de payload (`text` + `textMessage.text`);
   - retorno inclui diagnostico `auto_reply` sem quebrar `status=accepted`.
 - Deploy:
   - commit `8474a4e` em `main`.

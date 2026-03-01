@@ -44,7 +44,7 @@ Date: 2026-02-27
 - Status: completed
 - Output:
   - `apps/platform-api/src/app.mjs`
-    - webhook inbound passa a tentar auto-resposta Evolution `sendText` com fallback de compatibilidade (`text` -> `textMessage.text`);
+    - webhook inbound passa a tentar auto-resposta Evolution `sendText` com fallback de compatibilidade (`text` e `textMessage.text`);
     - resposta do webhook inclui `auto_reply.status` (`sent|failed|disabled|skipped`) sem quebrar `status=accepted`.
   - `apps/platform-api/src/app.test.mjs`
     - cobertura para inbound sem configuracao (`auto_reply.failed`);
