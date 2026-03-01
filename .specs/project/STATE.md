@@ -45,6 +45,7 @@ Active feature: crm-modern-inbox-2026-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-01: refinamento solicitado de fidelidade visual: chat do Owner recebeu fundo tonal dark/green e bolhas com largura natural (sem bloco branco integral), e CRM ganhou command bar/board-tabs + barras graficas dinamicas por stage/canal para aproximacao 99% do layout alvo sem clonar codigo externo.
 - 2026-03-01: deploy dev executado apos v2 visual (`npm run deploy:dev -- -SkipNpmCi`); `/srv/SaaS` atualizado, `saas.service` ativo e health publico `https://dev.automaniaai.com.br/api/health` confirmado `200/ok`.
 - 2026-03-01: v2 do layout CRM (slice `crm-krayin-reference-modernization-slice`) aplicada: toolbar de filtros (busca/stage/canal), agrupamento de pipeline por `stage` ou `channel`, cards de atividade no detalhe com badges (direcao/delivery) e navegação de views `Inbox/Pipeline/Leads`; builds owner/crm continuam verdes.
 - 2026-03-01: progresso visual no `crm-krayin-reference-modernization-slice`: CRM recebeu abas `Inbox/Pipeline/Leads`, kanban por stage, painel lateral de detalhe/atividades e defaults `studio + darkgreen`; Owner/CRM `studio` recoloridos para acento por token (sem hardcode azul). Builds `app-crm-console` e `app-owner-console` verdes.

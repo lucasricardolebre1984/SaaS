@@ -74,6 +74,8 @@ const detailLeadPhoneEl = document.getElementById('detailLeadPhone');
 const detailLeadChannelEl = document.getElementById('detailLeadChannel');
 const detailLeadIdEl = document.getElementById('detailLeadId');
 const detailActivityListEl = document.getElementById('detailActivityList');
+const stageBarsEl = document.getElementById('stageBars');
+const channelBarsEl = document.getElementById('channelBars');
 
 const kpis = {
   new: document.getElementById('kpi-new'),
@@ -456,10 +458,57 @@ function renderPipeline(leads = []) {
   });
 }
 
+function renderMetricBars(targetEl, entries = [], total = 0) {
+  if (!targetEl) return;
+  if (!entries.length || total <= 0) {
+    targetEl.innerHTML = '<p class="empty">Sem dados.</p>';
+    return;
+  }
+
+  targetEl.innerHTML = entries.map(([label, count]) => {
+    const pct = Math.max(0, Math.min(100, (Number(count || 0) / total) * 100));
+    return `
+      <article class="metric-bar">
+        <div class="metric-bar__label">
+          <span>${safeText(label)}</span>
+          <span>${count} (${pct.toFixed(0)}%)</span>
+        </div>
+        <div class="metric-bar__track">
+          <div class="metric-bar__fill" style="width:${pct.toFixed(2)}%"></div>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+function renderAnalytics(sourceLeads = []) {
+  const total = sourceLeads.length;
+  if (total === 0) {
+    renderMetricBars(stageBarsEl, [], 0);
+    renderMetricBars(channelBarsEl, [], 0);
+    return;
+  }
+
+  const stageMap = new Map();
+  const channelMap = new Map();
+  sourceLeads.forEach((lead) => {
+    const stage = String(lead.stage || 'unknown');
+    const channel = String(lead.source_channel || 'unknown');
+    stageMap.set(stage, Number(stageMap.get(stage) || 0) + 1);
+    channelMap.set(channel, Number(channelMap.get(channel) || 0) + 1);
+  });
+
+  const stageEntries = [...stageMap.entries()].sort((a, b) => b[1] - a[1]);
+  const channelEntries = [...channelMap.entries()].sort((a, b) => b[1] - a[1]);
+  renderMetricBars(stageBarsEl, stageEntries, total);
+  renderMetricBars(channelBarsEl, channelEntries, total);
+}
+
 function refreshLeadViews() {
   const filtered = getFilteredLeads(leadsCache);
   renderLeads(filtered);
   renderPipeline(filtered);
+  renderAnalytics(filtered);
 }
 
 function renderLeads(items) {

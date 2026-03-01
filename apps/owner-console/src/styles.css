@@ -415,9 +415,19 @@ body {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-4);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-bg-soft) 62%, transparent),
+      color-mix(in srgb, var(--color-card) 86%, transparent)
+    );
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .msg {
+  width: fit-content;
+  max-width: 82%;
   border-radius: 12px;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
@@ -426,13 +436,13 @@ body {
 }
 
 .msg--assistant {
-  background: #fbfdff;
+  background: color-mix(in srgb, var(--color-assistant) 82%, var(--color-card));
+  justify-self: start;
 }
 
 .msg--owner {
   background: var(--color-owner);
   justify-self: end;
-  max-width: 78%;
 }
 
 .composer {
@@ -997,11 +1007,22 @@ html[data-layout='studio'] .msg {
 }
 
 html[data-layout='studio'] .msg--assistant {
-  background: rgba(30, 64, 175, 0.16);
+  background: color-mix(in srgb, var(--color-primary) 24%, transparent);
 }
 
 html[data-layout='studio'] .msg--owner {
-  background: rgba(2, 132, 199, 0.16);
+  background: color-mix(in srgb, var(--color-primary-strong) 28%, transparent);
+}
+
+html[data-layout='studio'] .messages {
+  background:
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 32%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-bg) 74%, transparent),
+      color-mix(in srgb, var(--color-card) 90%, transparent)
+    );
+  border-color: rgba(148, 163, 184, 0.2);
 }
 
 html[data-layout='studio'] .approval-queue {

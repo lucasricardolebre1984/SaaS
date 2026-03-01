@@ -203,3 +203,4 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-03-01,19:45,20:08,0.38,Implement,crm-krayin-reference-modernization-slice,T1-T6,pair,done,CRM Krayin-like UI v1 com abas Inbox/Pipeline/Leads kanban por stage e painel de detalhe/atividades + recolor studio darkgreen no owner/crm
 2026-03-01,20:10,20:24,0.23,Implement,crm-krayin-reference-modernization-slice,T6-v2,pair,done,CRM v2 visual: filtros (search stage channel) agrupamento pipeline stage/channel e activities cards com badges mantendo fluxo inbox/IA
 2026-03-01,20:25,20:31,0.10,Operations,crm-krayin-reference-modernization-slice,Deploy-Dev,pair,done,Deploy dev apos CRM v2 via npm run deploy:dev -- -SkipNpmCi com health publico OK
+2026-03-01,20:36,20:51,0.25,Implement,crm-krayin-reference-modernization-slice,T6-v3,pair,done,Owner chat darkgreen tonal background and bubble sizing fix + CRM commandbar/board-tabs and dynamic stage-channel bar charts

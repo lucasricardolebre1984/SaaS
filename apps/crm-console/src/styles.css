@@ -265,6 +265,44 @@ select {
   align-content: start;
 }
 
+.crm-commandbar {
+  padding: var(--space-3);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.crm-commandbar__left,
+.crm-commandbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.crm-board-tabs {
+  padding: var(--space-2);
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.board-tab {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-card);
+  color: var(--color-text);
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.board-tab.is-active {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-card));
+}
+
 .crm-view-tabs {
   padding: var(--space-2);
   display: flex;
@@ -716,6 +754,55 @@ th {
   letter-spacing: 0.03em;
 }
 
+.analytics-wrap {
+  padding: var(--space-3);
+  display: grid;
+  gap: 14px;
+}
+
+.analytics-wrap h4 {
+  margin: 0 0 8px;
+  font-size: 0.84rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-bars {
+  display: grid;
+  gap: 8px;
+}
+
+.metric-bar {
+  display: grid;
+  gap: 4px;
+}
+
+.metric-bar__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 0.76rem;
+}
+
+.metric-bar__track {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-soft) 84%, transparent);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.metric-bar__fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-primary) 86%, black),
+    color-mix(in srgb, var(--color-primary-strong) 80%, black)
+  );
+}
+
 .form {
   display: grid;
   gap: var(--space-3);
@@ -957,6 +1044,11 @@ html[data-layout='studio'] .view-tab.is-active {
   background: color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
+html[data-layout='studio'] .board-tab.is-active {
+  border-color: color-mix(in srgb, var(--color-primary) 70%, white);
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
 html[data-layout='studio'] .pipeline-column,
 html[data-layout='studio'] .pipeline-lead,
 html[data-layout='studio'] .detail-activities li {
@@ -964,6 +1056,10 @@ html[data-layout='studio'] .detail-activities li {
 }
 
 html[data-layout='studio'] .crm-toolbar {
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+html[data-layout='studio'] .metric-bar__track {
   border-color: rgba(148, 163, 184, 0.22);
 }
 
@@ -995,6 +1091,11 @@ html[data-layout='studio'] .crm-toolbar {
 
   .crm-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crm-commandbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .conversation-list {
@@ -1061,6 +1162,11 @@ html[data-layout='studio'] .crm-toolbar {
 
   .crm-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .crm-commandbar__left,
+  .crm-commandbar__right {
+    width: 100%;
   }
 }
 

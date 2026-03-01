@@ -66,6 +66,25 @@
 
         <main class="workspace">
           <section class="main-grid">
+            <section class="card crm-commandbar">
+              <div class="crm-commandbar__left">
+                <button class="btn" type="button">Criar contato</button>
+                <button class="btn btn--ghost" type="button">Importar</button>
+                <button class="btn btn--ghost" type="button">Integrar</button>
+              </div>
+              <div class="crm-commandbar__right">
+                <button class="btn btn--ghost" type="button">Automatizar</button>
+                <button class="btn btn--ghost" type="button">Agrupar</button>
+                <button class="btn btn--ghost" type="button">Filtrar</button>
+              </div>
+            </section>
+
+            <section class="card crm-board-tabs">
+              <button class="board-tab is-active" type="button">Quadro principal</button>
+              <button class="board-tab" type="button">Cards</button>
+              <button class="board-tab" type="button">Pipeline</button>
+            </section>
+
             <section class="kpis">
               <article class="kpi card"><h3>New</h3><strong id="kpi-new">0</strong></article>
               <article class="kpi card"><h3>Qualified</h3><strong id="kpi-qualified">0</strong></article>
@@ -212,6 +231,26 @@
           </section>
 
           <aside class="side-stack">
+            <section class="card analytics-card">
+              <header class="card__header">
+                <h3>Barras Graficas</h3>
+              </header>
+              <div class="analytics-wrap">
+                <section>
+                  <h4>Distribuicao por Stage</h4>
+                  <div id="stageBars" class="metric-bars">
+                    <p class="empty">Sem dados.</p>
+                  </div>
+                </section>
+                <section>
+                  <h4>Distribuicao por Canal</h4>
+                  <div id="channelBars" class="metric-bars">
+                    <p class="empty">Sem dados.</p>
+                  </div>
+                </section>
+              </div>
+            </section>
+
             <section class="card">
               <header class="card__header">
                 <h3>Novo Lead</h3>

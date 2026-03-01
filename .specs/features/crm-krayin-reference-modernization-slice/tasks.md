@@ -66,6 +66,8 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
   - `Detail panel` com dados do lead e timeline recente de mensagens no inbox.
   - toolbar v2 de CRM com filtros (`buscar`, `stage`, `canal`) e agrupamento do pipeline (`stage`/`channel`);
   - cards de atividade enriquecidos com badges de direcao e delivery;
+  - command bar e board-tabs estilo CRM enterprise para aproximar fidelidade Krayin-like;
+  - barras graficas dinamicas (stage/canal) no painel lateral;
   - builds verdes apos v2:
     - `npx nx run app-crm-console:build`
     - `npx nx run app-owner-console:build`.
