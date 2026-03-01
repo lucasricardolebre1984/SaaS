@@ -27,7 +27,7 @@ Observacao modulo 02:
 
 ## Fluxo Diário (obrigatório)
 ```powershell
-cd C:\projetos\SaaS
+cd C:\projetos\fabio
 npm run init:day
 ```
 

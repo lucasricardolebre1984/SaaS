@@ -3,7 +3,7 @@
 This repository follows strict spec-driven execution to prevent scope drift and legacy contamination.
 
 ## Daily Commands (Mandatory)
-Run from `C:\projetos\SaaS`.
+Run from `C:\projetos\fabio`.
 
 1. New day / clean bootstrap:
    - `npm run init:day`
@@ -18,7 +18,7 @@ Raw PowerShell equivalents:
 - `.\tools\end-day.ps1 -ShowPending`
 
 ## Runtime Commands (SaaS Local)
-Run from `C:\projetos\SaaS`.
+Run from `C:\projetos\fabio`.
 
 Recommended unified runtime (single endpoint):
 - `npm run serve:saas`
@@ -85,7 +85,7 @@ Trigger matrix and installation runbook:
 - **Ubuntu (AWS dev):** caminhos no servidor:
   - App SaaS: `/srv/SaaS` (mesmo código do repo SaaS; `git pull` a partir daqui).
   - Evolution API: `/srv/evolution` (WhatsApp provider; o app em `/srv/SaaS` chama via `EVOLUTION_HTTP_BASE_URL` no `.env`).
-- **Local:** workspace pode ser `C:\projetos\fabio` ou `C:\projetos\SaaS`. O único lugar com nome "fabio" é o path local; no GitHub e no Ubuntu o repo/app é **SaaS** (path no servidor: `/srv/SaaS`). Comandos diários e runtime (`init:day`, `resume:day`, `serve:saas`, `deploy:dev`) rodam a partir da raiz do repo. Para arrumar Evolution no AWS, acessar o Ubuntu via SSH (runbook: `apps/platform-api/RUNBOOK-aws-deploy-dev.md`; script de diagnóstico: `tools/evolution-aws-check.sh`).
+- **Local:** workspace padrão é `C:\projetos\fabio`. No GitHub e no Ubuntu o repo/app é **SaaS** (path no servidor: `/srv/SaaS`). Comandos diários e runtime (`init:day`, `resume:day`, `serve:saas`, `deploy:dev`) rodam a partir da raiz do repo local (`C:\projetos\fabio`). Para arrumar Evolution no AWS, acessar o Ubuntu via SSH (runbook: `apps/platform-api/RUNBOOK-aws-deploy-dev.md`; script de diagnóstico: `tools/evolution-aws-check.sh`).
 
 ## Legacy Quarantine Rule (Critical)
 - Source system: `C:\projetos\fabio2`
