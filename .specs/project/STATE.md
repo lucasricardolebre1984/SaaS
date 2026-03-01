@@ -45,6 +45,7 @@ Active feature: crm-modern-inbox-2026-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-01: **MUDANCA CRITICA** solicitada pelo owner: ativar IA operacional da Persona 2 no CRM thread (sugestao, qualificacao e execucao assistida). Aberta feature `crm-persona2-ai-execution-slice` com `spec/design/tasks` em Draft para aprovacao formal antes de implementar.
 - 2026-03-01: **MUDANCA CRITICA** aplicada por solicitação do owner: CRM operacional no nivel inbox/thread/qualificacao; troca de foco para `crm-modern-inbox-2026-slice` em Implement+Validate.
 - 2026-03-01: implementado MVP de inbox CRM WhatsApp:
   - novo store de conversas/mensagens file+postgres (`crm-conversation-store-*`);
@@ -640,3 +641,9 @@ Active feature: crm-modern-inbox-2026-slice
 
 - 2026-02-27 M5B-006 hotfix aplicado: owner chat menos poluido (erros compactos), auto-sync de runtime OpenAI em falhas openai_not_configured, recuperacao de sessao no modulo 01, fechamento de menu mobile robusto e QR Evolution com force_new + polling extendido + parser tolerante.
 - 2026-02-27 M5B-007 hotfix aplicado: endpoint QR da Evolution nao recria instancia quando connect responde 200 sem QR; agora consulta `connectionState` explicito e faz polling de connect/state, reduzindo loops de startup e falso pending por reset agressivo.
+
+## 2026-03-01 - crm-persona2-ai-execution-slice
+- Fase: Implement + Validate (T1..T9) concluida neste ciclo com gates verdes.
+- Entrega: contratos IA CRM + endpoints suggest/qualify/execute + runtime-config tenant + UI owner/crm.
+- Proximo passo recomendado: UAT em dev.automaniaai.com.br com tenant_automania (inbound real -> suggest -> execute send -> qualify -> execute stage).
+

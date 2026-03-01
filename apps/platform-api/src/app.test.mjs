@@ -52,7 +52,10 @@ function validRuntimeConfigUpsertRequest(overrides = {}) {
           whatsapp_agent_prompt: 'Atenda com clareza e registre intencao.'
         },
         execution: {
-          confirmations_enabled: false
+          confirmations_enabled: false,
+          whatsapp_ai_enabled: true,
+          whatsapp_ai_mode: 'assist_execute',
+          whatsapp_ai_min_confidence: 0.7
         }
       },
       ...overrides
@@ -2389,6 +2392,9 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
     assert.equal(upsertBody.response.runtime.owner_response_mode, 'openai');
     assert.equal(upsertBody.response.openai.api_key_configured, true);
     assert.equal(upsertBody.response.execution.confirmations_enabled, false);
+    assert.equal(upsertBody.response.execution.whatsapp_ai_enabled, true);
+    assert.equal(upsertBody.response.execution.whatsapp_ai_mode, 'assist_execute');
+    assert.equal(upsertBody.response.execution.whatsapp_ai_min_confidence, 0.7);
 
     const getRes = await fetch(
       `${runtimeBaseUrl}/v1/owner-concierge/runtime-config?tenant_id=tenant_automania`
@@ -2399,6 +2405,8 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
     assert.equal(getBody.runtime.owner_response_mode, 'openai');
     assert.equal(getBody.openai.api_key_configured, true);
     assert.equal(getBody.personas.owner_concierge_prompt.length > 0, true);
+    assert.equal(getBody.execution.whatsapp_ai_enabled, true);
+    assert.equal(getBody.execution.whatsapp_ai_mode, 'assist_execute');
   } finally {
     await new Promise((resolve, reject) => runtimeServer.close((err) => (err ? reject(err) : resolve())));
     await fs.rm(runtimeStorageDir, { recursive: true, force: true });
@@ -3522,6 +3530,309 @@ test('CRM conversation endpoints open thread and send outbound message', async (
     });
     await new Promise((resolve, reject) => {
       evolutionServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await fs.rm(localStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('CRM AI endpoints suggest reply, qualify stage and execute actions with idempotency', async () => {
+  const localStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-crm-ai-endpoints-'));
+  const evolutionRequests = [];
+  const evolutionServer = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const rawBody = Buffer.concat(chunks).toString('utf8');
+    const parsedBody = rawBody ? JSON.parse(rawBody) : {};
+    evolutionRequests.push({
+      method: req.method,
+      url: req.url,
+      body: parsedBody
+    });
+
+    if (req.method === 'POST' && req.url === '/message/sendText/tenant_automania') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ key: { id: `provider-ai-${evolutionRequests.length}` } }));
+      return;
+    }
+
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not_found' }));
+  });
+  await new Promise((resolve) => evolutionServer.listen(0, '127.0.0.1', resolve));
+  const evolutionAddress = evolutionServer.address();
+  const evolutionBaseUrl = `http://127.0.0.1:${evolutionAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: localStorageDir,
+      customerStorageDir: path.join(localStorageDir, 'customers'),
+      agendaStorageDir: path.join(localStorageDir, 'agenda'),
+      billingStorageDir: path.join(localStorageDir, 'billing'),
+      leadStorageDir: path.join(localStorageDir, 'crm'),
+      crmAutomationStorageDir: path.join(localStorageDir, 'crm-automation'),
+      crmConversationStorageDir: path.join(localStorageDir, 'crm-conversations'),
+      ownerMemoryStorageDir: path.join(localStorageDir, 'owner-memory'),
+      tenantRuntimeConfigStorageDir: path.join(localStorageDir, 'runtime-config'),
+      evolutionHttpBaseUrl: evolutionBaseUrl,
+      evolutionApiKey: 'test-evolution-key',
+      evolutionInstanceId: 'tenant_automania',
+      evolutionAutoReplyEnabled: false
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const inboundPayload = {
+      event: 'MESSAGES_UPSERT',
+      instance: 'tenant_automania',
+      data: {
+        key: {
+          id: 'thread-ai-msg-in-001',
+          remoteJid: '5511970010020@s.whatsapp.net',
+          fromMe: false
+        },
+        pushName: 'Lead AI',
+        message: { conversation: 'Oi, quero saber preco e como funciona.' }
+      },
+      date_time: '2026-03-01T12:10:00.000Z'
+    };
+    const webhookRes = await fetch(`${appBaseUrl}/provider/evolution/webhook`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(inboundPayload)
+    });
+    assert.equal(webhookRes.status, 200);
+
+    const conversationsRes = await fetch(`${appBaseUrl}/v1/crm/conversations?tenant_id=tenant_automania`);
+    assert.equal(conversationsRes.status, 200);
+    const conversationsBody = await conversationsRes.json();
+    const conversation = conversationsBody.items[0];
+    assert.ok(conversation?.conversation_id);
+
+    const suggestRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/ai/suggest-reply`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          request: {
+            request_id: 'be810abe-53cb-4449-b337-6d5677882800',
+            tenant_id: 'tenant_automania',
+            tone: 'consultivo'
+          }
+        })
+      }
+    );
+    assert.equal(suggestRes.status, 200);
+    const suggestBody = await suggestRes.json();
+    assert.equal(suggestBody.response.status, 'ok');
+    assert.equal(typeof suggestBody.response.draft_reply, 'string');
+    assert.equal(suggestBody.response.draft_reply.length > 0, true);
+
+    const qualifyRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/ai/qualify`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          request: {
+            request_id: '5f6dd57c-02c7-4710-a7f7-6e0b9eb84afc',
+            tenant_id: 'tenant_automania'
+          }
+        })
+      }
+    );
+    assert.equal(qualifyRes.status, 200);
+    const qualifyBody = await qualifyRes.json();
+    assert.equal(qualifyBody.response.status, 'ok');
+    assert.equal(typeof qualifyBody.response.current_stage, 'string');
+    assert.equal(typeof qualifyBody.response.suggested_stage, 'string');
+    assert.equal(typeof qualifyBody.response.confidence, 'number');
+
+    const executeSendRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/ai/execute`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          request: {
+            request_id: '165c99fa-1222-4e27-a50e-6f39e2e3eecf',
+            tenant_id: 'tenant_automania',
+            action: 'send_reply',
+            client_request_id: 'client-ai-send-001',
+            payload: {
+              reply_text: suggestBody.response.draft_reply
+            }
+          }
+        })
+      }
+    );
+    assert.equal(executeSendRes.status, 200);
+    const executeSendBody = await executeSendRes.json();
+    assert.equal(executeSendBody.response.status, 'ok');
+    assert.equal(executeSendBody.response.executed_action, 'send_reply');
+
+    const executeSendAgainRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/ai/execute`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          request: {
+            request_id: '165c99fa-1222-4e27-a50e-6f39e2e3eec0',
+            tenant_id: 'tenant_automania',
+            action: 'send_reply',
+            client_request_id: 'client-ai-send-001',
+            payload: {
+              reply_text: suggestBody.response.draft_reply
+            }
+          }
+        })
+      }
+    );
+    assert.equal(executeSendAgainRes.status, 200);
+    const executeSendAgainBody = await executeSendAgainRes.json();
+    assert.equal(executeSendAgainBody.response.status, 'idempotent');
+
+    const executeStageRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/ai/execute`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          request: {
+            request_id: 'f0ff28df-f45e-4f22-b57e-6d3146ad28a3',
+            tenant_id: 'tenant_automania',
+            action: 'update_stage',
+            client_request_id: 'client-ai-stage-001',
+            payload: {
+              to_stage: 'contacted',
+              trigger: 'first_contact_attempt'
+            }
+          }
+        })
+      }
+    );
+    assert.equal(executeStageRes.status, 200);
+    const executeStageBody = await executeStageRes.json();
+    assert.equal(executeStageBody.response.executed_action, 'update_stage');
+    assert.equal(executeStageBody.response.lead_result.stage, 'contacted');
+
+    const messagesRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/messages?tenant_id=tenant_automania`
+    );
+    assert.equal(messagesRes.status, 200);
+    const messagesBody = await messagesRes.json();
+    const aiOutbound = messagesBody.items.find((item) => item.metadata?.source === 'crm_ai_execute');
+    assert.ok(aiOutbound);
+    assert.equal(evolutionRequests.length >= 1, true);
+  } finally {
+    await new Promise((resolve, reject) => {
+      appServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await new Promise((resolve, reject) => {
+      evolutionServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await fs.rm(localStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('CRM AI execute is blocked when tenant runtime mode is suggest_only', async () => {
+  const localStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-crm-ai-policy-'));
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: localStorageDir,
+      customerStorageDir: path.join(localStorageDir, 'customers'),
+      agendaStorageDir: path.join(localStorageDir, 'agenda'),
+      billingStorageDir: path.join(localStorageDir, 'billing'),
+      leadStorageDir: path.join(localStorageDir, 'crm'),
+      crmAutomationStorageDir: path.join(localStorageDir, 'crm-automation'),
+      crmConversationStorageDir: path.join(localStorageDir, 'crm-conversations'),
+      ownerMemoryStorageDir: path.join(localStorageDir, 'owner-memory'),
+      tenantRuntimeConfigStorageDir: path.join(localStorageDir, 'runtime-config'),
+      evolutionAutoReplyEnabled: false
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const runtimeRes = await fetch(`${appBaseUrl}/v1/owner-concierge/runtime-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: 'b8caacfa-c4fa-4ce9-a181-bdbdd5d75439',
+          tenant_id: 'tenant_automania',
+          config: {
+            execution: {
+              whatsapp_ai_enabled: true,
+              whatsapp_ai_mode: 'suggest_only',
+              whatsapp_ai_min_confidence: 0.7
+            }
+          }
+        }
+      })
+    });
+    assert.equal(runtimeRes.status, 200);
+
+    const inboundPayload = {
+      event: 'MESSAGES_UPSERT',
+      instance: 'tenant_automania',
+      data: {
+        key: {
+          id: 'thread-ai-msg-in-002',
+          remoteJid: '5511970010021@s.whatsapp.net',
+          fromMe: false
+        },
+        pushName: 'Lead AI Policy',
+        message: { conversation: 'Ola.' }
+      },
+      date_time: '2026-03-01T12:20:00.000Z'
+    };
+    const webhookRes = await fetch(`${appBaseUrl}/provider/evolution/webhook`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(inboundPayload)
+    });
+    assert.equal(webhookRes.status, 200);
+
+    const conversationsRes = await fetch(`${appBaseUrl}/v1/crm/conversations?tenant_id=tenant_automania`);
+    assert.equal(conversationsRes.status, 200);
+    const conversationsBody = await conversationsRes.json();
+    const conversation = conversationsBody.items[0];
+    assert.ok(conversation?.conversation_id);
+
+    const executeRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/ai/execute`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          request: {
+            request_id: 'eb1f4d7b-b3fc-4f8a-8cf3-83caec6e5e90',
+            tenant_id: 'tenant_automania',
+            action: 'send_reply',
+            client_request_id: 'client-ai-policy-001',
+            payload: {
+              reply_text: 'Mensagem bloqueada por policy.'
+            }
+          }
+        })
+      }
+    );
+    assert.equal(executeRes.status, 409);
+    const executeBody = await executeRes.json();
+    assert.equal(executeBody.error, 'crm_ai_execute_blocked');
+    assert.equal(executeBody.mode, 'suggest_only');
+  } finally {
+    await new Promise((resolve, reject) => {
+      appServer.close((err) => (err ? reject(err) : resolve()));
     });
     await fs.rm(localStorageDir, { recursive: true, force: true });
   }

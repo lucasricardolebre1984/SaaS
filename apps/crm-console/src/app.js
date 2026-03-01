@@ -52,7 +52,9 @@ const threadMessagesEl = document.getElementById('threadMessages');
 const threadSendForm = document.getElementById('threadSendForm');
 const threadMessageInput = document.getElementById('threadMessageInput');
 const threadStageSelect = document.getElementById('threadStageSelect');
+const threadAiSuggestBtn = document.getElementById('threadAiSuggestBtn');
 const threadQualifyBtn = document.getElementById('threadQualifyBtn');
+const threadAiExecuteBtn = document.getElementById('threadAiExecuteBtn');
 const threadUpdateStageBtn = document.getElementById('threadUpdateStageBtn');
 
 const kpis = {
@@ -68,6 +70,8 @@ let leadsCache = [];
 let conversationsCache = [];
 let selectedConversationId = null;
 let selectedThreadMessages = [];
+let latestAiDraftReply = '';
+let latestAiQualifySuggestion = null;
 
 function normalizeLayout(layout) {
   return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
@@ -296,6 +300,8 @@ function renderConversations(items) {
     if (selectedConversationId) {
       selectedConversationId = null;
       selectedThreadMessages = [];
+      latestAiDraftReply = '';
+      latestAiQualifySuggestion = null;
       renderThreadMessages();
       applyThreadMeta(null);
     }
@@ -380,6 +386,8 @@ async function loadConversations() {
 
 async function openConversation(conversationId, options = { markRead: false }) {
   selectedConversationId = conversationId;
+  latestAiDraftReply = '';
+  latestAiQualifySuggestion = null;
   renderConversations(conversationsCache);
   const conversation = selectedConversation();
   applyThreadMeta(conversation);
@@ -534,6 +542,52 @@ async function sendThreadMessage(event) {
   }
 }
 
+async function postConversationAi(conversationId, suffix, requestPayload = {}) {
+  const response = await fetch(
+    `${apiBase()}/v1/crm/conversations/${encodeURIComponent(conversationId)}/ai/${suffix}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: crypto.randomUUID(),
+          tenant_id: tenantId(),
+          ...requestPayload
+        }
+      })
+    }
+  );
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.details || body.error || `HTTP ${response.status}`);
+  }
+  return body.response ?? body;
+}
+
+async function handleAiSuggestReply() {
+  const conversation = selectedConversation();
+  if (!conversation) {
+    formStatus.textContent = 'Selecione uma conversa para sugerir resposta por IA.';
+    return;
+  }
+
+  try {
+    formStatus.textContent = 'Gerando sugestao de resposta por IA...';
+    const response = await postConversationAi(conversation.conversation_id, 'suggest-reply', {
+      tone: 'consultivo'
+    });
+    const draft = String(response.draft_reply || '').trim();
+    if (!draft) {
+      throw new Error('IA retornou rascunho vazio');
+    }
+    latestAiDraftReply = draft;
+    threadMessageInput.value = draft;
+    formStatus.textContent = `Rascunho IA pronto (confianca ${Number(response.confidence ?? 0).toFixed(2)}).`;
+  } catch (error) {
+    formStatus.textContent = `Falha ao sugerir resposta IA: ${error.message}`;
+  }
+}
+
 async function updateLeadStage(leadId, currentStage, nextStage) {
   const key = `${currentStage}->${nextStage}`;
   const trigger = STAGE_TRIGGERS[key];
@@ -571,35 +625,76 @@ async function updateLeadStage(leadId, currentStage, nextStage) {
 async function handleQualifyLead() {
   const conversation = selectedConversation();
   if (!conversation) {
-    formStatus.textContent = 'Selecione uma conversa para qualificar.';
-    return;
-  }
-
-  const linkedLead = getLeadById(conversation.lead_id) ?? getLeadByPhone(conversation.contact_e164);
-  if (!linkedLead) {
-    formStatus.textContent = 'Conversa sem lead vinculado ainda.';
+    formStatus.textContent = 'Selecione uma conversa para qualificar por IA.';
     return;
   }
 
   try {
-    formStatus.textContent = 'Aplicando qualificacao...';
-    if (linkedLead.stage === 'new') {
-      await updateLeadStage(linkedLead.lead_id, 'new', 'contacted');
-      await updateLeadStage(linkedLead.lead_id, 'contacted', 'qualified');
-    } else if (linkedLead.stage === 'contacted') {
-      await updateLeadStage(linkedLead.lead_id, 'contacted', 'qualified');
-    } else {
-      formStatus.textContent = `Lead ja esta em stage ${linkedLead.stage}.`;
+    formStatus.textContent = 'Analisando qualificacao por IA...';
+    const response = await postConversationAi(conversation.conversation_id, 'qualify');
+    latestAiQualifySuggestion = response;
+
+    const suggestedStage = String(response.suggested_stage || '').trim();
+    if (suggestedStage) {
+      threadStageSelect.value = suggestedStage;
+    }
+    formStatus.textContent = `IA sugeriu stage ${response.suggested_stage} (confianca ${Number(response.confidence ?? 0).toFixed(2)}).`;
+  } catch (error) {
+    formStatus.textContent = `Falha ao qualificar por IA: ${error.message}`;
+  }
+}
+
+async function executeAiAction(conversationId, action, payload) {
+  return postConversationAi(conversationId, 'execute', {
+    action,
+    client_request_id: crypto.randomUUID(),
+    payload
+  });
+}
+
+async function handleAiExecute() {
+  const conversation = selectedConversation();
+  if (!conversation) {
+    formStatus.textContent = 'Selecione uma conversa para executar IA.';
+    return;
+  }
+
+  const replyText = threadMessageInput.value.trim() || latestAiDraftReply;
+  const qualifySuggestion = latestAiQualifySuggestion;
+
+  try {
+    if (replyText) {
+      formStatus.textContent = 'Executando envio IA no WhatsApp...';
+      await executeAiAction(conversation.conversation_id, 'send_reply', {
+        reply_text: replyText
+      });
+      threadMessageInput.value = '';
+      latestAiDraftReply = '';
+      await openConversation(conversation.conversation_id, { markRead: false });
+      await loadConversations();
+      renderLeads(leadsCache);
+      formStatus.textContent = 'Resposta IA executada e enviada no WhatsApp.';
       return;
     }
 
-    await loadAllData();
-    if (selectedConversationId) {
-      await openConversation(selectedConversationId, { markRead: false });
+    if (qualifySuggestion?.suggested_stage && qualifySuggestion?.required_trigger) {
+      formStatus.textContent = 'Executando update de stage por IA...';
+      await executeAiAction(conversation.conversation_id, 'update_stage', {
+        to_stage: qualifySuggestion.suggested_stage,
+        trigger: qualifySuggestion.required_trigger,
+        reason_code: 'ia_qualificacao_assistida'
+      });
+      await loadAllData();
+      if (selectedConversationId) {
+        await openConversation(selectedConversationId, { markRead: false });
+      }
+      formStatus.textContent = `Stage atualizado por IA para ${qualifySuggestion.suggested_stage}.`;
+      return;
     }
-    formStatus.textContent = 'Lead qualificado com sucesso.';
+
+    formStatus.textContent = 'Sem acao IA pronta: gere sugestao de resposta ou qualificacao antes de executar.';
   } catch (error) {
-    formStatus.textContent = `Falha ao qualificar: ${error.message}`;
+    formStatus.textContent = `Falha ao executar IA: ${error.message}`;
   }
 }
 
@@ -659,7 +754,9 @@ tenantIdInput.addEventListener('blur', () => {
 reloadBtn.addEventListener('click', loadAllData);
 leadForm.addEventListener('submit', createLead);
 threadSendForm.addEventListener('submit', sendThreadMessage);
+threadAiSuggestBtn.addEventListener('click', handleAiSuggestReply);
 threadQualifyBtn.addEventListener('click', handleQualifyLead);
+threadAiExecuteBtn.addEventListener('click', handleAiExecute);
 threadUpdateStageBtn.addEventListener('click', handleUpdateStage);
 
 apiBaseInput.addEventListener('change', () => {

@@ -71,6 +71,8 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
   - novos endpoints de inbox/thread/envio/read no modulo 02;
   - webhook Evolution persiste inbound e atualiza delivery/read por `message_id`;
   - console CRM agora abre conversa, mostra thread, permite enviar e qualificar lead.
+- Proximo slice de IA (2026-03-01):
+  - criado draft `crm-persona2-ai-execution-slice` com spec/design/tasks para Persona 2 IA no thread (suggest-reply, qualify, execute assistido), pendente aprovacao para implementar.
 - Deploy:
   - commit `8474a4e` em `main`.
   - rollout executado com `npm run deploy:dev`.
@@ -139,3 +141,10 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 - Fluxo operacional atual aprovado: codar/validar local -> `git push origin main` -> `npm run deploy:dev` (pull/restart no Ubuntu).
 - Branch protection reaplicada na `main` (status check + review + enforce admins).
 - Repo SaaS no GitHub e caminhos Ubuntu documentados em AGENTS.md (seção "Repository and Environments"); runbook e script Evolution alinhados.
+
+## Update 2026-03-01 (Persona 2 AI CRM)
+- Implementados endpoints: POST /v1/crm/conversations/:id/ai/suggest-reply, .../ai/qualify, .../ai/execute com policy tenant (suggest_only|assist_execute) e idempotencia por client_request_id.
+- Runtime-config estendido com xecution.whatsapp_ai_enabled, xecution.whatsapp_ai_mode, xecution.whatsapp_ai_min_confidence e sincronizado no menu 06.
+- CRM UI atualizado com botoes de IA (sugerir, qualificar, executar) e fluxo de execucao na thread.
+- Gates validados: pp-platform-api:test, pp-crm-console:build, pp-owner-console:build, contract-tests:contract-checks.
+

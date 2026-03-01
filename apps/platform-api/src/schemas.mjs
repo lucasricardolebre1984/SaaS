@@ -43,6 +43,9 @@ const campaignStateUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/c
 const campaignListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/campaign-list.schema.json');
 const followupCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/followup-create.schema.json');
 const followupListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/followup-list.schema.json');
+const crmAiSuggestReplySchema = readJson('libs/mod-02-whatsapp-crm/contracts/crm-ai-suggest-reply.schema.json');
+const crmAiQualifySchema = readJson('libs/mod-02-whatsapp-crm/contracts/crm-ai-qualify.schema.json');
+const crmAiExecuteSchema = readJson('libs/mod-02-whatsapp-crm/contracts/crm-ai-execute.schema.json');
 const customerCreateSchema = readJson('libs/mod-03-clientes/contracts/customer-create.schema.json');
 const customerListSchema = readJson('libs/mod-03-clientes/contracts/customer-list.schema.json');
 const customerEventsSchema = readJson('libs/mod-03-clientes/contracts/customer-events.schema.json');
@@ -88,6 +91,9 @@ const validateCampaignStateUpdateRequest = ajv.compile(campaignStateUpdateSchema
 const validateCampaignListResponse = ajv.compile(campaignListSchema);
 const validateFollowupCreateRequest = ajv.compile(followupCreateSchema.properties.request);
 const validateFollowupListResponse = ajv.compile(followupListSchema);
+const validateCrmAiSuggestReplyRequest = ajv.compile(crmAiSuggestReplySchema.properties.request);
+const validateCrmAiQualifyRequest = ajv.compile(crmAiQualifySchema.properties.request);
+const validateCrmAiExecuteRequest = ajv.compile(crmAiExecuteSchema.properties.request);
 const validateCustomerCreateRequest = ajv.compile(customerCreateSchema.properties.request);
 const validateCustomerListResponse = ajv.compile(customerListSchema);
 const validateCustomerLifecycleEventPayload = ajv.compile(customerEventsSchema);
@@ -288,6 +294,24 @@ export function followupCreateValid(body) {
 export function followupListValid(body) {
   const ok = validateFollowupListResponse(body);
   return { ok: Boolean(ok), errors: validateFollowupListResponse.errors ?? [] };
+}
+
+export function crmAiSuggestReplyValid(body) {
+  const ok = validateCrmAiSuggestReplyRequest(body?.request);
+  const errors = [...(validateCrmAiSuggestReplyRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function crmAiQualifyValid(body) {
+  const ok = validateCrmAiQualifyRequest(body?.request);
+  const errors = [...(validateCrmAiQualifyRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function crmAiExecuteValid(body) {
+  const ok = validateCrmAiExecuteRequest(body?.request);
+  const errors = [...(validateCrmAiExecuteRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
 }
 
 export function orchestrationCommandValid(body) {

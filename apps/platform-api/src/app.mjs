@@ -12,6 +12,9 @@ import {
   contextPromotionValid,
   contextRetrievalRequestValid,
   contextRetrievalResponseValid,
+  crmAiExecuteValid,
+  crmAiQualifyValid,
+  crmAiSuggestReplyValid,
   contextSummaryValid,
   customerCreateValid,
   customerLifecycleEventPayloadValid,
@@ -39,7 +42,11 @@ import {
 } from './schemas.mjs';
 import { createOrchestrationStore } from './orchestration-store.mjs';
 import { createTaskPlanner } from './task-planner.mjs';
-import { normalizeLeadStageForPublicEvent } from './lead-funnel.mjs';
+import {
+  findLeadStageTransition,
+  listLeadStageTransitionsFrom,
+  normalizeLeadStageForPublicEvent
+} from './lead-funnel.mjs';
 import { createCustomerStore } from './customer-store.mjs';
 import { createAgendaStore } from './agenda-store.mjs';
 import { createBillingStore } from './billing-store.mjs';
@@ -403,6 +410,25 @@ function boolOrFallback(value, fallback = false) {
   return fallback;
 }
 
+function numberOrFallback(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return parsed;
+}
+
+function clampNumber(value, min = 0, max = 1) {
+  if (!Number.isFinite(value)) return min;
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+function normalizeCrmAiMode(value, fallback = 'assist_execute') {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (raw === 'suggest_only' || raw === 'assist_execute') return raw;
+  return fallback;
+}
+
 function parseBooleanFlag(value, fallback = false) {
   if (typeof value === 'boolean') return value;
   const normalized = String(value ?? '').trim().toLowerCase();
@@ -563,6 +589,22 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
       confirmations_enabled: boolOrFallback(
         executionRaw.confirmations_enabled,
         boolOrFallback(executionFallback.confirmations_enabled, false)
+      ),
+      whatsapp_ai_enabled: boolOrFallback(
+        executionRaw.whatsapp_ai_enabled,
+        boolOrFallback(executionFallback.whatsapp_ai_enabled, true)
+      ),
+      whatsapp_ai_mode: normalizeCrmAiMode(
+        executionRaw.whatsapp_ai_mode,
+        normalizeCrmAiMode(executionFallback.whatsapp_ai_mode, 'assist_execute')
+      ),
+      whatsapp_ai_min_confidence: clampNumber(
+        numberOrFallback(
+          executionRaw.whatsapp_ai_min_confidence,
+          numberOrFallback(executionFallback.whatsapp_ai_min_confidence, 0.7)
+        ),
+        0,
+        1
       )
     },
     integrations: {
@@ -801,7 +843,10 @@ function createRuntimeConfigSummary(tenantId, configRecord) {
       whatsapp_agent_prompt: normalized.personas.whatsapp_agent_prompt
     },
     execution: {
-      confirmations_enabled: normalized.execution.confirmations_enabled
+      confirmations_enabled: normalized.execution.confirmations_enabled,
+      whatsapp_ai_enabled: normalized.execution.whatsapp_ai_enabled,
+      whatsapp_ai_mode: normalized.execution.whatsapp_ai_mode,
+      whatsapp_ai_min_confidence: normalized.execution.whatsapp_ai_min_confidence
     },
     integrations: {
       crm_evolution: {
@@ -811,6 +856,326 @@ function createRuntimeConfigSummary(tenantId, configRecord) {
       }
     },
     updated_at: typeof configRecord?.updated_at === 'string' ? configRecord.updated_at : null
+  };
+}
+
+function cleanShortText(value, maxLength = 500) {
+  const raw = String(value ?? '').trim().replace(/\s+/g, ' ');
+  if (!raw) return '';
+  if (raw.length <= maxLength) return raw;
+  return `${raw.slice(0, maxLength - 3)}...`;
+}
+
+function normalizeCrmAiTone(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (raw === 'consultivo' || raw === 'direto' || raw === 'followup') return raw;
+  return 'consultivo';
+}
+
+function parsePossibleJson(rawText) {
+  const text = String(rawText ?? '').trim();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    // no-op
+  }
+
+  const fencedMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fencedMatch?.[1]) {
+    try {
+      return JSON.parse(fencedMatch[1]);
+    } catch {
+      // no-op
+    }
+  }
+
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    const candidate = text.slice(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // no-op
+    }
+  }
+
+  return null;
+}
+
+function resolveCrmAiRuntimeConfig(tenantRuntimeConfig) {
+  const normalized = sanitizeTenantRuntimeConfigInput(tenantRuntimeConfig ?? {});
+  return {
+    enabled: normalized.execution.whatsapp_ai_enabled === true,
+    mode: normalizeCrmAiMode(normalized.execution.whatsapp_ai_mode, 'assist_execute'),
+    minConfidence: clampNumber(numberOrFallback(normalized.execution.whatsapp_ai_min_confidence, 0.7), 0, 1),
+    prompt: cleanShortText(normalized.personas.whatsapp_agent_prompt, 12000)
+  };
+}
+
+function buildCrmAiContextPack(conversation, lead, messages = []) {
+  const sortedMessages = Array.isArray(messages) ? [...messages] : [];
+  sortedMessages.sort((a, b) => String(a?.occurred_at ?? '').localeCompare(String(b?.occurred_at ?? '')));
+  const recent = sortedMessages.slice(-12);
+  const latestInbound = [...recent].reverse().find((item) => item?.direction === 'inbound') ?? null;
+  const latestOutbound = [...recent].reverse().find((item) => item?.direction === 'outbound') ?? null;
+
+  return {
+    conversation_id: conversation?.conversation_id ?? '',
+    contact_e164: conversation?.contact_e164 ?? '',
+    display_name: conversation?.display_name ?? null,
+    lead: lead
+      ? {
+        lead_id: lead.lead_id,
+        stage: lead.stage,
+        metadata: lead.metadata ?? {}
+      }
+      : null,
+    latest_inbound_text: cleanShortText(latestInbound?.text ?? '', 1200),
+    latest_outbound_text: cleanShortText(latestOutbound?.text ?? '', 1200),
+    messages: recent.map((item) => ({
+      direction: item.direction === 'outbound' ? 'outbound' : 'inbound',
+      text: cleanShortText(item?.text ?? '', 600),
+      occurred_at: item?.occurred_at ?? null,
+      delivery_state: item?.delivery_state ?? 'unknown'
+    }))
+  };
+}
+
+function chooseHeuristicStage(currentStage, contextPack) {
+  const transitions = listLeadStageTransitionsFrom(currentStage);
+  const allowedTargets = new Set(transitions.map((item) => item.to));
+  const latestText = String(contextPack?.latest_inbound_text ?? '').toLowerCase();
+
+  if (!latestText || transitions.length === 0) {
+    return {
+      suggestedStage: currentStage,
+      confidence: 0.45,
+      reason: 'Sem evidencia suficiente na mensagem atual para avancar stage.'
+    };
+  }
+
+  const targetIfAllowed = (stage) => (allowedTargets.has(stage) ? stage : null);
+  const hasAny = (patterns) => patterns.some((pattern) => latestText.includes(pattern));
+
+  let suggested = null;
+  let confidence = 0.62;
+  let reason = 'Sugestao baseada no conteudo da ultima mensagem inbound e no funil permitido.';
+
+  if (hasAny(['nao tenho interesse', 'não tenho interesse', 'nao quero', 'cancelar', 'encerrar'])) {
+    suggested = targetIfAllowed('lost') ?? targetIfAllowed('disqualified');
+    confidence = 0.86;
+    reason = 'Lead indicou desinteresse explicito; recomendado mover para encerramento.';
+  } else if (hasAny(['fechar', 'aceito', 'aceitar', 'vamos contratar', 'pode emitir'])) {
+    suggested = targetIfAllowed('won') ?? targetIfAllowed('negotiation') ?? targetIfAllowed('proposal');
+    confidence = 0.84;
+    reason = 'Mensagem indica intencao clara de fechamento.';
+  } else if (hasAny(['desconto', 'condicao', 'condições', 'negociar', 'counter'])) {
+    suggested = targetIfAllowed('negotiation') ?? targetIfAllowed('proposal');
+    confidence = 0.79;
+    reason = 'Lead trouxe objecao/contraproposta, sugerindo negociacao.';
+  } else if (hasAny(['proposta', 'orcamento', 'orçamento', 'valor', 'preco', 'preço'])) {
+    suggested = targetIfAllowed('proposal') ?? targetIfAllowed('qualified');
+    confidence = 0.76;
+    reason = 'Lead pediu detalhes comerciais e valor, indicando avancar para proposta.';
+  } else if (hasAny(['quero', 'gostaria', 'tenho interesse', 'podemos conversar', 'como funciona'])) {
+    suggested = targetIfAllowed('qualified') ?? targetIfAllowed('contacted');
+    confidence = 0.72;
+    reason = 'Lead demonstrou interesse ativo e abertura para qualificacao.';
+  }
+
+  if (!suggested) {
+    suggested = transitions[0]?.to ?? currentStage;
+    confidence = suggested === currentStage ? 0.45 : 0.6;
+  }
+
+  return {
+    suggestedStage: suggested ?? currentStage,
+    confidence: clampNumber(confidence, 0, 1),
+    reason: cleanShortText(reason, 300)
+  };
+}
+
+function buildHeuristicDraftReply(contextPack, tone = 'consultivo') {
+  const latestInbound = String(contextPack?.latest_inbound_text ?? '').trim();
+  const contactName = cleanShortText(contextPack?.display_name ?? '', 80);
+  const salutation = contactName ? `Ola ${contactName}!` : 'Ola!';
+
+  if (latestInbound.length === 0) {
+    return {
+      draftReply: `${salutation} Recebi sua mensagem e sigo a disposicao para ajudar com os proximos passos.`,
+      confidence: 0.58,
+      reasoningSummary: 'Sem texto inbound recente; usando resposta padrao de continuidade.'
+    };
+  }
+
+  if (tone === 'direto') {
+    return {
+      draftReply: `${salutation} Obrigado pela mensagem. Posso te enviar agora uma proposta objetiva com valores e proximo passo?`,
+      confidence: 0.68,
+      reasoningSummary: 'Tom direto aplicado sobre a ultima interacao do lead.'
+    };
+  }
+
+  if (tone === 'followup') {
+    return {
+      draftReply: `${salutation} Passando para dar continuidade ao seu atendimento. Quer que eu avance com a proxima etapa agora?`,
+      confidence: 0.66,
+      reasoningSummary: 'Tom de follow-up para reengajar o lead na thread ativa.'
+    };
+  }
+
+  return {
+    draftReply: `${salutation} Obrigado por compartilhar. Para te direcionar melhor, posso entender seu objetivo principal e prazo esperado?`,
+    confidence: 0.7,
+    reasoningSummary: 'Tom consultivo para qualificar intencao e prazo sem friccao.'
+  };
+}
+
+function formatCrmAiMessageHistory(messages = []) {
+  return messages
+    .map((item) => {
+      const who = item.direction === 'outbound' ? 'atendente' : 'lead';
+      return `${who}: ${cleanShortText(item.text, 280)}`;
+    })
+    .join('\n');
+}
+
+async function generateCrmAiDraftReply({ provider, aiConfig, contextPack, tone }) {
+  const normalizedTone = normalizeCrmAiTone(tone);
+  const heuristic = buildHeuristicDraftReply(contextPack, normalizedTone);
+  if (!provider) {
+    return {
+      ...heuristic,
+      provider: 'local',
+      model: null
+    };
+  }
+
+  const messageHistory = formatCrmAiMessageHistory(contextPack.messages);
+  const prompt = [
+    'Voce e a Persona 2 (Agente WhatsApp CRM) e deve sugerir UMA resposta curta para o lead.',
+    `Tom solicitado: ${normalizedTone}.`,
+    'Regras: maximo 320 caracteres, objetivo, humano, sem inventar preco/prazo, sem markdown, sem bullets.',
+    aiConfig.prompt
+      ? `Prompt do tenant para Persona 2:\n${aiConfig.prompt}`
+      : 'Prompt do tenant vazio: use tom profissional cordial padrao.',
+    `Stage atual do lead: ${contextPack?.lead?.stage ?? 'new'}.`,
+    `Historico recente:\n${messageHistory || '(sem historico)'}`,
+    'Retorne apenas o texto final da mensagem ao lead.'
+  ].join('\n\n');
+
+  const reply = await provider.generateAssistantOutput({
+    text: prompt,
+    persona_overrides: {
+      whatsapp_agent_prompt: aiConfig.prompt
+    }
+  });
+
+  if (reply?.provider !== 'openai') {
+    return {
+      ...heuristic,
+      provider: reply?.provider ?? 'local',
+      model: reply?.model ?? null
+    };
+  }
+
+  const draft = cleanShortText(reply.text ?? '', 320);
+  if (!draft) {
+    return {
+      ...heuristic,
+      provider: 'openai',
+      model: reply?.model ?? null
+    };
+  }
+
+  return {
+    draftReply: draft,
+    confidence: 0.82,
+    reasoningSummary: 'Resposta sugerida pela IA com contexto da thread e stage atual.',
+    provider: 'openai',
+    model: reply?.model ?? null
+  };
+}
+
+async function generateCrmAiQualification({ provider, aiConfig, contextPack }) {
+  const currentStage = String(contextPack?.lead?.stage ?? 'new').trim() || 'new';
+  const heuristic = chooseHeuristicStage(currentStage, contextPack);
+  const transitions = listLeadStageTransitionsFrom(currentStage);
+  const transitionByTarget = new Map(transitions.map((item) => [item.to, item]));
+
+  if (!provider) {
+    return {
+      currentStage,
+      suggestedStage: heuristic.suggestedStage,
+      confidence: heuristic.confidence,
+      reason: heuristic.reason,
+      requiredTrigger: transitionByTarget.get(heuristic.suggestedStage)?.trigger ?? null,
+      provider: 'local',
+      model: null
+    };
+  }
+
+  const messageHistory = formatCrmAiMessageHistory(contextPack.messages);
+  const allowedTargets = transitions.map((item) => item.to);
+  const prompt = [
+    'Voce e a Persona 2 (Agente WhatsApp CRM).',
+    'Analise a conversa e sugira o proximo stage do lead com confianca de 0 a 1.',
+    aiConfig.prompt
+      ? `Prompt do tenant para Persona 2:\n${aiConfig.prompt}`
+      : 'Prompt do tenant vazio: use criterio comercial padrao.',
+    `Stage atual: ${currentStage}.`,
+    `Stages permitidos a partir do atual: ${allowedTargets.length > 0 ? allowedTargets.join(', ') : '(nenhum)'}.`,
+    `Historico recente:\n${messageHistory || '(sem historico)'}`,
+    'Retorne JSON estrito no formato: {"suggested_stage":"...", "confidence":0.0, "reason":"..."}.'
+  ].join('\n\n');
+
+  const output = await provider.generateAssistantOutput({
+    text: prompt,
+    persona_overrides: {
+      whatsapp_agent_prompt: aiConfig.prompt
+    }
+  });
+
+  if (output?.provider !== 'openai') {
+    return {
+      currentStage,
+      suggestedStage: heuristic.suggestedStage,
+      confidence: heuristic.confidence,
+      reason: heuristic.reason,
+      requiredTrigger: transitionByTarget.get(heuristic.suggestedStage)?.trigger ?? null,
+      provider: output?.provider ?? 'local',
+      model: output?.model ?? null
+    };
+  }
+
+  const parsed = parsePossibleJson(output.text);
+  const suggestedFromAi = String(parsed?.suggested_stage ?? '').trim().toLowerCase();
+  const candidate = transitionByTarget.get(suggestedFromAi);
+  const numericConfidence = clampNumber(numberOrFallback(parsed?.confidence, heuristic.confidence), 0, 1);
+
+  if (!candidate) {
+    return {
+      currentStage,
+      suggestedStage: heuristic.suggestedStage,
+      confidence: Math.min(numericConfidence, 0.74),
+      reason: 'IA retornou stage nao permitido para a transicao atual; aplicado fallback seguro.',
+      requiredTrigger: transitionByTarget.get(heuristic.suggestedStage)?.trigger ?? null,
+      provider: 'openai',
+      model: output?.model ?? null
+    };
+  }
+
+  return {
+    currentStage,
+    suggestedStage: candidate.to,
+    confidence: numericConfidence,
+    reason: cleanShortText(parsed?.reason ?? 'Sugestao baseada em sinais da conversa recente.', 320),
+    requiredTrigger: candidate.trigger,
+    provider: 'openai',
+    model: output?.model ?? null
   };
 }
 
@@ -2099,6 +2464,56 @@ export function createApp(options = {}) {
         : ownerResponseProviderConfig.openaiModel
     });
   }
+
+  const crmAiExecutionCache = new Map();
+  const crmAiAuditLog = [];
+
+  function makeCrmAiExecutionKey({ tenantId, conversationId, action, clientRequestId }) {
+    return [
+      String(tenantId ?? '').trim(),
+      String(conversationId ?? '').trim(),
+      String(action ?? '').trim(),
+      String(clientRequestId ?? '').trim()
+    ].join('|');
+  }
+
+  function appendCrmAiAudit(entry) {
+    crmAiAuditLog.push({
+      at: new Date().toISOString(),
+      ...entry
+    });
+    if (crmAiAuditLog.length > 1000) {
+      crmAiAuditLog.splice(0, crmAiAuditLog.length - 1000);
+    }
+  }
+
+  async function resolveCrmThreadContext(tenantId, conversationId) {
+    const conversation = await crmConversationStore.getConversationById(tenantId, conversationId);
+    if (!conversation) {
+      return {
+        ok: false,
+        code: 'conversation_not_found'
+      };
+    }
+
+    const messages = await crmConversationStore.listMessages(tenantId, conversationId, { limit: 200 });
+    const leads = await leadStore.listLeads(tenantId);
+    const leadById = new Map(leads.map((item) => [item.lead_id, item]));
+    const leadByPhone = new Map(leads.map((item) => [item.phone_e164, item]));
+    const linkedLead = (
+      (conversation.lead_id ? leadById.get(conversation.lead_id) : null)
+      ?? leadByPhone.get(conversation.contact_e164)
+      ?? null
+    );
+
+    return {
+      ok: true,
+      conversation,
+      messages,
+      lead: linkedLead
+    };
+  }
+
   function getOwnerEmbeddingProvider(modeOverride = null) {
     if (!modeOverride) {
       return ownerEmbeddingProvider;
@@ -3938,6 +4353,467 @@ export function createApp(options = {}) {
           message: saved.message,
           provider_message_id: providerResult.providerMessageId ?? null
         });
+      }
+
+      const conversationAiSuggestReplyMatch = path.match(/^\/v1\/crm\/conversations\/([^/]+)\/ai\/suggest-reply$/);
+      if (method === 'POST' && conversationAiSuggestReplyMatch) {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = crmAiSuggestReplyValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id ?? '').trim();
+        const conversationId = decodeURIComponent(conversationAiSuggestReplyMatch[1] ?? '').trim();
+        if (!conversationId) {
+          return json(res, 400, { error: 'missing_conversation_id' });
+        }
+
+        const contextResult = await resolveCrmThreadContext(tenantId, conversationId);
+        if (!contextResult.ok) {
+          return json(res, 404, { error: contextResult.code });
+        }
+
+        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
+        const aiConfig = resolveCrmAiRuntimeConfig(tenantRuntimeConfig);
+        if (!aiConfig.enabled) {
+          return json(res, 403, {
+            error: 'crm_ai_disabled',
+            mode: aiConfig.mode
+          });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        const contextPack = buildCrmAiContextPack(
+          contextResult.conversation,
+          contextResult.lead,
+          contextResult.messages
+        );
+        const provider = getOwnerResponseProviderForTenant(tenantRuntimeConfig);
+
+        let suggestion;
+        try {
+          suggestion = await generateCrmAiDraftReply({
+            provider,
+            aiConfig,
+            contextPack,
+            tone: request.tone
+          });
+        } catch (error) {
+          appendCrmAiAudit({
+            tenant_id: tenantId,
+            conversation_id: conversationId,
+            action: 'suggest_reply',
+            status: 'failed',
+            correlation_id: correlationId,
+            trace_id: traceId,
+            details: truncateProviderErrorDetails(error?.message ?? error, 800)
+          });
+          return json(res, 502, {
+            error: 'ai_provider_error',
+            details: truncateProviderErrorDetails(error?.message ?? error, 800),
+            correlation_id: correlationId,
+            trace_id: traceId
+          });
+        }
+
+        appendCrmAiAudit({
+          tenant_id: tenantId,
+          conversation_id: conversationId,
+          action: 'suggest_reply',
+          status: 'ok',
+          correlation_id: correlationId,
+          trace_id: traceId,
+          confidence: suggestion.confidence,
+          provider: suggestion.provider
+        });
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'ok',
+            conversation_id: conversationId,
+            draft_reply: suggestion.draftReply,
+            confidence: suggestion.confidence,
+            reasoning_summary: suggestion.reasoningSummary,
+            policy: {
+              enabled: aiConfig.enabled,
+              mode: aiConfig.mode,
+              min_confidence: aiConfig.minConfidence
+            },
+            provider: {
+              name: suggestion.provider ?? 'local',
+              model: suggestion.model ?? null
+            },
+            correlation_id: correlationId,
+            trace_id: traceId
+          }
+        });
+      }
+
+      const conversationAiQualifyMatch = path.match(/^\/v1\/crm\/conversations\/([^/]+)\/ai\/qualify$/);
+      if (method === 'POST' && conversationAiQualifyMatch) {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = crmAiQualifyValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id ?? '').trim();
+        const conversationId = decodeURIComponent(conversationAiQualifyMatch[1] ?? '').trim();
+        if (!conversationId) {
+          return json(res, 400, { error: 'missing_conversation_id' });
+        }
+
+        const contextResult = await resolveCrmThreadContext(tenantId, conversationId);
+        if (!contextResult.ok) {
+          return json(res, 404, { error: contextResult.code });
+        }
+
+        if (!contextResult.lead) {
+          return json(res, 404, { error: 'lead_not_found_for_conversation' });
+        }
+
+        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
+        const aiConfig = resolveCrmAiRuntimeConfig(tenantRuntimeConfig);
+        if (!aiConfig.enabled) {
+          return json(res, 403, {
+            error: 'crm_ai_disabled',
+            mode: aiConfig.mode
+          });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        const contextPack = buildCrmAiContextPack(
+          contextResult.conversation,
+          contextResult.lead,
+          contextResult.messages
+        );
+        const provider = getOwnerResponseProviderForTenant(tenantRuntimeConfig);
+
+        let qualification;
+        try {
+          qualification = await generateCrmAiQualification({
+            provider,
+            aiConfig,
+            contextPack
+          });
+        } catch (error) {
+          appendCrmAiAudit({
+            tenant_id: tenantId,
+            conversation_id: conversationId,
+            action: 'qualify',
+            status: 'failed',
+            correlation_id: correlationId,
+            trace_id: traceId,
+            details: truncateProviderErrorDetails(error?.message ?? error, 800)
+          });
+          return json(res, 502, {
+            error: 'ai_provider_error',
+            details: truncateProviderErrorDetails(error?.message ?? error, 800),
+            correlation_id: correlationId,
+            trace_id: traceId
+          });
+        }
+
+        let suggestedStage = qualification.suggestedStage;
+        let requiredTrigger = qualification.requiredTrigger;
+        let confidence = qualification.confidence;
+        let reason = qualification.reason;
+
+        if (confidence < aiConfig.minConfidence) {
+          suggestedStage = qualification.currentStage;
+          requiredTrigger = null;
+          reason = `Confianca ${confidence.toFixed(2)} abaixo do limiar ${aiConfig.minConfidence.toFixed(2)}; manter stage atual.`;
+        }
+
+        appendCrmAiAudit({
+          tenant_id: tenantId,
+          conversation_id: conversationId,
+          action: 'qualify',
+          status: 'ok',
+          correlation_id: correlationId,
+          trace_id: traceId,
+          confidence,
+          suggested_stage: suggestedStage,
+          provider: qualification.provider
+        });
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'ok',
+            conversation_id: conversationId,
+            current_stage: qualification.currentStage,
+            suggested_stage: suggestedStage,
+            confidence: confidence,
+            reason: reason,
+            required_trigger: requiredTrigger,
+            policy: {
+              enabled: aiConfig.enabled,
+              mode: aiConfig.mode,
+              min_confidence: aiConfig.minConfidence
+            },
+            provider: {
+              name: qualification.provider ?? 'local',
+              model: qualification.model ?? null
+            },
+            correlation_id: correlationId,
+            trace_id: traceId
+          }
+        });
+      }
+
+      const conversationAiExecuteMatch = path.match(/^\/v1\/crm\/conversations\/([^/]+)\/ai\/execute$/);
+      if (method === 'POST' && conversationAiExecuteMatch) {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = crmAiExecuteValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const tenantId = String(request.tenant_id ?? '').trim();
+        const conversationId = decodeURIComponent(conversationAiExecuteMatch[1] ?? '').trim();
+        if (!conversationId) {
+          return json(res, 400, { error: 'missing_conversation_id' });
+        }
+
+        const contextResult = await resolveCrmThreadContext(tenantId, conversationId);
+        if (!contextResult.ok) {
+          return json(res, 404, { error: contextResult.code });
+        }
+
+        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
+        const aiConfig = resolveCrmAiRuntimeConfig(tenantRuntimeConfig);
+        if (!aiConfig.enabled) {
+          return json(res, 403, {
+            error: 'crm_ai_disabled',
+            mode: aiConfig.mode
+          });
+        }
+        if (aiConfig.mode !== 'assist_execute') {
+          return json(res, 409, {
+            error: 'crm_ai_execute_blocked',
+            mode: aiConfig.mode
+          });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        const action = String(request.action ?? '').trim();
+        const clientRequestId = String(request.client_request_id ?? '').trim();
+        const executionCacheKey = makeCrmAiExecutionKey({
+          tenantId,
+          conversationId,
+          action,
+          clientRequestId
+        });
+        const cachedExecution = crmAiExecutionCache.get(executionCacheKey);
+        if (cachedExecution) {
+          return json(res, 200, {
+            response: {
+              ...cachedExecution,
+              status: 'idempotent',
+              request_id: request.request_id
+            }
+          });
+        }
+
+        if (action === 'send_reply') {
+          const replyText = cleanShortText(request?.payload?.reply_text ?? '', 2000);
+          if (!replyText) {
+            return json(res, 400, { error: 'missing_reply_text' });
+          }
+
+          const evolutionRuntime = await resolveEvolutionRuntimeConfig(tenantId);
+          if (!evolutionRuntime.baseUrl || !evolutionRuntime.apiKey || !evolutionRuntime.instanceId) {
+            return json(res, 503, { error: 'evolution_not_configured' });
+          }
+
+          const recipientNumber = normalizeEvolutionRecipientNumber(contextResult.conversation.contact_e164);
+          if (!recipientNumber) {
+            return json(res, 400, { error: 'invalid_recipient' });
+          }
+
+          let providerResult = null;
+          try {
+            providerResult = await sendEvolutionTextMessage({
+              baseUrl: evolutionRuntime.baseUrl,
+              apiKey: evolutionRuntime.apiKey,
+              instanceId: evolutionRuntime.instanceId,
+              number: recipientNumber,
+              text: replyText
+            });
+          } catch (error) {
+            providerResult = {
+              ok: false,
+              status: 502,
+              errorDetails: truncateProviderErrorDetails(error?.message ?? error)
+            };
+          }
+
+          const saved = await crmConversationStore.appendOutboundMessage({
+            tenant_id: tenantId,
+            conversation_id: conversationId,
+            provider: 'evolution-api',
+            provider_message_id: providerResult?.providerMessageId ?? null,
+            message_type: 'text',
+            text: replyText,
+            delivery_state: providerResult?.ok ? 'sent' : 'failed',
+            occurred_at: new Date().toISOString(),
+            metadata: {
+              source: 'crm_ai_execute',
+              ai_action: 'send_reply',
+              provider_status: providerResult?.status ?? null,
+              provider_error: providerResult?.ok ? null : (providerResult?.errorDetails ?? null),
+              correlation_id: correlationId,
+              trace_id: traceId
+            }
+          });
+          if (!saved.ok) {
+            return json(res, 404, { error: 'conversation_not_found' });
+          }
+
+          appendCrmAiAudit({
+            tenant_id: tenantId,
+            conversation_id: conversationId,
+            action: 'execute_send_reply',
+            status: providerResult?.ok ? 'ok' : 'failed',
+            correlation_id: correlationId,
+            trace_id: traceId,
+            provider_status: providerResult?.status ?? null
+          });
+
+          if (!providerResult?.ok) {
+            return json(res, 502, {
+              error: 'provider_send_error',
+              provider_status: providerResult?.status ?? 502,
+              details: providerResult?.errorDetails ?? 'provider_send_error',
+              message: saved.message
+            });
+          }
+
+          const responsePayload = {
+            request_id: request.request_id,
+            status: 'ok',
+            executed_action: 'send_reply',
+            conversation_id: conversationId,
+            provider_result: {
+              status: providerResult.status ?? 200,
+              provider_message_id: providerResult.providerMessageId ?? null
+            },
+            message: saved.message,
+            correlation_id: correlationId,
+            trace_id: traceId
+          };
+          crmAiExecutionCache.set(executionCacheKey, responsePayload);
+          return json(res, 200, { response: responsePayload });
+        }
+
+        if (action === 'update_stage') {
+          const lead = contextResult.lead;
+          if (!lead) {
+            return json(res, 404, { error: 'lead_not_found_for_conversation' });
+          }
+
+          const currentStage = String(lead.stage ?? '').trim();
+          const toStage = String(request?.payload?.to_stage ?? '').trim();
+          if (!toStage) {
+            return json(res, 400, { error: 'missing_to_stage' });
+          }
+
+          const transition = findLeadStageTransition(currentStage, toStage);
+          const trigger = cleanShortText(request?.payload?.trigger ?? transition?.trigger ?? '', 120);
+          const reasonCode = cleanShortText(
+            request?.payload?.reason_code ?? (transition?.requires_reason_code ? 'ai_stage_update' : ''),
+            120
+          );
+
+          let updateResult;
+          try {
+            updateResult = await leadStore.updateLeadStage(
+              tenantId,
+              lead.lead_id,
+              {
+                to_stage: toStage,
+                trigger,
+                reason_code: reasonCode,
+                metadata: {
+                  ...(lead.metadata && typeof lead.metadata === 'object' ? lead.metadata : {}),
+                  ai_action: 'update_stage',
+                  ai_correlation_id: correlationId,
+                  ai_trace_id: traceId
+                }
+              }
+            );
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+
+          if (!updateResult.ok && updateResult.code === 'not_found') {
+            return json(res, 404, { error: 'not_found' });
+          }
+          if (!updateResult.ok) {
+            return json(res, 400, {
+              error: 'transition_error',
+              details: updateResult
+            });
+          }
+
+          appendCrmAiAudit({
+            tenant_id: tenantId,
+            conversation_id: conversationId,
+            action: 'execute_update_stage',
+            status: 'ok',
+            correlation_id: correlationId,
+            trace_id: traceId,
+            from_stage: currentStage,
+            to_stage: toStage
+          });
+
+          const responsePayload = {
+            request_id: request.request_id,
+            status: 'ok',
+            executed_action: 'update_stage',
+            conversation_id: conversationId,
+            lead_result: updateResult.lead,
+            correlation_id: correlationId,
+            trace_id: traceId
+          };
+          crmAiExecutionCache.set(executionCacheKey, responsePayload);
+          return json(res, 200, { response: responsePayload });
+        }
+
+        return json(res, 400, { error: 'invalid_ai_action' });
       }
 
       if (method === 'POST' && path === '/v1/billing/charges') {
@@ -6102,5 +6978,6 @@ export function createApp(options = {}) {
   handler.ownerMemoryMaintenanceStore = ownerMemoryMaintenanceStore;
   handler.tenantRuntimeConfigStore = tenantRuntimeConfigStore;
   handler.ownerResponseProvider = ownerResponseProvider;
+  handler.crmAiAuditLog = crmAiAuditLog;
   return handler;
 }

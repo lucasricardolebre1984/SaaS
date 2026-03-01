@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/crm-ai-qualify.schema.json",
+  "title": "Module 02 CRM AI Qualify Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "correlation_id": { "type": "string", "format": "uuid" }
+      },
+      "required": ["request_id", "tenant_id"]
+    }
+  },
+  "required": ["request"]
+}

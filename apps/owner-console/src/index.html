@@ -561,6 +561,25 @@
 
           <section class="card">
             <header class="card__header">
+              <h3>Execucao IA CRM (Persona 2)</h3>
+            </header>
+            <div class="settings-grid">
+              <label class="toggle-label"><input id="cfgWhatsappAiEnabled" type="checkbox" /> IA WhatsApp habilitada</label>
+              <label>Modo de Execucao
+                <select id="cfgWhatsappAiMode">
+                  <option value="assist_execute">assist_execute</option>
+                  <option value="suggest_only">suggest_only</option>
+                </select>
+              </label>
+              <label>Limiar Minimo de Confianca (0..1)<input id="cfgWhatsappAiMinConfidence" type="number" min="0" max="1" step="0.05" /></label>
+            </div>
+            <p class="settings-note">
+              `suggest_only` bloqueia execucao em `ai/execute`. `assist_execute` permite executar resposta/stage pelo CRM.
+            </p>
+          </section>
+
+          <section class="card">
+            <header class="card__header">
               <h3>Integracoes por Modulo</h3>
             </header>
             <div class="settings-grid">

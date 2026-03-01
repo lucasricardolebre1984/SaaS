@@ -25,8 +25,13 @@ export const LEAD_STAGES = model.states;
 const STAGE_SET = new Set(model.states);
 
 const transitionsByPair = new Map();
+const transitionsByFrom = new Map();
 for (const transition of model.transitions) {
   transitionsByPair.set(`${transition.from}=>${transition.to}`, transition);
+  if (!transitionsByFrom.has(transition.from)) {
+    transitionsByFrom.set(transition.from, []);
+  }
+  transitionsByFrom.get(transition.from).push(transition);
 }
 
 export function isKnownLeadStage(stage) {
@@ -36,6 +41,27 @@ export function isKnownLeadStage(stage) {
 export function normalizeLeadStageForPublicEvent(stage) {
   const mapping = model.normalization_for_public_events?.['crm.lead.created.stage'] ?? {};
   return mapping[stage] ?? stage;
+}
+
+export function listLeadStageTransitionsFrom(stage) {
+  const items = transitionsByFrom.get(stage) ?? [];
+  return items.map((item) => ({
+    from: item.from,
+    to: item.to,
+    trigger: item.trigger,
+    requires_reason_code: item.requires_reason_code === true
+  }));
+}
+
+export function findLeadStageTransition(currentStage, nextStage) {
+  const transition = transitionsByPair.get(`${currentStage}=>${nextStage}`);
+  if (!transition) return null;
+  return {
+    from: transition.from,
+    to: transition.to,
+    trigger: transition.trigger,
+    requires_reason_code: transition.requires_reason_code === true
+  };
 }
 
 export function validateLeadStageTransition(currentStage, nextStage, trigger, reasonCode) {

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/crm-ai-execute.schema.json",
+  "title": "Module 02 CRM AI Execute Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "action": {
+          "type": "string",
+          "enum": ["send_reply", "update_stage"]
+        },
+        "client_request_id": { "type": "string", "minLength": 4, "maxLength": 120 },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reply_text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+            "to_stage": {
+              "type": "string",
+              "enum": [
+                "new",
+                "contacted",
+                "qualified",
+                "proposal",
+                "negotiation",
+                "won",
+                "lost",
+                "nurturing",
+                "disqualified"
+              ]
+            },
+            "trigger": { "type": "string", "minLength": 3 },
+            "reason_code": { "type": "string", "minLength": 3 }
+          }
+        }
+      },
+      "required": ["request_id", "tenant_id", "action", "client_request_id", "payload"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": { "const": "send_reply" }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "required": ["reply_text"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": { "const": "update_stage" }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "required": ["to_stage"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "required": ["request"]
+}

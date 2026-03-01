@@ -30,6 +30,20 @@ function asString(value, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
+function asNumberInRange(value, fallback = 0.7, min = 0, max = 1) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < min) return min;
+  if (parsed > max) return max;
+  return parsed;
+}
+
+function normalizeCrmAiMode(value, fallback = 'assist_execute') {
+  const raw = asString(value, fallback).toLowerCase();
+  if (raw === 'suggest_only' || raw === 'assist_execute') return raw;
+  return fallback;
+}
+
 function normalizeApiKey(value, fallback = '') {
   const raw = asString(value, fallback);
   if (!raw) return '';
@@ -86,6 +100,20 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
       confirmations_enabled: asBool(
         executionInput.confirmations_enabled,
         asBool(executionFallback.confirmations_enabled, false)
+      ),
+      whatsapp_ai_enabled: asBool(
+        executionInput.whatsapp_ai_enabled,
+        asBool(executionFallback.whatsapp_ai_enabled, true)
+      ),
+      whatsapp_ai_mode: normalizeCrmAiMode(
+        executionInput.whatsapp_ai_mode,
+        normalizeCrmAiMode(executionFallback.whatsapp_ai_mode, 'assist_execute')
+      ),
+      whatsapp_ai_min_confidence: asNumberInRange(
+        executionInput.whatsapp_ai_min_confidence,
+        asNumberInRange(executionFallback.whatsapp_ai_min_confidence, 0.7),
+        0,
+        1
       )
     },
     integrations: {

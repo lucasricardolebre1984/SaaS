@@ -178,3 +178,6 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-01,internal,engineering-time,local,0.00,0.00,operations,M5B-006 main push and Ubuntu deploy with runtime health validation
 2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-modern-inbox-2026-slice T2..T6 inbox thread stores webhook and send flow
 2026-03-01,internal,engineering-time,local,0.00,0.00,validation,crm-modern-inbox-2026-slice gates for api tests crm build and contract checks
+2026-03-01,internal,engineering-time,local,0.00,0.00,specification,crm-persona2-ai-execution-slice complete draft spec design tasks for persona2 ai thread flow
+2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-persona2-ai-execution-slice T1..T8 Persona2 AI endpoints runtime-config UI and idempotent execution
+2026-03-01,internal,engineering-time,local,0.00,0.00,validation,crm-persona2-ai-execution-slice T9 gates green api tests ui builds and contract checks

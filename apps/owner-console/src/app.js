@@ -192,6 +192,9 @@ const cfgOpenAiImageGenInput = document.getElementById('cfgOpenAiImageGen');
 const cfgOpenAiImageReadInput = document.getElementById('cfgOpenAiImageRead');
 const cfgPersona1PromptInput = document.getElementById('cfgPersona1Prompt');
 const cfgPersona2PromptInput = document.getElementById('cfgPersona2Prompt');
+const cfgWhatsappAiEnabledInput = document.getElementById('cfgWhatsappAiEnabled');
+const cfgWhatsappAiModeInput = document.getElementById('cfgWhatsappAiMode');
+const cfgWhatsappAiMinConfidenceInput = document.getElementById('cfgWhatsappAiMinConfidence');
 
 const cfgGoogleClientIdInput = document.getElementById('cfgGoogleClientId');
 const cfgGoogleClientSecretInput = document.getElementById('cfgGoogleClientSecret');
@@ -364,7 +367,10 @@ function createDefaultConfig() {
       whatsapp_agent_prompt: ''
     },
     execution: {
-      confirmations_enabled: false
+      confirmations_enabled: false,
+      whatsapp_ai_enabled: true,
+      whatsapp_ai_mode: 'assist_execute',
+      whatsapp_ai_min_confidence: 0.7
     },
     integrations: {
       agenda_google: {
@@ -399,6 +405,19 @@ function safeNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function normalizeWhatsappAiMode(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  return raw === 'suggest_only' ? 'suggest_only' : 'assist_execute';
+}
+
+function normalizeWhatsappAiMinConfidence(value, fallback = 0.7) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < 0) return 0;
+  if (parsed > 1) return 1;
+  return parsed;
+}
+
 function mergeConfig(raw) {
   const defaults = createDefaultConfig();
   const configuredApiBase = normalizeApiBase(raw?.runtime?.api_base_url ?? defaults.runtime.api_base_url);
@@ -428,7 +447,15 @@ function mergeConfig(raw) {
     },
     execution: {
       ...defaults.execution,
-      ...(raw?.execution ?? {})
+      ...(raw?.execution ?? {}),
+      whatsapp_ai_enabled: raw?.execution?.whatsapp_ai_enabled == null
+        ? defaults.execution.whatsapp_ai_enabled
+        : Boolean(raw.execution.whatsapp_ai_enabled),
+      whatsapp_ai_mode: normalizeWhatsappAiMode(raw?.execution?.whatsapp_ai_mode ?? defaults.execution.whatsapp_ai_mode),
+      whatsapp_ai_min_confidence: normalizeWhatsappAiMinConfidence(
+        raw?.execution?.whatsapp_ai_min_confidence,
+        defaults.execution.whatsapp_ai_min_confidence
+      )
     },
     integrations: {
       agenda_google: {
@@ -869,7 +896,13 @@ function buildRuntimeConfigSyncPayload() {
           whatsapp_agent_prompt: state.config.personas.whatsapp_agent_prompt
         },
         execution: {
-          confirmations_enabled: Boolean(state.config.execution.confirmations_enabled)
+          confirmations_enabled: Boolean(state.config.execution.confirmations_enabled),
+          whatsapp_ai_enabled: Boolean(state.config.execution.whatsapp_ai_enabled),
+          whatsapp_ai_mode: normalizeWhatsappAiMode(state.config.execution.whatsapp_ai_mode),
+          whatsapp_ai_min_confidence: normalizeWhatsappAiMinConfidence(
+            state.config.execution.whatsapp_ai_min_confidence,
+            0.7
+          )
         },
         integrations: {
           crm_evolution: {
@@ -917,6 +950,18 @@ async function pullRuntimeConfigFromBackend() {
   }
   if (body?.execution && typeof body.execution.confirmations_enabled === 'boolean') {
     state.config.execution.confirmations_enabled = body.execution.confirmations_enabled;
+  }
+  if (body?.execution && typeof body.execution.whatsapp_ai_enabled === 'boolean') {
+    state.config.execution.whatsapp_ai_enabled = body.execution.whatsapp_ai_enabled;
+  }
+  if (body?.execution && typeof body.execution.whatsapp_ai_mode === 'string') {
+    state.config.execution.whatsapp_ai_mode = normalizeWhatsappAiMode(body.execution.whatsapp_ai_mode);
+  }
+  if (body?.execution && Object.prototype.hasOwnProperty.call(body.execution, 'whatsapp_ai_min_confidence')) {
+    state.config.execution.whatsapp_ai_min_confidence = normalizeWhatsappAiMinConfidence(
+      body.execution.whatsapp_ai_min_confidence,
+      0.7
+    );
   }
   if (body?.integrations?.crm_evolution && typeof body.integrations.crm_evolution === 'object') {
     const ce = body.integrations.crm_evolution;
@@ -1917,6 +1962,17 @@ function populateConfigForm() {
   cfgOpenAiImageReadInput.checked = Boolean(state.config.openai.image_read_enabled);
   cfgPersona1PromptInput.value = state.config.personas.owner_concierge_prompt;
   cfgPersona2PromptInput.value = state.config.personas.whatsapp_agent_prompt;
+  if (cfgWhatsappAiEnabledInput) {
+    cfgWhatsappAiEnabledInput.checked = Boolean(state.config.execution.whatsapp_ai_enabled);
+  }
+  if (cfgWhatsappAiModeInput) {
+    cfgWhatsappAiModeInput.value = normalizeWhatsappAiMode(state.config.execution.whatsapp_ai_mode);
+  }
+  if (cfgWhatsappAiMinConfidenceInput) {
+    cfgWhatsappAiMinConfidenceInput.value = String(
+      normalizeWhatsappAiMinConfidence(state.config.execution.whatsapp_ai_min_confidence, 0.7)
+    );
+  }
 
   cfgGoogleClientIdInput.value = state.config.integrations.agenda_google.client_id;
   cfgGoogleClientSecretInput.value = state.config.integrations.agenda_google.client_secret;
@@ -1946,6 +2002,12 @@ function collectConfigForm() {
   state.config.personas.owner_concierge_prompt = cfgPersona1PromptInput.value.trim();
   state.config.personas.whatsapp_agent_prompt = cfgPersona2PromptInput.value.trim();
   state.config.execution.confirmations_enabled = false;
+  state.config.execution.whatsapp_ai_enabled = cfgWhatsappAiEnabledInput?.checked ?? true;
+  state.config.execution.whatsapp_ai_mode = normalizeWhatsappAiMode(cfgWhatsappAiModeInput?.value ?? 'assist_execute');
+  state.config.execution.whatsapp_ai_min_confidence = normalizeWhatsappAiMinConfidence(
+    cfgWhatsappAiMinConfidenceInput?.value,
+    0.7
+  );
 
   state.config.integrations.agenda_google.client_id = cfgGoogleClientIdInput.value.trim();
   state.config.integrations.agenda_google.client_secret = cfgGoogleClientSecretInput.value.trim();
