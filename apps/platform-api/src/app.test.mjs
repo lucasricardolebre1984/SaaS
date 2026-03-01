@@ -3243,6 +3243,45 @@ test('POST /provider/evolution/webhook accepts valid request', async () => {
   assert.equal(body.status, 'accepted');
 });
 
+test('POST /provider/evolution/webhook maps raw MESSAGES_UPSERT inbound into CRM lead', async () => {
+  const rawWebhookPayload = {
+    event: 'MESSAGES_UPSERT',
+    instance: 'tenant_automania',
+    data: {
+      key: {
+        id: 'evo-msg-raw-001',
+        remoteJid: '5511999999999@s.whatsapp.net',
+        fromMe: false
+      },
+      pushName: 'Cliente Inbox',
+      message: {
+        conversation: 'Ola, gostaria de atendimento.'
+      }
+    },
+    date_time: '2026-03-01T09:00:00.000Z'
+  };
+
+  const webhookRes = await fetch(`${baseUrl}/provider/evolution/webhook`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(rawWebhookPayload)
+  });
+  assert.equal(webhookRes.status, 200);
+  const webhookBody = await webhookRes.json();
+  assert.equal(webhookBody.status, 'accepted');
+  assert.equal(webhookBody.normalized.tenant_id, 'tenant_automania');
+  assert.equal(webhookBody.normalized.event_type, 'message.inbound');
+  assert.equal(webhookBody.inbound.status, 'created');
+
+  const leadsRes = await fetch(`${baseUrl}/v1/crm/leads?tenant_id=tenant_automania`);
+  assert.equal(leadsRes.status, 200);
+  const leadsBody = await leadsRes.json();
+  const created = leadsBody.items.find((item) => item.external_key === 'wa:+5511999999999');
+  assert.ok(created);
+  assert.equal(created.phone_e164, '+5511999999999');
+  assert.equal(created.source_channel, 'whatsapp');
+});
+
 test('POST /provider/evolution/webhook rejects invalid request', async () => {
   const payload = validWebhookRequest();
   delete payload.signature;

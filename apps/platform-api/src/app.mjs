@@ -202,6 +202,117 @@ function firstNonEmptyString(values = []) {
   return '';
 }
 
+function normalizeE164FromAny(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  const source = trimmed.includes('@') ? trimmed.split('@')[0] : trimmed;
+  const hasPlus = source.startsWith('+');
+  const digits = source.replace(/\D/g, '');
+  if (digits.length < 8) return '';
+  return `${hasPlus ? '+' : '+'}${digits}`;
+}
+
+function normalizeEvolutionEventType(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const upper = raw.toUpperCase().replace(/[.\s-]/g, '_');
+  if (upper === 'MESSAGE_INBOUND' || upper === 'MESSAGES_UPSERT') return 'message.inbound';
+  if (upper === 'MESSAGE_DELIVERY_UPDATE' || upper === 'MESSAGES_UPDATE') return 'message.delivery_update';
+  if (upper === 'MESSAGE_READ_UPDATE') return 'message.read_update';
+  if (upper === 'MESSAGE_FAILED') return 'message.failed';
+  if (upper === 'CONNECTION_UPDATE') return 'connection.update';
+  if (upper === 'QRCODE_UPDATED' || upper === 'QR_UPDATED') return 'qr.updated';
+  return '';
+}
+
+function inferMessageTypeFromRawMessage(rawMessage) {
+  if (!rawMessage || typeof rawMessage !== 'object') return 'text';
+  if (rawMessage.audioMessage) return 'audio';
+  if (rawMessage.imageMessage) return 'image';
+  if (rawMessage.documentMessage || rawMessage.videoMessage || rawMessage.stickerMessage) return 'file';
+  return 'text';
+}
+
+function extractTextFromRawMessage(rawMessage) {
+  if (!rawMessage || typeof rawMessage !== 'object') return '';
+  return firstNonEmptyString([
+    rawMessage.conversation,
+    rawMessage.extendedTextMessage?.text,
+    rawMessage.imageMessage?.caption,
+    rawMessage.videoMessage?.caption,
+    rawMessage.documentMessage?.caption
+  ]);
+}
+
+function normalizeEvolutionWebhookInput(rawBody) {
+  const raw = rawBody && typeof rawBody === 'object' ? rawBody : null;
+  if (!raw) return null;
+
+  const data = raw.data && typeof raw.data === 'object' ? raw.data : {};
+  const key = data.key && typeof data.key === 'object' ? data.key : {};
+  const rawMessage = data.message && typeof data.message === 'object' ? data.message : {};
+  const eventType = normalizeEvolutionEventType(
+    firstNonEmptyString([raw.event_type, raw.event, raw.type, data.event])
+  );
+  if (!eventType) return null;
+
+  const messageId = firstNonEmptyString([
+    data.message_id,
+    data.messageId,
+    data.id,
+    key.id,
+    raw.message_id
+  ]);
+  if (!messageId) return null;
+
+  const tenantId = firstNonEmptyString([raw.tenant_id, raw.tenantId, raw.instance, raw.instance_id]);
+  if (!tenantId) return null;
+
+  const fromE164 = normalizeE164FromAny(
+    firstNonEmptyString([
+      data.from_e164,
+      data.from,
+      key.remoteJid
+    ])
+  );
+  const toE164 = normalizeE164FromAny(
+    firstNonEmptyString([
+      data.to_e164,
+      data.to,
+      data?.key?.participant
+    ])
+  );
+  const messageType = firstNonEmptyString([data.message_type, data.messageType])
+    || inferMessageTypeFromRawMessage(rawMessage);
+  const text = firstNonEmptyString([data.text, extractTextFromRawMessage(rawMessage)]);
+  const deliveryState = firstNonEmptyString([data.delivery_state, data.status]).toLowerCase();
+
+  return {
+    event_id: firstNonEmptyString([raw.event_id, raw.eventId]) || randomUUID(),
+    tenant_id: tenantId,
+    provider: 'evolution-api',
+    instance_id: firstNonEmptyString([raw.instance_id, raw.instance, raw.instanceName]) || tenantId,
+    event_type: eventType,
+    occurred_at: firstNonEmptyString([raw.occurred_at, raw.date_time, raw.dateTime]) || new Date().toISOString(),
+    trace_id: firstNonEmptyString([raw.trace_id, raw.traceId]) || `trace-${randomUUID().slice(0, 12)}`,
+    correlation_id: firstNonEmptyString([raw.correlation_id, raw.correlationId]) || randomUUID(),
+    signature: firstNonEmptyString([raw.signature]) || 'evolution-raw',
+    payload: {
+      message_id: messageId,
+      from_e164: fromE164 || undefined,
+      to_e164: toE164 || undefined,
+      message_type: ['text', 'audio', 'image', 'file'].includes(messageType) ? messageType : 'text',
+      ...(text ? { text } : {}),
+      ...(deliveryState && ['queued', 'sent', 'delivered', 'read', 'failed'].includes(deliveryState)
+        ? { delivery_state: deliveryState }
+        : {}),
+      raw
+    }
+  };
+}
+
 function delayMs(ms) {
   const value = Number(ms);
   const safe = Number.isFinite(value) ? Math.max(0, value) : 0;
@@ -5210,22 +5321,93 @@ export function createApp(options = {}) {
           return json(res, 400, { error: 'invalid_json' });
         }
 
-        const validation = evolutionWebhookValid(body);
-        if (!validation.ok) {
+        const strictValidation = evolutionWebhookValid(body);
+        const shouldTryRawNormalization = (
+          body &&
+          typeof body === 'object' &&
+          !Array.isArray(body) &&
+          (Object.prototype.hasOwnProperty.call(body, 'event') || Object.prototype.hasOwnProperty.call(body, 'data')) &&
+          !Object.prototype.hasOwnProperty.call(body, 'provider')
+        );
+        const normalizedBody = strictValidation.ok
+          ? body
+          : (shouldTryRawNormalization ? normalizeEvolutionWebhookInput(body) : body);
+        const validation = evolutionWebhookValid(normalizedBody);
+        if (!validation.ok || !normalizedBody) {
           return json(res, 400, {
             error: 'validation_error',
             details: validation.errors
           });
         }
 
+        let inboundResult = null;
+        if (
+          normalizedBody.event_type === 'message.inbound' &&
+          typeof normalizedBody.payload?.from_e164 === 'string' &&
+          normalizedBody.payload.from_e164.length > 0
+        ) {
+          try {
+            const phoneE164 = normalizedBody.payload.from_e164;
+            const rawName = firstNonEmptyString([
+              body?.data?.pushName,
+              body?.data?.notifyName,
+              body?.pushName
+            ]);
+            const fallbackName = `Lead ${phoneE164.slice(-4)}`;
+            const leadCreateResult = await leadStore.createLead({
+              lead_id: randomUUID(),
+              tenant_id: normalizedBody.tenant_id,
+              external_key: `wa:${phoneE164}`,
+              display_name: rawName || fallbackName,
+              phone_e164: phoneE164,
+              source_channel: 'whatsapp',
+              stage: 'new',
+              metadata: {
+                origin: 'evolution_webhook',
+                message_id: normalizedBody.payload.message_id,
+                event_type: normalizedBody.event_type
+              }
+            });
+
+            let lifecycleEventName = null;
+            if (leadCreateResult.action !== 'idempotent') {
+              const leadCreatedEvent = createCrmLeadCreatedEvent(
+                leadCreateResult.lead,
+                normalizedBody.correlation_id ?? randomUUID(),
+                normalizedBody.trace_id ?? `trace-${randomUUID().slice(0, 12)}`
+              );
+              const eventResult = await validateAndPersistEvent(store, leadCreatedEvent);
+              if (!eventResult.ok) {
+                return json(res, 500, {
+                  error: eventResult.type,
+                  details: eventResult.details
+                });
+              }
+              lifecycleEventName = leadCreatedEvent.name;
+            }
+
+            inboundResult = {
+              status: leadCreateResult.action,
+              lead_id: leadCreateResult.lead?.lead_id ?? null,
+              lifecycle_event_name: lifecycleEventName
+            };
+          } catch (error) {
+            return json(res, 500, {
+              error: 'storage_error',
+              details: String(error.message ?? error)
+            });
+          }
+        }
+
         return json(res, 200, {
           status: 'accepted',
           normalized: {
-            tenant_id: body.tenant_id,
-            event_type: body.event_type,
-            message_id: body.payload.message_id,
-            delivery_state: body.payload.delivery_state ?? 'unknown'
-          }
+            tenant_id: normalizedBody.tenant_id,
+            event_type: normalizedBody.event_type,
+            message_id: normalizedBody.payload.message_id,
+            delivery_state: normalizedBody.payload.delivery_state ?? 'unknown'
+          },
+          ...(inboundResult ? { inbound: inboundResult } : {})
         });
       }
 
