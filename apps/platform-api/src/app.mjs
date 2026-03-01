@@ -222,6 +222,24 @@ function normalizeE164FromAny(value) {
   return `${hasPlus ? '+' : '+'}${digits}`;
 }
 
+function normalizeE164FromCandidates(values = []) {
+  let lidFallback = '';
+  for (const value of values) {
+    const raw = String(value ?? '').trim();
+    if (!raw) continue;
+    const normalized = normalizeE164FromAny(raw);
+    if (!normalized) continue;
+    if (raw.toLowerCase().includes('@lid')) {
+      if (!lidFallback) {
+        lidFallback = normalized;
+      }
+      continue;
+    }
+    return normalized;
+  }
+  return lidFallback;
+}
+
 function normalizeEvolutionEventType(value) {
   const raw = String(value ?? '').trim();
   if (!raw) return '';
@@ -278,20 +296,25 @@ function normalizeEvolutionWebhookInput(rawBody) {
   const tenantId = firstNonEmptyString([raw.tenant_id, raw.tenantId, raw.instance, raw.instance_id]);
   if (!tenantId) return null;
 
-  const fromE164 = normalizeE164FromAny(
-    firstNonEmptyString([
-      data.from_e164,
-      data.from,
-      key.remoteJid
-    ])
-  );
-  const toE164 = normalizeE164FromAny(
-    firstNonEmptyString([
-      data.to_e164,
-      data.to,
-      data?.key?.participant
-    ])
-  );
+  const fromE164 = normalizeE164FromCandidates([
+    data.from_e164,
+    data.from,
+    data.sender,
+    key.participantAlt,
+    key.remoteJidAlt,
+    data.remoteJidAlt,
+    key.participant,
+    key.remoteJid
+  ]);
+  const toE164 = normalizeE164FromCandidates([
+    data.to_e164,
+    data.to,
+    data.recipient,
+    key.remoteJidAlt,
+    key.participantAlt,
+    key.remoteJid,
+    key.participant
+  ]);
   const messageType = firstNonEmptyString([data.message_type, data.messageType])
     || inferMessageTypeFromRawMessage(rawMessage);
   const text = firstNonEmptyString([data.text, extractTextFromRawMessage(rawMessage)]);

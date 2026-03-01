@@ -3308,6 +3308,111 @@ test('POST /provider/evolution/webhook maps raw MESSAGES_UPSERT inbound into CRM
   assert.equal(messagesBody.items.at(-1).direction, 'inbound');
 });
 
+test('POST /provider/evolution/webhook prefers remoteJidAlt over lid jid for inbound contact and auto reply', async () => {
+  const localStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-evo-lid-alt-'));
+  const evolutionRequests = [];
+  const evolutionServer = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const rawBody = Buffer.concat(chunks).toString('utf8');
+    const parsedBody = rawBody ? JSON.parse(rawBody) : {};
+    evolutionRequests.push({
+      method: req.method,
+      url: req.url,
+      body: parsedBody
+    });
+    if (req.method === 'POST' && req.url === '/message/sendText/tenant_automania') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ key: { id: 'provider-msg-lid-alt-001' } }));
+      return;
+    }
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not_found' }));
+  });
+  await new Promise((resolve) => evolutionServer.listen(0, '127.0.0.1', resolve));
+  const evolutionAddress = evolutionServer.address();
+  const evolutionBaseUrl = `http://127.0.0.1:${evolutionAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: localStorageDir,
+      customerStorageDir: path.join(localStorageDir, 'customers'),
+      agendaStorageDir: path.join(localStorageDir, 'agenda'),
+      billingStorageDir: path.join(localStorageDir, 'billing'),
+      leadStorageDir: path.join(localStorageDir, 'crm'),
+      crmAutomationStorageDir: path.join(localStorageDir, 'crm-automation'),
+      crmConversationStorageDir: path.join(localStorageDir, 'crm-conversations'),
+      ownerMemoryStorageDir: path.join(localStorageDir, 'owner-memory'),
+      evolutionHttpBaseUrl: evolutionBaseUrl,
+      evolutionApiKey: 'test-evolution-key',
+      evolutionInstanceId: 'tenant_automania',
+      evolutionAutoReplyEnabled: true,
+      evolutionAutoReplyText: 'Recebemos sua mensagem.'
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const rawWebhookPayload = {
+      event: 'MESSAGES_UPSERT',
+      instance: 'tenant_automania',
+      data: {
+        key: {
+          id: 'evo-msg-lid-001',
+          remoteJid: '94850074554542@lid',
+          remoteJidAlt: '5516981903443@s.whatsapp.net',
+          fromMe: false
+        },
+        pushName: 'Contato LID',
+        message: {
+          conversation: 'Oi pelo LID.'
+        }
+      },
+      date_time: '2026-03-01T13:00:00.000Z'
+    };
+
+    const webhookRes = await fetch(`${appBaseUrl}/provider/evolution/webhook`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(rawWebhookPayload)
+    });
+    assert.equal(webhookRes.status, 200);
+    const webhookBody = await webhookRes.json();
+    assert.equal(webhookBody.status, 'accepted');
+    assert.equal(webhookBody.normalized.message_id, 'evo-msg-lid-001');
+    assert.equal(webhookBody.inbound.status, 'created');
+    assert.equal(webhookBody.auto_reply.status, 'sent');
+
+    assert.equal(evolutionRequests.length, 1);
+    assert.equal(evolutionRequests[0].body.number, '5516981903443');
+    assert.equal(evolutionRequests[0].body.text, 'Recebemos sua mensagem.');
+
+    const leadsRes = await fetch(`${appBaseUrl}/v1/crm/leads?tenant_id=tenant_automania`);
+    assert.equal(leadsRes.status, 200);
+    const leadsBody = await leadsRes.json();
+    const createdLead = leadsBody.items.find((item) => item.external_key === 'wa:+5516981903443');
+    assert.ok(createdLead);
+
+    const conversationsRes = await fetch(`${appBaseUrl}/v1/crm/conversations?tenant_id=tenant_automania`);
+    assert.equal(conversationsRes.status, 200);
+    const conversationsBody = await conversationsRes.json();
+    const conversation = conversationsBody.items.find((item) => item.contact_e164 === '+5516981903443');
+    assert.ok(conversation);
+  } finally {
+    await new Promise((resolve, reject) => {
+      appServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await new Promise((resolve, reject) => {
+      evolutionServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await fs.rm(localStorageDir, { recursive: true, force: true });
+  }
+});
+
 test('POST /provider/evolution/webhook sends auto reply through Evolution with compatibility fallback', async () => {
   const localStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-evo-autoreply-'));
   const evolutionRequests = [];
