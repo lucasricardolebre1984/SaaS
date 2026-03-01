@@ -352,14 +352,25 @@ function renderThreadMessages() {
     return;
   }
 
-  threadMessagesEl.innerHTML = selectedThreadMessages
+  const sortedMessages = [...selectedThreadMessages].sort((left, right) => {
+    const leftDate = new Date(left?.occurred_at ?? left?.created_at ?? 0).getTime();
+    const rightDate = new Date(right?.occurred_at ?? right?.created_at ?? 0).getTime();
+    if (leftDate !== rightDate) return leftDate - rightDate;
+    return String(left?.message_row_id ?? '').localeCompare(String(right?.message_row_id ?? ''));
+  });
+
+  threadMessagesEl.innerHTML = sortedMessages
     .map((message) => {
       const isOutbound = message.direction === 'outbound';
       const cssClass = isOutbound ? 'is-outbound' : 'is-inbound';
       const directionLabel = isOutbound ? 'saida' : 'entrada';
+      const text = String(message.text ?? '').trim()
+        || (message.message_type && message.message_type !== 'text'
+          ? `(mensagem ${message.message_type})`
+          : '(sem texto)');
       return `
       <article class="thread-message ${cssClass}">
-        <div>${safeText(message.text || '(sem texto)')}</div>
+        <div>${safeText(text)}</div>
         <div class="thread-message__meta">${safeText(directionLabel)} | ${safeText(message.delivery_state || 'unknown')} | ${safeText(formatTime(message.occurred_at))}</div>
       </article>
     `;
