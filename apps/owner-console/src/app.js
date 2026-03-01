@@ -358,7 +358,7 @@ function createDefaultConfig() {
     },
     openai: {
       api_key: '',
-      model: 'gpt-5.1-mini',
+      model: 'gpt-5-mini',
       vision_enabled: true,
       voice_enabled: true,
       image_generation_enabled: true,
@@ -2012,7 +2012,7 @@ function collectConfigForm() {
   state.config.metrics.fx_usd_brl = safeNumber(cfgFxUsdBrlInput.value, 5.0);
 
   state.config.openai.api_key = cfgOpenAiApiKeyInput.value.trim();
-  state.config.openai.model = cfgOpenAiModelInput.value.trim() || 'gpt-5.1-mini';
+  state.config.openai.model = cfgOpenAiModelInput.value.trim() || 'gpt-5-mini';
   state.config.openai.vision_enabled = cfgOpenAiVisionInput.checked;
   state.config.openai.voice_enabled = cfgOpenAiVoiceInput.checked;
   state.config.openai.image_generation_enabled = cfgOpenAiImageGenInput.checked;
@@ -2798,3 +2798,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+

@@ -575,7 +575,7 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
       ? integrationsFallback.crm_evolution
       : {};
 
-  const fallbackModel = stringOrFallback(openaiFallback.model, 'gpt-5.1-mini') || 'gpt-5.1-mini';
+  const fallbackModel = stringOrFallback(openaiFallback.model, 'gpt-5-mini') || 'gpt-5-mini';
   const fallbackEvolutionInstance = stringOrFallback(crmEvolutionFallback.instance_id, 'fabio') || 'fabio';
 
   return {
@@ -586,7 +586,7 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
           ? openaiRaw.api_key
           : openaiFallback.api_key
       ),
-      model: stringOrFallback(openaiRaw.model, fallbackModel) || 'gpt-5.1-mini',
+      model: stringOrFallback(openaiRaw.model, fallbackModel) || 'gpt-5-mini',
       vision_enabled: boolOrFallback(openaiRaw.vision_enabled, boolOrFallback(openaiFallback.vision_enabled, true)),
       voice_enabled: boolOrFallback(openaiRaw.voice_enabled, boolOrFallback(openaiFallback.voice_enabled, true)),
       image_generation_enabled: boolOrFallback(
@@ -7013,3 +7013,4 @@ export function createApp(options = {}) {
   handler.crmAiAuditLog = crmAiAuditLog;
   return handler;
 }
+

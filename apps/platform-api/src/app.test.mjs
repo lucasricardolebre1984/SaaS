@@ -41,7 +41,7 @@ function validRuntimeConfigUpsertRequest(overrides = {}) {
       config: {
         openai: {
           api_key: 'tenant-openai-key',
-          model: 'gpt-5.1-mini',
+          model: 'gpt-5-mini',
           vision_enabled: true,
           voice_enabled: true,
           image_generation_enabled: true,
@@ -2404,7 +2404,7 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
     assert.equal(upsertBody.response.execution.whatsapp_ai_enabled, true);
     assert.equal(upsertBody.response.execution.whatsapp_ai_mode, 'assist_execute');
     assert.equal(upsertBody.response.execution.whatsapp_ai_min_confidence, 0.7);
-    assert.equal(upsertBody.response.runtime.model, 'gpt-5.1-mini');
+    assert.equal(upsertBody.response.runtime.model, 'gpt-5-mini');
     assert.equal(upsertBody.response.integrations.crm_evolution.auto_reply_enabled, false);
     assert.equal(upsertBody.response.integrations.crm_evolution.auto_reply_text, 'Auto reply customizado');
 
@@ -2419,7 +2419,7 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
     assert.equal(getBody.personas.owner_concierge_prompt.length > 0, true);
     assert.equal(getBody.execution.whatsapp_ai_enabled, true);
     assert.equal(getBody.execution.whatsapp_ai_mode, 'assist_execute');
-    assert.equal(getBody.runtime.model, 'gpt-5.1-mini');
+    assert.equal(getBody.runtime.model, 'gpt-5-mini');
     assert.equal(getBody.integrations.crm_evolution.auto_reply_enabled, false);
     assert.equal(getBody.integrations.crm_evolution.auto_reply_text, 'Auto reply customizado');
   } finally {
@@ -2451,7 +2451,7 @@ test('POST /v1/owner-concierge/runtime-config preserves secret keys when omitted
           config: {
             openai: {
               api_key: 'tenant-openai-key',
-              model: 'gpt-5.1-mini',
+              model: 'gpt-5-mini',
               vision_enabled: true,
               voice_enabled: true,
               image_generation_enabled: true,
@@ -2564,7 +2564,7 @@ test('tenant runtime config applies OpenAI response and disables confirmation wo
 
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({
-      model: 'gpt-5.1-mini',
+      model: 'gpt-5-mini',
       choices: [{
         message: {
           content: 'Resposta tenant runtime OpenAI'
@@ -2920,13 +2920,13 @@ test('POST /v1/owner-concierge/interaction uses openai response provider in stri
       chunks.push(chunk);
     }
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    assert.equal(body.model, 'gpt-5.1-mini');
+    assert.equal(body.model, 'gpt-5-mini');
     assert.ok(Array.isArray(body.messages));
     assert.ok(body.messages.length >= 2);
 
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({
-      model: 'gpt-5.1-mini',
+      model: 'gpt-5-mini',
       choices: [{
         message: {
           content: 'Resposta mock da OpenAI para owner concierge'
@@ -2943,7 +2943,7 @@ test('POST /v1/owner-concierge/interaction uses openai response provider in stri
     createApp({
       orchestrationStorageDir: strictStorageDir,
       ownerResponseMode: 'openai',
-      ownerResponseModel: 'gpt-5.1-mini',
+      ownerResponseModel: 'gpt-5-mini',
       openaiApiKey: 'test-key',
       openaiBaseUrl: providerBaseUrl
     })
@@ -2966,7 +2966,7 @@ test('POST /v1/owner-concierge/interaction uses openai response provider in stri
     const body = await res.json();
     assert.equal(body.response.status, 'accepted');
     assert.equal(body.response.assistant_output.provider, 'openai');
-    assert.equal(body.response.assistant_output.model, 'gpt-5.1-mini');
+    assert.equal(body.response.assistant_output.model, 'gpt-5-mini');
     assert.ok(body.response.assistant_output.latency_ms >= 0);
     assert.equal(body.response.assistant_output.text, 'Resposta mock da OpenAI para owner concierge');
     assert.equal(providerCalled, true);
@@ -3006,7 +3006,7 @@ test('POST /v1/owner-concierge/interaction forwards inline image and file excerp
     }
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
 
-    assert.equal(body.model, 'gpt-5.1-mini');
+    assert.equal(body.model, 'gpt-5-mini');
     assert.ok(Array.isArray(body.messages));
     const userMessage = body.messages.find((item) => item.role === 'user');
     assert.ok(userMessage);
@@ -3020,7 +3020,7 @@ test('POST /v1/owner-concierge/interaction forwards inline image and file excerp
 
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({
-      model: 'gpt-5.1-mini',
+      model: 'gpt-5-mini',
       choices: [{
         message: { content: 'Anexos processados com sucesso' }
       }]
@@ -3035,7 +3035,7 @@ test('POST /v1/owner-concierge/interaction forwards inline image and file excerp
     createApp({
       orchestrationStorageDir: storageDir,
       ownerResponseMode: 'openai',
-      ownerResponseModel: 'gpt-5.1-mini',
+      ownerResponseModel: 'gpt-5-mini',
       openaiApiKey: 'test-key',
       openaiBaseUrl: providerBaseUrl
     })
@@ -4058,3 +4058,4 @@ test('GET /v1/whatsapp/evolution/qr returns pending state when provider has no Q
     await fs.rm(storageRoot, { recursive: true, force: true });
   }
 });
+
