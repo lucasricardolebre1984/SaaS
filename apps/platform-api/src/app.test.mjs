@@ -3301,7 +3301,7 @@ test('POST /provider/evolution/webhook sends auto reply through Evolution with c
       body: parsedBody
     });
     if (req.method === 'POST' && req.url === '/message/sendText/tenant_automania') {
-      if (typeof parsedBody.text === 'string') {
+      if (typeof parsedBody.text === 'string' && !parsedBody.textMessage) {
         res.writeHead(400, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ error: 'missing_textMessage' }));
         return;
@@ -3373,6 +3373,7 @@ test('POST /provider/evolution/webhook sends auto reply through Evolution with c
     assert.equal(evolutionRequests[0].body.number, '5511912345678');
     assert.equal(evolutionRequests[0].body.text, 'Recebemos sua mensagem e retornaremos em instantes.');
     assert.equal(evolutionRequests[1].body.number, '5511912345678');
+    assert.equal(evolutionRequests[1].body.text, 'Recebemos sua mensagem e retornaremos em instantes.');
     assert.equal(evolutionRequests[1].body.textMessage.text, 'Recebemos sua mensagem e retornaremos em instantes.');
   } finally {
     await new Promise((resolve, reject) => {

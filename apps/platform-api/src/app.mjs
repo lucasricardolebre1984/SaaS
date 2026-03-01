@@ -486,6 +486,7 @@ async function sendEvolutionTextMessage({ baseUrl, apiKey, instanceId, number, t
 
   const secondAttempt = await attemptSend({
     number: sanitizedNumber,
+    text: sanitizedText,
     textMessage: { text: sanitizedText }
   });
   if (secondAttempt.ok) {
