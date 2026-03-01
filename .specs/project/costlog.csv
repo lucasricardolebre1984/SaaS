@@ -185,3 +185,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,whatsapp persona runtime config hardening (auto-reply off default + model gpt-5.1-mini + menu 06 controls)
 2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,crm ai runtime compatibility fix for gpt-5-mini model and openai parameter set
 2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,crm inbox realtime polling and thread alignment fix deployed to dev
+2026-03-01,internal,engineering-time,local,0.00,0.00,hotfix,crm timeline timestamp normalization in UI to surface latest inbound at bottom

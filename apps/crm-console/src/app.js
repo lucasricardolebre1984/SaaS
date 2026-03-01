@@ -355,9 +355,20 @@ function renderThreadMessages() {
     return;
   }
 
+  const messageTimelineMs = (message) => {
+    const occurred = new Date(message?.occurred_at ?? 0).getTime();
+    const created = new Date(message?.created_at ?? 0).getTime();
+    if (Number.isFinite(occurred) && Number.isFinite(created)) {
+      return Math.max(occurred, created);
+    }
+    if (Number.isFinite(created)) return created;
+    if (Number.isFinite(occurred)) return occurred;
+    return 0;
+  };
+
   const sortedMessages = [...selectedThreadMessages].sort((left, right) => {
-    const leftDate = new Date(left?.occurred_at ?? left?.created_at ?? 0).getTime();
-    const rightDate = new Date(right?.occurred_at ?? right?.created_at ?? 0).getTime();
+    const leftDate = messageTimelineMs(left);
+    const rightDate = messageTimelineMs(right);
     if (leftDate !== rightDate) return leftDate - rightDate;
     return String(left?.message_row_id ?? '').localeCompare(String(right?.message_row_id ?? ''));
   });
@@ -374,7 +385,7 @@ function renderThreadMessages() {
       return `
       <article class="thread-message ${cssClass}">
         <div>${safeText(text)}</div>
-        <div class="thread-message__meta">${safeText(directionLabel)} | ${safeText(message.delivery_state || 'unknown')} | ${safeText(formatTime(message.occurred_at))}</div>
+        <div class="thread-message__meta">${safeText(directionLabel)} | ${safeText(message.delivery_state || 'unknown')} | ${safeText(formatTime(message.created_at || message.occurred_at))}</div>
       </article>
     `;
     })
