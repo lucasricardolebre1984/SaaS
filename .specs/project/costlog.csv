@@ -181,3 +181,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-01,internal,engineering-time,local,0.00,0.00,specification,crm-persona2-ai-execution-slice complete draft spec design tasks for persona2 ai thread flow
 2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-persona2-ai-execution-slice T1..T8 Persona2 AI endpoints runtime-config UI and idempotent execution
 2026-03-01,internal,engineering-time,local,0.00,0.00,validation,crm-persona2-ai-execution-slice T9 gates green api tests ui builds and contract checks
+2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm inbox whatsapp lid normalization hotfix with deploy and live validation
