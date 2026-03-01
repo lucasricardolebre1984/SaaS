@@ -1097,6 +1097,8 @@ async function generateCrmAiDraftReply({ provider, aiConfig, contextPack, tone }
 
   const messageHistory = formatCrmAiMessageHistory(contextPack.messages);
   const promptParts = [
+    'Modo template SaaS neutro: nao cite marca/empresa especifica nem servicos fixos nao informados pelo usuario.',
+    'Nao invente catalogo, links, CNPJ, preco ou prazo. Se faltar contexto, faca uma pergunta curta de esclarecimento.',
     `Tom desejado: ${normalizedTone}.`,
     `Stage atual: ${contextPack?.lead?.stage ?? 'new'}.`,
     `Historico:\n${messageHistory || '(sem historico)'}`,
@@ -6709,11 +6711,27 @@ export function createApp(options = {}) {
                               threadContext.lead,
                               threadContext.messages
                             );
+                            // Keep auto-reply neutral/virgin: only latest inbound signal, no long thread carry-over.
+                            const latestInbound = [...(threadContext.messages ?? [])]
+                              .reverse()
+                              .find((item) => item?.direction === 'inbound');
+                            const neutralContextPack = {
+                              ...contextPack,
+                              latest_outbound_text: '',
+                              messages: latestInbound
+                                ? [{
+                                  direction: 'inbound',
+                                  text: cleanShortText(latestInbound?.text ?? '', 600),
+                                  occurred_at: latestInbound?.occurred_at ?? null,
+                                  delivery_state: latestInbound?.delivery_state ?? 'unknown'
+                                }]
+                                : []
+                            };
                             const provider = getOwnerResponseProviderForTenant(tenantRuntimeConfig);
                             const aiDraft = await generateCrmAiDraftReply({
                               provider,
                               aiConfig,
-                              contextPack,
+                              contextPack: neutralContextPack,
                               tone: 'consultivo'
                             });
                             const candidateReply = cleanShortText(aiDraft?.draftReply ?? '', 2000);
