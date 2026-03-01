@@ -57,7 +57,12 @@ function normalizeIntegrationsCrmEvolution(input = {}, fallback = {}) {
   return {
     base_url: asString(raw.base_url, asString(fb.base_url, '')),
     api_key: asString(raw.api_key, asString(fb.api_key, '')),
-    instance_id: asString(raw.instance_id, asString(fb.instance_id, 'fabio')) || 'fabio'
+    instance_id: asString(raw.instance_id, asString(fb.instance_id, 'fabio')) || 'fabio',
+    auto_reply_enabled: asBool(raw.auto_reply_enabled, asBool(fb.auto_reply_enabled, false)),
+    auto_reply_text: asString(
+      raw.auto_reply_text,
+      asString(fb.auto_reply_text, 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.')
+    )
   };
 }
 
@@ -74,7 +79,7 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
   return {
     openai: {
       api_key: normalizeApiKey(openaiInput.api_key, normalizeApiKey(openaiFallback.api_key, '')),
-      model: asString(openaiInput.model, asString(openaiFallback.model, 'gpt-5.1')) || 'gpt-5.1',
+      model: asString(openaiInput.model, asString(openaiFallback.model, 'gpt-5.1-mini')) || 'gpt-5.1-mini',
       vision_enabled: asBool(openaiInput.vision_enabled, asBool(openaiFallback.vision_enabled, true)),
       voice_enabled: asBool(openaiInput.voice_enabled, asBool(openaiFallback.voice_enabled, true)),
       image_generation_enabled: asBool(

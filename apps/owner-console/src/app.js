@@ -202,6 +202,8 @@ const cfgGoogleRefreshTokenInput = document.getElementById('cfgGoogleRefreshToke
 const cfgEvolutionBaseUrlInput = document.getElementById('cfgEvolutionBaseUrl');
 const cfgEvolutionApiKeyInput = document.getElementById('cfgEvolutionApiKey');
 const cfgEvolutionInstanceIdInput = document.getElementById('cfgEvolutionInstanceId');
+const cfgEvolutionAutoReplyEnabledInput = document.getElementById('cfgEvolutionAutoReplyEnabled');
+const cfgEvolutionAutoReplyTextInput = document.getElementById('cfgEvolutionAutoReplyText');
 const cfgBillingProviderInput = document.getElementById('cfgBillingProvider');
 const cfgBillingApiKeyInput = document.getElementById('cfgBillingApiKey');
 
@@ -356,7 +358,7 @@ function createDefaultConfig() {
     },
     openai: {
       api_key: '',
-      model: 'gpt-5.1',
+      model: 'gpt-5.1-mini',
       vision_enabled: true,
       voice_enabled: true,
       image_generation_enabled: true,
@@ -381,7 +383,9 @@ function createDefaultConfig() {
       crm_evolution: {
         base_url: '',
         api_key: '',
-        instance_id: 'fabio'
+        instance_id: 'fabio',
+        auto_reply_enabled: false,
+        auto_reply_text: 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.'
       },
       billing: {
         provider: '',
@@ -908,7 +912,9 @@ function buildRuntimeConfigSyncPayload() {
           crm_evolution: {
             base_url: state.config.integrations.crm_evolution.base_url || '',
             api_key: state.config.integrations.crm_evolution.api_key || '',
-            instance_id: state.config.integrations.crm_evolution.instance_id || 'fabio'
+            instance_id: state.config.integrations.crm_evolution.instance_id || 'fabio',
+            auto_reply_enabled: Boolean(state.config.integrations.crm_evolution.auto_reply_enabled),
+            auto_reply_text: String(state.config.integrations.crm_evolution.auto_reply_text || '')
           }
         }
       }
@@ -967,6 +973,12 @@ async function pullRuntimeConfigFromBackend() {
     const ce = body.integrations.crm_evolution;
     if (typeof ce.base_url === 'string') state.config.integrations.crm_evolution.base_url = ce.base_url;
     if (typeof ce.instance_id === 'string') state.config.integrations.crm_evolution.instance_id = ce.instance_id || 'fabio';
+    if (typeof ce.auto_reply_enabled === 'boolean') {
+      state.config.integrations.crm_evolution.auto_reply_enabled = ce.auto_reply_enabled;
+    }
+    if (typeof ce.auto_reply_text === 'string') {
+      state.config.integrations.crm_evolution.auto_reply_text = ce.auto_reply_text;
+    }
     // api_key nao e devolvido pelo backend (seguranca); mantem o valor local.
   }
 
@@ -1980,6 +1992,12 @@ function populateConfigForm() {
   cfgEvolutionBaseUrlInput.value = state.config.integrations.crm_evolution.base_url;
   cfgEvolutionApiKeyInput.value = state.config.integrations.crm_evolution.api_key;
   cfgEvolutionInstanceIdInput.value = state.config.integrations.crm_evolution.instance_id || 'fabio';
+  if (cfgEvolutionAutoReplyEnabledInput) {
+    cfgEvolutionAutoReplyEnabledInput.checked = Boolean(state.config.integrations.crm_evolution.auto_reply_enabled);
+  }
+  if (cfgEvolutionAutoReplyTextInput) {
+    cfgEvolutionAutoReplyTextInput.value = String(state.config.integrations.crm_evolution.auto_reply_text || '');
+  }
   cfgBillingProviderInput.value = state.config.integrations.billing.provider;
   cfgBillingApiKeyInput.value = state.config.integrations.billing.api_key;
 }
@@ -1994,7 +2012,7 @@ function collectConfigForm() {
   state.config.metrics.fx_usd_brl = safeNumber(cfgFxUsdBrlInput.value, 5.0);
 
   state.config.openai.api_key = cfgOpenAiApiKeyInput.value.trim();
-  state.config.openai.model = cfgOpenAiModelInput.value.trim() || 'gpt-5.1';
+  state.config.openai.model = cfgOpenAiModelInput.value.trim() || 'gpt-5.1-mini';
   state.config.openai.vision_enabled = cfgOpenAiVisionInput.checked;
   state.config.openai.voice_enabled = cfgOpenAiVoiceInput.checked;
   state.config.openai.image_generation_enabled = cfgOpenAiImageGenInput.checked;
@@ -2015,6 +2033,9 @@ function collectConfigForm() {
   state.config.integrations.crm_evolution.base_url = cfgEvolutionBaseUrlInput.value.trim();
   state.config.integrations.crm_evolution.api_key = cfgEvolutionApiKeyInput.value.trim();
   state.config.integrations.crm_evolution.instance_id = (cfgEvolutionInstanceIdInput.value.trim() || 'fabio');
+  state.config.integrations.crm_evolution.auto_reply_enabled = cfgEvolutionAutoReplyEnabledInput?.checked ?? false;
+  state.config.integrations.crm_evolution.auto_reply_text = cfgEvolutionAutoReplyTextInput?.value?.trim()
+    || 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.';
   state.config.integrations.billing.provider = cfgBillingProviderInput.value.trim();
   state.config.integrations.billing.api_key = cfgBillingApiKeyInput.value.trim();
 }

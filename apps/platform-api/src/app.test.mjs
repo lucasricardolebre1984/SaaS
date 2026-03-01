@@ -56,6 +56,15 @@ function validRuntimeConfigUpsertRequest(overrides = {}) {
           whatsapp_ai_enabled: true,
           whatsapp_ai_mode: 'assist_execute',
           whatsapp_ai_min_confidence: 0.7
+        },
+        integrations: {
+          crm_evolution: {
+            base_url: 'http://127.0.0.1:8080',
+            api_key: 'tenant-evolution-key',
+            instance_id: 'tenant_automania',
+            auto_reply_enabled: false,
+            auto_reply_text: 'Auto reply customizado'
+          }
         }
       },
       ...overrides
@@ -2395,6 +2404,9 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
     assert.equal(upsertBody.response.execution.whatsapp_ai_enabled, true);
     assert.equal(upsertBody.response.execution.whatsapp_ai_mode, 'assist_execute');
     assert.equal(upsertBody.response.execution.whatsapp_ai_min_confidence, 0.7);
+    assert.equal(upsertBody.response.runtime.model, 'gpt-5.1-mini');
+    assert.equal(upsertBody.response.integrations.crm_evolution.auto_reply_enabled, false);
+    assert.equal(upsertBody.response.integrations.crm_evolution.auto_reply_text, 'Auto reply customizado');
 
     const getRes = await fetch(
       `${runtimeBaseUrl}/v1/owner-concierge/runtime-config?tenant_id=tenant_automania`
@@ -2407,6 +2419,9 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
     assert.equal(getBody.personas.owner_concierge_prompt.length > 0, true);
     assert.equal(getBody.execution.whatsapp_ai_enabled, true);
     assert.equal(getBody.execution.whatsapp_ai_mode, 'assist_execute');
+    assert.equal(getBody.runtime.model, 'gpt-5.1-mini');
+    assert.equal(getBody.integrations.crm_evolution.auto_reply_enabled, false);
+    assert.equal(getBody.integrations.crm_evolution.auto_reply_text, 'Auto reply customizado');
   } finally {
     await new Promise((resolve, reject) => runtimeServer.close((err) => (err ? reject(err) : resolve())));
     await fs.rm(runtimeStorageDir, { recursive: true, force: true });
@@ -3280,8 +3295,7 @@ test('POST /provider/evolution/webhook maps raw MESSAGES_UPSERT inbound into CRM
   assert.equal(webhookBody.normalized.tenant_id, 'tenant_automania');
   assert.equal(webhookBody.normalized.event_type, 'message.inbound');
   assert.equal(webhookBody.inbound.status, 'created');
-  assert.equal(webhookBody.auto_reply.status, 'failed');
-  assert.equal(webhookBody.auto_reply.error, 'evolution_not_configured');
+  assert.equal(webhookBody.auto_reply.status, 'disabled');
 
   const leadsRes = await fetch(`${baseUrl}/v1/crm/leads?tenant_id=tenant_automania`);
   assert.equal(leadsRes.status, 200);

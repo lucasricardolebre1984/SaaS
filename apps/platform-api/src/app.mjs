@@ -575,7 +575,7 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
       ? integrationsFallback.crm_evolution
       : {};
 
-  const fallbackModel = stringOrFallback(openaiFallback.model, 'gpt-5.1') || 'gpt-5.1';
+  const fallbackModel = stringOrFallback(openaiFallback.model, 'gpt-5.1-mini') || 'gpt-5.1-mini';
   const fallbackEvolutionInstance = stringOrFallback(crmEvolutionFallback.instance_id, 'fabio') || 'fabio';
 
   return {
@@ -586,7 +586,7 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
           ? openaiRaw.api_key
           : openaiFallback.api_key
       ),
-      model: stringOrFallback(openaiRaw.model, fallbackModel) || 'gpt-5.1',
+      model: stringOrFallback(openaiRaw.model, fallbackModel) || 'gpt-5.1-mini',
       vision_enabled: boolOrFallback(openaiRaw.vision_enabled, boolOrFallback(openaiFallback.vision_enabled, true)),
       voice_enabled: boolOrFallback(openaiRaw.voice_enabled, boolOrFallback(openaiFallback.voice_enabled, true)),
       image_generation_enabled: boolOrFallback(
@@ -640,7 +640,18 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
           crmEvolutionRaw.api_key,
           stringOrFallback(crmEvolutionFallback.api_key, '')
         ),
-        instance_id: stringOrFallback(crmEvolutionRaw.instance_id, fallbackEvolutionInstance) || 'fabio'
+        instance_id: stringOrFallback(crmEvolutionRaw.instance_id, fallbackEvolutionInstance) || 'fabio',
+        auto_reply_enabled: boolOrFallback(
+          crmEvolutionRaw.auto_reply_enabled,
+          boolOrFallback(crmEvolutionFallback.auto_reply_enabled, false)
+        ),
+        auto_reply_text: stringOrFallback(
+          crmEvolutionRaw.auto_reply_text,
+          stringOrFallback(
+            crmEvolutionFallback.auto_reply_text,
+            'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.'
+          )
+        )
       }
     }
   };
@@ -875,7 +886,9 @@ function createRuntimeConfigSummary(tenantId, configRecord) {
       crm_evolution: {
         base_url: normalized.integrations.crm_evolution.base_url,
         api_key: normalized.integrations.crm_evolution.api_key ? '(configured)' : '',
-        instance_id: normalized.integrations.crm_evolution.instance_id
+        instance_id: normalized.integrations.crm_evolution.instance_id,
+        auto_reply_enabled: normalized.integrations.crm_evolution.auto_reply_enabled === true,
+        auto_reply_text: normalized.integrations.crm_evolution.auto_reply_text
       }
     },
     updated_at: typeof configRecord?.updated_at === 'string' ? configRecord.updated_at : null
@@ -1078,24 +1091,22 @@ async function generateCrmAiDraftReply({ provider, aiConfig, contextPack, tone }
   }
 
   const messageHistory = formatCrmAiMessageHistory(contextPack.messages);
-  const prompt = [
-    'Voce e a Persona 2 (Agente WhatsApp CRM) e deve sugerir UMA resposta curta para o lead.',
-    `Tom solicitado: ${normalizedTone}.`,
-    'Regras: maximo 320 caracteres, objetivo, humano, sem inventar preco/prazo, sem markdown, sem bullets.',
-    aiConfig.prompt
-      ? `Prompt do tenant para Persona 2:\n${aiConfig.prompt}`
-      : 'Prompt do tenant vazio: use tom profissional cordial padrao.',
-    `Stage atual do lead: ${contextPack?.lead?.stage ?? 'new'}.`,
-    `Historico recente:\n${messageHistory || '(sem historico)'}`,
-    'Retorne apenas o texto final da mensagem ao lead.'
-  ].join('\n\n');
+  const promptParts = [
+    `Tom desejado: ${normalizedTone}.`,
+    `Stage atual: ${contextPack?.lead?.stage ?? 'new'}.`,
+    `Historico:\n${messageHistory || '(sem historico)'}`,
+    'Gere uma resposta curta para enviar agora no WhatsApp.',
+    'Retorne apenas o texto final da resposta.'
+  ];
+  if (aiConfig.prompt) {
+    promptParts.push(`Contexto extra do tenant:\n${aiConfig.prompt}`);
+  }
 
-  const reply = await provider.generateAssistantOutput({
-    text: prompt,
-    persona_overrides: {
-      whatsapp_agent_prompt: aiConfig.prompt
-    }
-  });
+  const payload = { text: promptParts.join('\n\n') };
+  if (aiConfig.prompt) {
+    payload.persona_overrides = { whatsapp_agent_prompt: aiConfig.prompt };
+  }
+  const reply = await provider.generateAssistantOutput(payload);
 
   if (reply?.provider !== 'openai') {
     return {
@@ -1143,24 +1154,22 @@ async function generateCrmAiQualification({ provider, aiConfig, contextPack }) {
 
   const messageHistory = formatCrmAiMessageHistory(contextPack.messages);
   const allowedTargets = transitions.map((item) => item.to);
-  const prompt = [
-    'Voce e a Persona 2 (Agente WhatsApp CRM).',
-    'Analise a conversa e sugira o proximo stage do lead com confianca de 0 a 1.',
-    aiConfig.prompt
-      ? `Prompt do tenant para Persona 2:\n${aiConfig.prompt}`
-      : 'Prompt do tenant vazio: use criterio comercial padrao.',
+  const promptParts = [
     `Stage atual: ${currentStage}.`,
-    `Stages permitidos a partir do atual: ${allowedTargets.length > 0 ? allowedTargets.join(', ') : '(nenhum)'}.`,
-    `Historico recente:\n${messageHistory || '(sem historico)'}`,
-    'Retorne JSON estrito no formato: {"suggested_stage":"...", "confidence":0.0, "reason":"..."}.'
-  ].join('\n\n');
+    `Stages permitidos: ${allowedTargets.length > 0 ? allowedTargets.join(', ') : '(nenhum)'}.`,
+    `Historico:\n${messageHistory || '(sem historico)'}`,
+    'Sugira o proximo stage com confianca entre 0 e 1.',
+    'Retorne JSON estrito: {"suggested_stage":"...", "confidence":0.0, "reason":"..."}.'
+  ];
+  if (aiConfig.prompt) {
+    promptParts.push(`Contexto extra do tenant:\n${aiConfig.prompt}`);
+  }
 
-  const output = await provider.generateAssistantOutput({
-    text: prompt,
-    persona_overrides: {
-      whatsapp_agent_prompt: aiConfig.prompt
-    }
-  });
+  const payload = { text: promptParts.join('\n\n') };
+  if (aiConfig.prompt) {
+    payload.persona_overrides = { whatsapp_agent_prompt: aiConfig.prompt };
+  }
+  const output = await provider.generateAssistantOutput(payload);
 
   if (output?.provider !== 'openai') {
     return {
@@ -2449,7 +2458,7 @@ export function createApp(options = {}) {
 
     const autoReplyEnabled = parseBooleanFlag(
       evolutionConfig.auto_reply_enabled ?? process.env.EVOLUTION_AUTO_REPLY_ENABLED ?? options.evolutionAutoReplyEnabled,
-      true
+      false
     );
     const autoReplyText = firstNonEmptyString([
       evolutionConfig.auto_reply_text,

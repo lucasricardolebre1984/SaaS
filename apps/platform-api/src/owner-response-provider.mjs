@@ -377,7 +377,7 @@ async function requestOpenAiReply(options, payload) {
 export function createOwnerResponseProvider(options = {}) {
   const mode = resolveMode(options.mode ?? process.env.OWNER_RESPONSE_MODE);
   const apiKey = asNonEmptyString(options.openaiApiKey ?? process.env.OPENAI_API_KEY);
-  const model = asNonEmptyString(options.openaiModel ?? process.env.OWNER_RESPONSE_MODEL) ?? 'gpt-5.1';
+  const model = asNonEmptyString(options.openaiModel ?? process.env.OWNER_RESPONSE_MODEL) ?? 'gpt-5.1-mini';
   const baseUrl = (
     asNonEmptyString(options.openaiBaseUrl ?? process.env.OPENAI_BASE_URL)
     ?? 'https://api.openai.com/v1'
