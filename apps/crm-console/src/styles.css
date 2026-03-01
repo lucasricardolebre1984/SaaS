@@ -458,12 +458,12 @@ th {
 }
 
 .thread-message.is-outbound {
-  justify-self: end;
+  align-self: flex-end;
   background: color-mix(in srgb, var(--color-primary) 14%, var(--color-card));
 }
 
 .thread-message.is-inbound {
-  justify-self: start;
+  align-self: flex-start;
   background: color-mix(in srgb, var(--color-bg-soft) 80%, white);
 }
 

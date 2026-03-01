@@ -72,6 +72,9 @@ let selectedConversationId = null;
 let selectedThreadMessages = [];
 let latestAiDraftReply = '';
 let latestAiQualifySuggestion = null;
+let inboxPollingTimer = null;
+let inboxPollingInFlight = false;
+const INBOX_POLL_INTERVAL_MS = 5000;
 
 function normalizeLayout(layout) {
   return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
@@ -457,6 +460,31 @@ async function loadAllData() {
     selectedThreadMessages = [];
     renderThreadMessages();
   }
+}
+
+function stopInboxPolling() {
+  if (inboxPollingTimer != null) {
+    clearInterval(inboxPollingTimer);
+    inboxPollingTimer = null;
+  }
+}
+
+function startInboxPolling() {
+  stopInboxPolling();
+  inboxPollingTimer = setInterval(async () => {
+    if (document.hidden || inboxPollingInFlight) return;
+    inboxPollingInFlight = true;
+    try {
+      await loadConversations();
+      if (selectedConversationId) {
+        await openConversation(selectedConversationId, { markRead: false });
+      }
+    } catch {
+      // Silent retry on next interval.
+    } finally {
+      inboxPollingInFlight = false;
+    }
+  }, INBOX_POLL_INTERVAL_MS);
 }
 
 async function createLead(event) {
@@ -953,7 +981,21 @@ if (whatsappQrBtn) {
   whatsappQrBtn.addEventListener('click', loadWhatsAppQr);
 }
 
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  loadConversations();
+  if (selectedConversationId) {
+    openConversation(selectedConversationId, { markRead: false });
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  stopInboxPolling();
+  stopQrConnectionPolling();
+});
+
 restoreVisualMode();
 apiBaseInput.value = loadApiBasePreference();
 applyBootstrapFromQuery();
 loadAllData();
+startInboxPolling();
