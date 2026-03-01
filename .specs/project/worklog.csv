@@ -179,3 +179,5 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-02-28,07:04,07:04,0.08,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-doc-audit,pair,done,Doc drift cleanup after sync: repo reference moved to lucasricardolebre1984/SaaS and legacy PR link marked as historical
 2026-02-28,07:59,07:59,0.42,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-008,pair,done,Runtime-config hardening to preserve tenant OpenAI/Evolution secrets when API key fields are omitted + CRM QR fallback force_new flow
 2026-02-28,07:59,07:59,0.17,Validate,milestone-5-runtime-stability-hotfix-slice,M5B-008,pair,done,Nx gates green after M5B-008: app-platform-api:test + app-owner-console:build + app-crm-console:build
+2026-03-01,10:45,11:35,0.83,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-006,pair,done,Evolution inbound webhook now attempts WhatsApp auto-reply with sendText fallback payload and non-blocking accepted response
+2026-03-01,11:35,11:50,0.25,Validate,milestone-5-runtime-stability-hotfix-slice,M5B-006,pair,done,Validated gates app-platform-api:test and contract-tests:contract-checks after M5B-006

@@ -402,6 +402,106 @@ function boolOrFallback(value, fallback = false) {
   return fallback;
 }
 
+function parseBooleanFlag(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+function truncateProviderErrorDetails(raw, maxLength = 220) {
+  const details = String(raw ?? '').trim();
+  if (!details) return 'provider_error';
+  return details.length > maxLength ? `${details.slice(0, maxLength)}...` : details;
+}
+
+function normalizeEvolutionRecipientNumber(value) {
+  const normalized = normalizeE164FromAny(value);
+  if (!normalized) return '';
+  return normalized.replace(/^\+/, '');
+}
+
+function extractEvolutionProviderMessageId(raw) {
+  const payload = raw && typeof raw === 'object' ? raw : {};
+  return firstNonEmptyString([
+    payload?.key?.id,
+    payload?.data?.key?.id,
+    payload?.message_id,
+    payload?.messageId,
+    payload?.id,
+    payload?.data?.id
+  ]) || null;
+}
+
+async function sendEvolutionTextMessage({ baseUrl, apiKey, instanceId, number, text }) {
+  const sanitizedBaseUrl = String(baseUrl ?? '').trim().replace(/\/$/, '');
+  const sanitizedInstanceId = String(instanceId ?? '').trim();
+  const sanitizedNumber = String(number ?? '').trim();
+  const sanitizedText = String(text ?? '').trim();
+  const url = `${sanitizedBaseUrl}/message/sendText/${encodeURIComponent(sanitizedInstanceId)}`;
+  const headers = {
+    apikey: String(apiKey ?? '').trim(),
+    'content-type': 'application/json'
+  };
+
+  const attemptSend = async (payload) => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+    const rawText = await response.text();
+    let parsed = null;
+    if (rawText) {
+      try {
+        parsed = JSON.parse(rawText);
+      } catch {
+        parsed = null;
+      }
+    }
+    if (response.ok) {
+      return {
+        ok: true,
+        status: response.status,
+        providerMessageId: extractEvolutionProviderMessageId(parsed),
+        providerPayload: parsed
+      };
+    }
+    return {
+      ok: false,
+      status: response.status,
+      errorDetails: truncateProviderErrorDetails(rawText || parsed?.message || parsed?.error || '')
+    };
+  };
+
+  const firstAttempt = await attemptSend({
+    number: sanitizedNumber,
+    text: sanitizedText
+  });
+  if (firstAttempt.ok) {
+    return firstAttempt;
+  }
+
+  const secondAttempt = await attemptSend({
+    number: sanitizedNumber,
+    textMessage: { text: sanitizedText }
+  });
+  if (secondAttempt.ok) {
+    return {
+      ...secondAttempt,
+      fallbackPayloadUsed: true
+    };
+  }
+
+  return {
+    ok: false,
+    status: secondAttempt.status || firstAttempt.status || 502,
+    errorDetails: secondAttempt.errorDetails || firstAttempt.errorDetails || 'provider_send_error'
+  };
+}
+
 function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
   const raw = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
   const fallback = fallbackConfig && typeof fallbackConfig === 'object' ? fallbackConfig : {};
@@ -1909,6 +2009,52 @@ export function createApp(options = {}) {
     const normalizedTenantId = String(tenantId ?? '').trim();
     if (!normalizedTenantId) return null;
     return tenantRuntimeConfigStore.getTenantRuntimeConfig(normalizedTenantId);
+  }
+
+  async function resolveEvolutionRuntimeConfig(tenantId) {
+    const normalizedTenantId = String(tenantId ?? '').trim();
+    let tenantConfig = null;
+    if (normalizedTenantId) {
+      try {
+        tenantConfig = await resolveTenantRuntimeConfig(normalizedTenantId);
+      } catch {
+        tenantConfig = null;
+      }
+    }
+
+    const evolutionConfig =
+      tenantConfig?.integrations?.crm_evolution && typeof tenantConfig.integrations.crm_evolution === 'object'
+        ? tenantConfig.integrations.crm_evolution
+        : {};
+
+    let baseUrl = String(evolutionConfig.base_url ?? '').trim();
+    let apiKey = String(evolutionConfig.api_key ?? '').trim();
+    let instanceId = String(evolutionConfig.instance_id ?? '').trim();
+    if (!baseUrl || !apiKey || !instanceId) {
+      baseUrl = String(process.env.EVOLUTION_HTTP_BASE_URL ?? options.evolutionHttpBaseUrl ?? '').trim();
+      apiKey = String(process.env.EVOLUTION_API_KEY ?? options.evolutionApiKey ?? '').trim();
+      instanceId = String(process.env.EVOLUTION_INSTANCE_ID ?? options.evolutionInstanceId ?? 'fabio').trim() || 'fabio';
+    }
+
+    const autoReplyEnabled = parseBooleanFlag(
+      evolutionConfig.auto_reply_enabled ?? process.env.EVOLUTION_AUTO_REPLY_ENABLED ?? options.evolutionAutoReplyEnabled,
+      true
+    );
+    const autoReplyText = firstNonEmptyString([
+      evolutionConfig.auto_reply_text,
+      process.env.EVOLUTION_AUTO_REPLY_TEXT,
+      options.evolutionAutoReplyText,
+      'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.'
+    ]);
+
+    return {
+      tenantId: normalizedTenantId,
+      baseUrl,
+      apiKey,
+      instanceId,
+      autoReplyEnabled,
+      autoReplyText
+    };
   }
 
   function getOwnerResponseProviderForTenant(tenantRuntimeConfig) {
@@ -5341,6 +5487,7 @@ export function createApp(options = {}) {
         }
 
         let inboundResult = null;
+        let autoReplyResult = null;
         if (
           normalizedBody.event_type === 'message.inbound' &&
           typeof normalizedBody.payload?.from_e164 === 'string' &&
@@ -5391,6 +5538,66 @@ export function createApp(options = {}) {
               lead_id: leadCreateResult.lead?.lead_id ?? null,
               lifecycle_event_name: lifecycleEventName
             };
+
+            const fromMe = Boolean(
+              body?.data?.key?.fromMe
+              ?? normalizedBody?.payload?.raw?.data?.key?.fromMe
+            );
+            if (!fromMe) {
+              const evolutionRuntime = await resolveEvolutionRuntimeConfig(normalizedBody.tenant_id);
+              if (!evolutionRuntime.autoReplyEnabled) {
+                autoReplyResult = { status: 'disabled' };
+              } else if (!evolutionRuntime.baseUrl || !evolutionRuntime.apiKey || !evolutionRuntime.instanceId) {
+                autoReplyResult = {
+                  status: 'failed',
+                  error: 'evolution_not_configured'
+                };
+              } else {
+                const recipientNumber = normalizeEvolutionRecipientNumber(phoneE164);
+                if (!recipientNumber) {
+                  autoReplyResult = {
+                    status: 'failed',
+                    error: 'invalid_recipient'
+                  };
+                } else {
+                  try {
+                    const sendResult = await sendEvolutionTextMessage({
+                      baseUrl: evolutionRuntime.baseUrl,
+                      apiKey: evolutionRuntime.apiKey,
+                      instanceId: evolutionRuntime.instanceId,
+                      number: recipientNumber,
+                      text: evolutionRuntime.autoReplyText
+                    });
+                    if (sendResult.ok) {
+                      autoReplyResult = {
+                        status: 'sent',
+                        instance_id: evolutionRuntime.instanceId,
+                        provider_message_id: sendResult.providerMessageId,
+                        ...(sendResult.fallbackPayloadUsed ? { fallback_payload_used: true } : {})
+                      };
+                    } else {
+                      autoReplyResult = {
+                        status: 'failed',
+                        error: 'provider_send_error',
+                        provider_status: sendResult.status,
+                        details: sendResult.errorDetails
+                      };
+                    }
+                  } catch (error) {
+                    autoReplyResult = {
+                      status: 'failed',
+                      error: 'provider_unreachable',
+                      details: truncateProviderErrorDetails(error?.message ?? error)
+                    };
+                  }
+                }
+              }
+            } else {
+              autoReplyResult = {
+                status: 'skipped',
+                reason: 'from_me_message'
+              };
+            }
           } catch (error) {
             return json(res, 500, {
               error: 'storage_error',
@@ -5407,7 +5614,8 @@ export function createApp(options = {}) {
             message_id: normalizedBody.payload.message_id,
             delivery_state: normalizedBody.payload.delivery_state ?? 'unknown'
           },
-          ...(inboundResult ? { inbound: inboundResult } : {})
+          ...(inboundResult ? { inbound: inboundResult } : {}),
+          ...(autoReplyResult ? { auto_reply: autoReplyResult } : {})
         });
       }
 

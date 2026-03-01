@@ -40,6 +40,19 @@ Date: 2026-02-27
   - validar `Gerar QR Code` do modulo 02 com instance Evolution ativa.
   - registrar evidencias finais de UAT em `STATUS-ATUAL.md`.
 
+## M5B-006 - Hotfix auto-resposta inbound WhatsApp (Evolution)
+- Status: completed
+- Output:
+  - `apps/platform-api/src/app.mjs`
+    - webhook inbound passa a tentar auto-resposta Evolution `sendText` com fallback de compatibilidade (`text` -> `textMessage.text`);
+    - resposta do webhook inclui `auto_reply.status` (`sent|failed|disabled|skipped`) sem quebrar `status=accepted`.
+  - `apps/platform-api/src/app.test.mjs`
+    - cobertura para inbound sem configuracao (`auto_reply.failed`);
+    - cobertura para envio outbound com mock Evolution e fallback de payload.
+- Validacao:
+  - `npx nx run app-platform-api:test` (pass)
+  - `npx nx run contract-tests:contract-checks` (pass)
+
 ## Evidence
 - Branch: `main` (via PR #3 mergeado em 2026-02-26T21:56:05Z)
 - Commit de runtime hotfix: `8474a4e` (main)

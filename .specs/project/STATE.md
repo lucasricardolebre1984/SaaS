@@ -1,6 +1,6 @@
 # STATE
 
-Last update: 2026-02-28
+Last update: 2026-03-01
 Active phase: Implement + Validate (milestone-5-runtime-stability-hotfix-slice)
 Active feature: milestone-5-runtime-stability-hotfix-slice
 
@@ -45,6 +45,7 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-01: M5B-006 concluido no backend (`app-platform-api`): webhook Evolution inbound agora tenta auto-resposta via `message/sendText/{instance}` com fallback de payload (`text` -> `textMessage.text`) e diagnostico `auto_reply` no retorno sem quebrar `status=accepted`; testes verdes em `npx nx run app-platform-api:test` e `npx nx run contract-tests:contract-checks`.
 - 2026-02-28: Ubuntu atualizado: remote do git em /srv/SaaS alterado de fabio para https://github.com/lucasricardolebre1984/SaaS.git; pull origin main, npm ci, restart; health 200; servico ativo.
 - 2026-02-28: Proximo passo iniciado: deploy 87435e6 (path /srv/SaaS unificado) via npm run deploy:dev; UAT Evolution executado via SSH (tools/evolution-aws-check.sh): Evolution API 200 OK, instancia tenant_automania state open; health publico dev.automaniaai.com.br/api/health 200; evidencias em worklog, costlog, STATE, STATUS, PROXIMO-PASSO.
 - 2026-02-28: Baseline Personas e runtime-config documentado em `.specs/project/BASELINE-PERSONAS-RUNTIME-CONFIG.md` (Persona 1/2, prompts menu 06, GET/POST runtime-config, API natural gpt-5.1, sem prompt rage, rollback); STATUS-ATUAL e STATE atualizados; slice CRM modern inbox aprovado.

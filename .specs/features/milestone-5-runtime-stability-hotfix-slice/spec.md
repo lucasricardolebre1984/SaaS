@@ -15,12 +15,14 @@ Fechar falhas de estabilidade do runtime em `dev.automaniaai.com.br` com foco em
 - Fallback de video do avatar para evitar tela preta em navegadores mobile.
 - Normalizacao de branches remotas para reduzir ruido operacional.
 - Atualizacao de docs institucionais e logs.
+- Hotfix de auto-resposta no inbound WhatsApp via Evolution para evitar conversa sem retorno no primeiro contato.
 
 ## Functional Requirements
 1. Runtime config deve truncar chave OpenAI para o primeiro token valido ao salvar.
 2. Menu mobile deve abrir/fechar sem bloquear navegacao de modulos.
 3. Avatar continuo deve ter fallback de renderizacao em mobile.
 4. Repositorio remoto deve ficar com branch principal limpa para operacao (`main`).
+5. Webhook inbound do Evolution deve permitir resposta automatica inicial ao contato, sem bloquear `status=accepted` em caso de erro do provider.
 
 ## Non-Functional Requirements
 - Todas as mudancas devem ser auditaveis por data/hora em `.specs/project/*`.
@@ -36,3 +38,4 @@ Fechar falhas de estabilidade do runtime em `dev.automaniaai.com.br` com foco em
 - Mobile drawer fecha corretamente em troca de modulo/click externo.
 - Avatar continuo nao cai em tela preta quando `avatar-fullscreen.mp4` falhar.
 - Branches remotas antigas removidas; protocolo de protecao da `main` restaurado.
+- Recebendo `message.inbound` valido, o backend tenta envio outbound via Evolution (`sendText`) e retorna diagnostico no payload (`auto_reply.sent` ou `auto_reply.failed`) mantendo webhook aceito.

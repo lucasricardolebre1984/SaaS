@@ -13,6 +13,9 @@ Date: 2026-02-26
 3. **Avatar preto no modo continuo**
    - Causa: falha de decode/playback do asset fullscreen em alguns browsers mobile.
    - Efeito: experiencia imersiva quebrada.
+4. **Inbound WhatsApp sem resposta**
+   - Causa: webhook `POST /provider/evolution/webhook` so cria lead; nao existe chamada outbound para Evolution.
+   - Efeito: contato entra no CRM, mas nao recebe retorno no WhatsApp.
 
 ## Solution
 1. Backend sanitization:
@@ -29,6 +32,17 @@ Date: 2026-02-26
    - erro no `avatar-fullscreen` troca para:
      - idle: `brain-idle.mp4`
      - speaking: `brain-speaking.mp4`.
+4. Auto-resposta inbound (hotfix controlado):
+   - no fluxo `message.inbound`, apos normalizacao e upsert de lead, tentar envio outbound em Evolution:
+     - endpoint: `POST /message/sendText/{instanceId}`
+     - tentativa 1 payload: `{ number, text }`
+     - fallback compatibilidade: `{ number, textMessage: { text } }`
+   - configuracao:
+     - habilitacao por env `EVOLUTION_AUTO_REPLY_ENABLED` (default `true`)
+     - template por env `EVOLUTION_AUTO_REPLY_TEXT` (default institucional curto)
+   - tolerancia a falha:
+     - webhook sempre responde `status=accepted`
+     - falha de envio retorna diagnostico `auto_reply.failed` no payload sem quebrar ingestao inbound.
 
 ## Deployment/Operations
 - Branch de entrega consolidada em `main` via PR #3 mergeado.
@@ -46,3 +60,7 @@ Date: 2026-02-26
    - enviar texto/audio
    - testar menu mobile
    - testar modo continuo/avatar.
+4. WhatsApp inbound->outbound:
+   - conectar instancia Evolution
+   - enviar mensagem inbound real
+   - validar tentativa de auto-resposta no backend e no celular.

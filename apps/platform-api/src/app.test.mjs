@@ -3272,6 +3272,8 @@ test('POST /provider/evolution/webhook maps raw MESSAGES_UPSERT inbound into CRM
   assert.equal(webhookBody.normalized.tenant_id, 'tenant_automania');
   assert.equal(webhookBody.normalized.event_type, 'message.inbound');
   assert.equal(webhookBody.inbound.status, 'created');
+  assert.equal(webhookBody.auto_reply.status, 'failed');
+  assert.equal(webhookBody.auto_reply.error, 'evolution_not_configured');
 
   const leadsRes = await fetch(`${baseUrl}/v1/crm/leads?tenant_id=tenant_automania`);
   assert.equal(leadsRes.status, 200);
@@ -3280,6 +3282,107 @@ test('POST /provider/evolution/webhook maps raw MESSAGES_UPSERT inbound into CRM
   assert.ok(created);
   assert.equal(created.phone_e164, '+5511999999999');
   assert.equal(created.source_channel, 'whatsapp');
+});
+
+test('POST /provider/evolution/webhook sends auto reply through Evolution with compatibility fallback', async () => {
+  const localStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-evo-autoreply-'));
+  const evolutionRequests = [];
+  const evolutionServer = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const rawBody = Buffer.concat(chunks).toString('utf8');
+    const parsedBody = rawBody ? JSON.parse(rawBody) : {};
+    evolutionRequests.push({
+      method: req.method,
+      url: req.url,
+      apikey: req.headers.apikey,
+      body: parsedBody
+    });
+    if (req.method === 'POST' && req.url === '/message/sendText/tenant_automania') {
+      if (typeof parsedBody.text === 'string') {
+        res.writeHead(400, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: 'missing_textMessage' }));
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ key: { id: 'provider-msg-out-001' } }));
+      return;
+    }
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not_found' }));
+  });
+  await new Promise((resolve) => evolutionServer.listen(0, '127.0.0.1', resolve));
+  const evolutionAddress = evolutionServer.address();
+  const evolutionBaseUrl = `http://127.0.0.1:${evolutionAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: localStorageDir,
+      customerStorageDir: path.join(localStorageDir, 'customers'),
+      agendaStorageDir: path.join(localStorageDir, 'agenda'),
+      billingStorageDir: path.join(localStorageDir, 'billing'),
+      leadStorageDir: path.join(localStorageDir, 'crm'),
+      crmAutomationStorageDir: path.join(localStorageDir, 'crm-automation'),
+      ownerMemoryStorageDir: path.join(localStorageDir, 'owner-memory'),
+      evolutionHttpBaseUrl: evolutionBaseUrl,
+      evolutionApiKey: 'test-evolution-key',
+      evolutionInstanceId: 'tenant_automania',
+      evolutionAutoReplyEnabled: true,
+      evolutionAutoReplyText: 'Recebemos sua mensagem e retornaremos em instantes.'
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const rawWebhookPayload = {
+      event: 'MESSAGES_UPSERT',
+      instance: 'tenant_automania',
+      data: {
+        key: {
+          id: 'evo-msg-raw-002',
+          remoteJid: '5511912345678@s.whatsapp.net',
+          fromMe: false
+        },
+        pushName: 'Contato Auto Reply',
+        message: {
+          conversation: 'Ola, pode me atender?'
+        }
+      },
+      date_time: '2026-03-01T10:20:00.000Z'
+    };
+
+    const webhookRes = await fetch(`${appBaseUrl}/provider/evolution/webhook`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(rawWebhookPayload)
+    });
+    assert.equal(webhookRes.status, 200);
+    const webhookBody = await webhookRes.json();
+    assert.equal(webhookBody.status, 'accepted');
+    assert.equal(webhookBody.inbound.status, 'created');
+    assert.equal(webhookBody.auto_reply.status, 'sent');
+    assert.equal(webhookBody.auto_reply.provider_message_id, 'provider-msg-out-001');
+    assert.equal(webhookBody.auto_reply.fallback_payload_used, true);
+
+    assert.equal(evolutionRequests.length, 2);
+    assert.equal(evolutionRequests[0].apikey, 'test-evolution-key');
+    assert.equal(evolutionRequests[0].body.number, '5511912345678');
+    assert.equal(evolutionRequests[0].body.text, 'Recebemos sua mensagem e retornaremos em instantes.');
+    assert.equal(evolutionRequests[1].body.number, '5511912345678');
+    assert.equal(evolutionRequests[1].body.textMessage.text, 'Recebemos sua mensagem e retornaremos em instantes.');
+  } finally {
+    await new Promise((resolve, reject) => {
+      appServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await new Promise((resolve, reject) => {
+      evolutionServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await fs.rm(localStorageDir, { recursive: true, force: true });
+  }
 });
 
 test('POST /provider/evolution/webhook rejects invalid request', async () => {
