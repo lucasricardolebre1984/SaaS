@@ -645,6 +645,10 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
           crmEvolutionRaw.auto_reply_enabled,
           boolOrFallback(crmEvolutionFallback.auto_reply_enabled, false)
         ),
+        auto_reply_use_ai: boolOrFallback(
+          crmEvolutionRaw.auto_reply_use_ai,
+          boolOrFallback(crmEvolutionFallback.auto_reply_use_ai, false)
+        ),
         auto_reply_text: stringOrFallback(
           crmEvolutionRaw.auto_reply_text,
           stringOrFallback(
@@ -888,6 +892,7 @@ function createRuntimeConfigSummary(tenantId, configRecord) {
         api_key: normalized.integrations.crm_evolution.api_key ? '(configured)' : '',
         instance_id: normalized.integrations.crm_evolution.instance_id,
         auto_reply_enabled: normalized.integrations.crm_evolution.auto_reply_enabled === true,
+        auto_reply_use_ai: normalized.integrations.crm_evolution.auto_reply_use_ai === true,
         auto_reply_text: normalized.integrations.crm_evolution.auto_reply_text
       }
     },
@@ -2460,6 +2465,10 @@ export function createApp(options = {}) {
       evolutionConfig.auto_reply_enabled ?? process.env.EVOLUTION_AUTO_REPLY_ENABLED ?? options.evolutionAutoReplyEnabled,
       false
     );
+    const autoReplyUseAi = parseBooleanFlag(
+      evolutionConfig.auto_reply_use_ai ?? process.env.EVOLUTION_AUTO_REPLY_USE_AI ?? options.evolutionAutoReplyUseAi,
+      false
+    );
     const autoReplyText = firstNonEmptyString([
       evolutionConfig.auto_reply_text,
       process.env.EVOLUTION_AUTO_REPLY_TEXT,
@@ -2473,6 +2482,7 @@ export function createApp(options = {}) {
       apiKey,
       instanceId,
       autoReplyEnabled,
+      autoReplyUseAi,
       autoReplyText
     };
   }
@@ -6678,12 +6688,62 @@ export function createApp(options = {}) {
                   };
                 } else {
                   try {
+                    let autoReplyText = evolutionRuntime.autoReplyText;
+                    let autoReplyMode = evolutionRuntime.autoReplyUseAi ? 'ai' : 'static';
+                    let aiProvider = null;
+                    let aiModel = null;
+                    let aiError = null;
+
+                    if (evolutionRuntime.autoReplyUseAi && inboundConversation?.conversation_id) {
+                      try {
+                        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(normalizedBody.tenant_id);
+                        const aiConfig = resolveCrmAiRuntimeConfig(tenantRuntimeConfig);
+                        if (aiConfig.enabled && aiConfig.mode === 'assist_execute') {
+                          const threadContext = await resolveCrmThreadContext(
+                            normalizedBody.tenant_id,
+                            inboundConversation.conversation_id
+                          );
+                          if (threadContext.ok) {
+                            const contextPack = buildCrmAiContextPack(
+                              threadContext.conversation,
+                              threadContext.lead,
+                              threadContext.messages
+                            );
+                            const provider = getOwnerResponseProviderForTenant(tenantRuntimeConfig);
+                            const aiDraft = await generateCrmAiDraftReply({
+                              provider,
+                              aiConfig,
+                              contextPack,
+                              tone: 'consultivo'
+                            });
+                            const candidateReply = cleanShortText(aiDraft?.draftReply ?? '', 2000);
+                            if (candidateReply) {
+                              autoReplyText = candidateReply;
+                              aiProvider = aiDraft?.provider ?? null;
+                              aiModel = aiDraft?.model ?? null;
+                            } else {
+                              autoReplyMode = 'static_fallback';
+                            }
+                          } else {
+                            autoReplyMode = 'static_fallback';
+                            aiError = 'thread_context_unavailable';
+                          }
+                        } else {
+                          autoReplyMode = 'static_fallback';
+                          aiError = 'crm_ai_disabled_or_mode_blocked';
+                        }
+                      } catch (error) {
+                        autoReplyMode = 'static_fallback';
+                        aiError = truncateProviderErrorDetails(error?.message ?? error);
+                      }
+                    }
+
                     const sendResult = await sendEvolutionTextMessage({
                       baseUrl: evolutionRuntime.baseUrl,
                       apiKey: evolutionRuntime.apiKey,
                       instanceId: evolutionRuntime.instanceId,
                       number: recipientNumber,
-                      text: evolutionRuntime.autoReplyText
+                      text: autoReplyText
                     });
                     if (sendResult.ok) {
                       if (inboundConversation?.conversation_id) {
@@ -6693,11 +6753,15 @@ export function createApp(options = {}) {
                           provider: 'evolution-api',
                           provider_message_id: sendResult.providerMessageId ?? null,
                           message_type: 'text',
-                          text: evolutionRuntime.autoReplyText,
+                          text: autoReplyText,
                           delivery_state: 'sent',
                           occurred_at: new Date().toISOString(),
                           metadata: {
                             source: 'evolution_auto_reply',
+                            auto_reply_mode: autoReplyMode,
+                            ai_provider: aiProvider,
+                            ai_model: aiModel,
+                            ai_error: aiError,
                             fallback_payload_used: Boolean(sendResult.fallbackPayloadUsed)
                           }
                         });
@@ -6705,6 +6769,10 @@ export function createApp(options = {}) {
                       autoReplyResult = {
                         status: 'sent',
                         instance_id: evolutionRuntime.instanceId,
+                        mode: autoReplyMode,
+                        provider: aiProvider,
+                        model: aiModel,
+                        ...(aiError ? { ai_error: aiError } : {}),
                         provider_message_id: sendResult.providerMessageId,
                         ...(sendResult.fallbackPayloadUsed ? { fallback_payload_used: true } : {})
                       };
@@ -6716,11 +6784,15 @@ export function createApp(options = {}) {
                           provider: 'evolution-api',
                           provider_message_id: null,
                           message_type: 'text',
-                          text: evolutionRuntime.autoReplyText,
+                          text: autoReplyText,
                           delivery_state: 'failed',
                           occurred_at: new Date().toISOString(),
                           metadata: {
                             source: 'evolution_auto_reply',
+                            auto_reply_mode: autoReplyMode,
+                            ai_provider: aiProvider,
+                            ai_model: aiModel,
+                            ai_error: aiError,
                             provider_status: sendResult.status ?? null,
                             provider_error: sendResult.errorDetails ?? null
                           }
@@ -6729,6 +6801,10 @@ export function createApp(options = {}) {
                       autoReplyResult = {
                         status: 'failed',
                         error: 'provider_send_error',
+                        mode: autoReplyMode,
+                        provider: aiProvider,
+                        model: aiModel,
+                        ...(aiError ? { ai_error: aiError } : {}),
                         provider_status: sendResult.status,
                         details: sendResult.errorDetails
                       };

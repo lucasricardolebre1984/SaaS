@@ -203,6 +203,7 @@ const cfgEvolutionBaseUrlInput = document.getElementById('cfgEvolutionBaseUrl');
 const cfgEvolutionApiKeyInput = document.getElementById('cfgEvolutionApiKey');
 const cfgEvolutionInstanceIdInput = document.getElementById('cfgEvolutionInstanceId');
 const cfgEvolutionAutoReplyEnabledInput = document.getElementById('cfgEvolutionAutoReplyEnabled');
+const cfgEvolutionAutoReplyUseAiInput = document.getElementById('cfgEvolutionAutoReplyUseAi');
 const cfgEvolutionAutoReplyTextInput = document.getElementById('cfgEvolutionAutoReplyText');
 const cfgBillingProviderInput = document.getElementById('cfgBillingProvider');
 const cfgBillingApiKeyInput = document.getElementById('cfgBillingApiKey');
@@ -385,6 +386,7 @@ function createDefaultConfig() {
         api_key: '',
         instance_id: 'fabio',
         auto_reply_enabled: false,
+        auto_reply_use_ai: false,
         auto_reply_text: 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.'
       },
       billing: {
@@ -468,7 +470,13 @@ function mergeConfig(raw) {
       },
       crm_evolution: {
         ...defaults.integrations.crm_evolution,
-        ...(raw?.integrations?.crm_evolution ?? {})
+        ...(raw?.integrations?.crm_evolution ?? {}),
+        auto_reply_enabled: raw?.integrations?.crm_evolution?.auto_reply_enabled == null
+          ? defaults.integrations.crm_evolution.auto_reply_enabled
+          : Boolean(raw.integrations.crm_evolution.auto_reply_enabled),
+        auto_reply_use_ai: raw?.integrations?.crm_evolution?.auto_reply_use_ai == null
+          ? defaults.integrations.crm_evolution.auto_reply_use_ai
+          : Boolean(raw.integrations.crm_evolution.auto_reply_use_ai)
       },
       billing: {
         ...defaults.integrations.billing,
@@ -914,6 +922,7 @@ function buildRuntimeConfigSyncPayload() {
             api_key: state.config.integrations.crm_evolution.api_key || '',
             instance_id: state.config.integrations.crm_evolution.instance_id || 'fabio',
             auto_reply_enabled: Boolean(state.config.integrations.crm_evolution.auto_reply_enabled),
+            auto_reply_use_ai: Boolean(state.config.integrations.crm_evolution.auto_reply_use_ai),
             auto_reply_text: String(state.config.integrations.crm_evolution.auto_reply_text || '')
           }
         }
@@ -975,6 +984,9 @@ async function pullRuntimeConfigFromBackend() {
     if (typeof ce.instance_id === 'string') state.config.integrations.crm_evolution.instance_id = ce.instance_id || 'fabio';
     if (typeof ce.auto_reply_enabled === 'boolean') {
       state.config.integrations.crm_evolution.auto_reply_enabled = ce.auto_reply_enabled;
+    }
+    if (typeof ce.auto_reply_use_ai === 'boolean') {
+      state.config.integrations.crm_evolution.auto_reply_use_ai = ce.auto_reply_use_ai;
     }
     if (typeof ce.auto_reply_text === 'string') {
       state.config.integrations.crm_evolution.auto_reply_text = ce.auto_reply_text;
@@ -1995,6 +2007,9 @@ function populateConfigForm() {
   if (cfgEvolutionAutoReplyEnabledInput) {
     cfgEvolutionAutoReplyEnabledInput.checked = Boolean(state.config.integrations.crm_evolution.auto_reply_enabled);
   }
+  if (cfgEvolutionAutoReplyUseAiInput) {
+    cfgEvolutionAutoReplyUseAiInput.checked = Boolean(state.config.integrations.crm_evolution.auto_reply_use_ai);
+  }
   if (cfgEvolutionAutoReplyTextInput) {
     cfgEvolutionAutoReplyTextInput.value = String(state.config.integrations.crm_evolution.auto_reply_text || '');
   }
@@ -2034,6 +2049,7 @@ function collectConfigForm() {
   state.config.integrations.crm_evolution.api_key = cfgEvolutionApiKeyInput.value.trim();
   state.config.integrations.crm_evolution.instance_id = (cfgEvolutionInstanceIdInput.value.trim() || 'fabio');
   state.config.integrations.crm_evolution.auto_reply_enabled = cfgEvolutionAutoReplyEnabledInput?.checked ?? false;
+  state.config.integrations.crm_evolution.auto_reply_use_ai = cfgEvolutionAutoReplyUseAiInput?.checked ?? false;
   state.config.integrations.crm_evolution.auto_reply_text = cfgEvolutionAutoReplyTextInput?.value?.trim()
     || 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.';
   state.config.integrations.billing.provider = cfgBillingProviderInput.value.trim();
