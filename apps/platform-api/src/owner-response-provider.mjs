@@ -239,7 +239,6 @@ async function requestOpenAiResponsesReply(options, payload) {
     },
     body: JSON.stringify({
       model: options.model,
-      temperature: 0.2,
       instructions: instructionParts.join('\n\n'),
       input: buildResponsesInput(payload, attachments)
     })
@@ -334,7 +333,6 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
     },
     body: JSON.stringify({
       model: options.model,
-      temperature: 0.2,
       messages
     })
   });
