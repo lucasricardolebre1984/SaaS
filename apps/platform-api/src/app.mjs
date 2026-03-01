@@ -6637,6 +6637,7 @@ export function createApp(options = {}) {
               lifecycle_event_name: lifecycleEventName
             };
 
+            const inboundOccurredAt = new Date().toISOString();
             const persistedInbound = await crmConversationStore.upsertInboundMessage({
               tenant_id: normalizedBody.tenant_id,
               contact_e164: phoneE164,
@@ -6647,9 +6648,10 @@ export function createApp(options = {}) {
               message_type: normalizedBody.payload.message_type ?? 'text',
               text: normalizedBody.payload.text ?? '',
               delivery_state: normalizedBody.payload.delivery_state ?? 'received',
-              occurred_at: normalizedBody.occurred_at ?? new Date().toISOString(),
+              occurred_at: inboundOccurredAt,
               metadata: {
-                source: 'evolution_webhook_inbound'
+                source: 'evolution_webhook_inbound',
+                provider_occurred_at: normalizedBody.occurred_at ?? null
               }
             });
             inboundConversation = persistedInbound?.conversation ?? null;
