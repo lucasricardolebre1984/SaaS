@@ -45,6 +45,7 @@ import { createAgendaStore } from './agenda-store.mjs';
 import { createBillingStore } from './billing-store.mjs';
 import { createLeadStore } from './lead-store.mjs';
 import { createCrmAutomationStore } from './crm-automation-store.mjs';
+import { createCrmConversationStore } from './crm-conversation-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
 import { createOwnerMemoryMaintenanceStore } from './owner-memory-maintenance-store.mjs';
 import { createOwnerShortMemoryStore } from './owner-short-memory-store.mjs';
@@ -1779,6 +1780,20 @@ function crmAutomationInfo(store) {
   };
 }
 
+function crmConversationInfo(store) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir
+  };
+}
+
 function ownerMemoryInfo(store, embeddingProvider) {
   if (store.backend === 'postgres') {
     return {
@@ -1963,6 +1978,13 @@ export function createApp(options = {}) {
   const crmAutomationStore = createCrmAutomationStore({
     backend,
     storageDir: options.crmAutomationStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
+  });
+  const crmConversationStore = createCrmConversationStore({
+    backend,
+    storageDir: options.crmConversationStorageDir,
     pgConnectionString,
     pgSchema,
     pgAutoMigrate
@@ -2304,6 +2326,7 @@ export function createApp(options = {}) {
           billing: billingInfo(billingStore),
           crm_leads: leadInfo(leadStore),
           crm_automation: crmAutomationInfo(crmAutomationStore),
+          crm_conversations: crmConversationInfo(crmConversationStore),
           owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider),
           owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore),
           tenant_runtime_config: tenantRuntimeConfigInfo(tenantRuntimeConfigStore),
@@ -3751,6 +3774,170 @@ export function createApp(options = {}) {
         }
 
         return json(res, 200, response);
+      }
+
+      if (method === 'GET' && path === '/v1/crm/conversations') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const limitRaw = Number(parsedUrl.searchParams.get('limit') ?? 100);
+        const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 100;
+        const conversations = await crmConversationStore.listConversations(tenantId, { limit });
+        const leads = await leadStore.listLeads(tenantId);
+        const leadById = new Map(leads.map((item) => [item.lead_id, item]));
+        const leadByPhone = new Map(leads.map((item) => [item.phone_e164, item]));
+
+        const items = conversations.map((conversation) => {
+          const linkedLead = (
+            (conversation.lead_id ? leadById.get(conversation.lead_id) : null)
+            ?? leadByPhone.get(conversation.contact_e164)
+            ?? null
+          );
+          return {
+            ...conversation,
+            lead_id: linkedLead?.lead_id ?? conversation.lead_id ?? null,
+            lead_stage: linkedLead?.stage ?? null
+          };
+        });
+        return json(res, 200, {
+          tenant_id: tenantId,
+          count: items.length,
+          items
+        });
+      }
+
+      const conversationMessagesMatch = path.match(/^\/v1\/crm\/conversations\/([^/]+)\/messages$/);
+      if (method === 'GET' && conversationMessagesMatch) {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+        const conversationId = decodeURIComponent(conversationMessagesMatch[1] ?? '').trim();
+        if (!conversationId) {
+          return json(res, 400, { error: 'missing_conversation_id' });
+        }
+        const conversation = await crmConversationStore.getConversationById(tenantId, conversationId);
+        if (!conversation) {
+          return json(res, 404, { error: 'conversation_not_found' });
+        }
+        const limitRaw = Number(parsedUrl.searchParams.get('limit') ?? 200);
+        const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 200;
+        const items = await crmConversationStore.listMessages(tenantId, conversationId, { limit });
+        return json(res, 200, {
+          tenant_id: tenantId,
+          conversation,
+          count: items.length,
+          items
+        });
+      }
+
+      const conversationReadMatch = path.match(/^\/v1\/crm\/conversations\/([^/]+)\/read$/);
+      if (method === 'POST' && conversationReadMatch) {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+        const conversationId = decodeURIComponent(conversationReadMatch[1] ?? '').trim();
+        if (!conversationId) {
+          return json(res, 400, { error: 'missing_conversation_id' });
+        }
+        const result = await crmConversationStore.markConversationRead(tenantId, conversationId);
+        if (!result.ok) {
+          return json(res, 404, { error: 'conversation_not_found' });
+        }
+        return json(res, 200, {
+          status: 'updated',
+          conversation: result.conversation
+        });
+      }
+
+      const conversationSendMatch = path.match(/^\/v1\/crm\/conversations\/([^/]+)\/send$/);
+      if (method === 'POST' && conversationSendMatch) {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+        const request = body?.request && typeof body.request === 'object' ? body.request : {};
+        const tenantId = String(request.tenant_id ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+        const text = String(request.text ?? '').trim();
+        if (!text) {
+          return json(res, 400, { error: 'missing_text' });
+        }
+        const conversationId = decodeURIComponent(conversationSendMatch[1] ?? '').trim();
+        if (!conversationId) {
+          return json(res, 400, { error: 'missing_conversation_id' });
+        }
+
+        const conversation = await crmConversationStore.getConversationById(tenantId, conversationId);
+        if (!conversation) {
+          return json(res, 404, { error: 'conversation_not_found' });
+        }
+
+        const evolutionRuntime = await resolveEvolutionRuntimeConfig(tenantId);
+        if (!evolutionRuntime.baseUrl || !evolutionRuntime.apiKey || !evolutionRuntime.instanceId) {
+          return json(res, 503, { error: 'evolution_not_configured' });
+        }
+
+        const recipientNumber = normalizeEvolutionRecipientNumber(conversation.contact_e164);
+        if (!recipientNumber) {
+          return json(res, 400, { error: 'invalid_recipient' });
+        }
+
+        let providerResult = null;
+        try {
+          providerResult = await sendEvolutionTextMessage({
+            baseUrl: evolutionRuntime.baseUrl,
+            apiKey: evolutionRuntime.apiKey,
+            instanceId: evolutionRuntime.instanceId,
+            number: recipientNumber,
+            text
+          });
+        } catch (error) {
+          providerResult = {
+            ok: false,
+            status: 502,
+            errorDetails: truncateProviderErrorDetails(error?.message ?? error)
+          };
+        }
+
+        const saved = await crmConversationStore.appendOutboundMessage({
+          tenant_id: tenantId,
+          conversation_id: conversationId,
+          provider: 'evolution-api',
+          provider_message_id: providerResult?.providerMessageId ?? null,
+          message_type: 'text',
+          text,
+          delivery_state: providerResult?.ok ? 'sent' : 'failed',
+          occurred_at: new Date().toISOString(),
+          metadata: {
+            source: 'crm_console_send',
+            provider_status: providerResult?.status ?? null,
+            provider_error: providerResult?.ok ? null : (providerResult?.errorDetails ?? null)
+          }
+        });
+        if (!saved.ok) {
+          return json(res, 404, { error: 'conversation_not_found' });
+        }
+
+        if (!providerResult?.ok) {
+          return json(res, 502, {
+            error: 'provider_send_error',
+            provider_status: providerResult?.status ?? 502,
+            details: providerResult?.errorDetails ?? 'provider_send_error',
+            message: saved.message
+          });
+        }
+
+        return json(res, 200, {
+          status: 'sent',
+          message: saved.message,
+          provider_message_id: providerResult.providerMessageId ?? null
+        });
       }
 
       if (method === 'POST' && path === '/v1/billing/charges') {
@@ -5489,6 +5676,8 @@ export function createApp(options = {}) {
 
         let inboundResult = null;
         let autoReplyResult = null;
+        let deliveryUpdateResult = null;
+        let inboundConversation = null;
         if (
           normalizedBody.event_type === 'message.inbound' &&
           typeof normalizedBody.payload?.from_e164 === 'string' &&
@@ -5540,6 +5729,23 @@ export function createApp(options = {}) {
               lifecycle_event_name: lifecycleEventName
             };
 
+            const persistedInbound = await crmConversationStore.upsertInboundMessage({
+              tenant_id: normalizedBody.tenant_id,
+              contact_e164: phoneE164,
+              display_name: rawName || fallbackName,
+              lead_id: leadCreateResult.lead?.lead_id ?? null,
+              provider: normalizedBody.provider ?? 'evolution-api',
+              provider_message_id: normalizedBody.payload.message_id,
+              message_type: normalizedBody.payload.message_type ?? 'text',
+              text: normalizedBody.payload.text ?? '',
+              delivery_state: normalizedBody.payload.delivery_state ?? 'received',
+              occurred_at: normalizedBody.occurred_at ?? new Date().toISOString(),
+              metadata: {
+                source: 'evolution_webhook_inbound'
+              }
+            });
+            inboundConversation = persistedInbound?.conversation ?? null;
+
             const fromMe = Boolean(
               body?.data?.key?.fromMe
               ?? normalizedBody?.payload?.raw?.data?.key?.fromMe
@@ -5570,6 +5776,22 @@ export function createApp(options = {}) {
                       text: evolutionRuntime.autoReplyText
                     });
                     if (sendResult.ok) {
+                      if (inboundConversation?.conversation_id) {
+                        await crmConversationStore.appendOutboundMessage({
+                          tenant_id: normalizedBody.tenant_id,
+                          conversation_id: inboundConversation.conversation_id,
+                          provider: 'evolution-api',
+                          provider_message_id: sendResult.providerMessageId ?? null,
+                          message_type: 'text',
+                          text: evolutionRuntime.autoReplyText,
+                          delivery_state: 'sent',
+                          occurred_at: new Date().toISOString(),
+                          metadata: {
+                            source: 'evolution_auto_reply',
+                            fallback_payload_used: Boolean(sendResult.fallbackPayloadUsed)
+                          }
+                        });
+                      }
                       autoReplyResult = {
                         status: 'sent',
                         instance_id: evolutionRuntime.instanceId,
@@ -5577,6 +5799,23 @@ export function createApp(options = {}) {
                         ...(sendResult.fallbackPayloadUsed ? { fallback_payload_used: true } : {})
                       };
                     } else {
+                      if (inboundConversation?.conversation_id) {
+                        await crmConversationStore.appendOutboundMessage({
+                          tenant_id: normalizedBody.tenant_id,
+                          conversation_id: inboundConversation.conversation_id,
+                          provider: 'evolution-api',
+                          provider_message_id: null,
+                          message_type: 'text',
+                          text: evolutionRuntime.autoReplyText,
+                          delivery_state: 'failed',
+                          occurred_at: new Date().toISOString(),
+                          metadata: {
+                            source: 'evolution_auto_reply',
+                            provider_status: sendResult.status ?? null,
+                            provider_error: sendResult.errorDetails ?? null
+                          }
+                        });
+                      }
                       autoReplyResult = {
                         status: 'failed',
                         error: 'provider_send_error',
@@ -5607,6 +5846,34 @@ export function createApp(options = {}) {
           }
         }
 
+        if (
+          (
+            normalizedBody.event_type === 'message.delivery_update' ||
+            normalizedBody.event_type === 'message.read_update' ||
+            normalizedBody.event_type === 'message.failed'
+          ) &&
+          typeof normalizedBody.payload?.message_id === 'string' &&
+          normalizedBody.payload.message_id.length > 0
+        ) {
+          const nextState = (
+            normalizedBody.payload.delivery_state
+            ?? (normalizedBody.event_type === 'message.read_update' ? 'read' : null)
+            ?? (normalizedBody.event_type === 'message.failed' ? 'failed' : null)
+            ?? (normalizedBody.event_type === 'message.delivery_update' ? 'delivered' : null)
+            ?? 'unknown'
+          );
+          const updateResult = await crmConversationStore.updateMessageDeliveryState(
+            normalizedBody.tenant_id,
+            normalizedBody.payload.message_id,
+            nextState
+          );
+          deliveryUpdateResult = {
+            status: updateResult.ok ? 'updated' : 'not_found',
+            message_id: normalizedBody.payload.message_id,
+            delivery_state: nextState
+          };
+        }
+
         return json(res, 200, {
           status: 'accepted',
           normalized: {
@@ -5616,7 +5883,8 @@ export function createApp(options = {}) {
             delivery_state: normalizedBody.payload.delivery_state ?? 'unknown'
           },
           ...(inboundResult ? { inbound: inboundResult } : {}),
-          ...(autoReplyResult ? { auto_reply: autoReplyResult } : {})
+          ...(autoReplyResult ? { auto_reply: autoReplyResult } : {}),
+          ...(deliveryUpdateResult ? { delivery_update: deliveryUpdateResult } : {})
         });
       }
 
@@ -5829,6 +6097,7 @@ export function createApp(options = {}) {
   handler.billingStore = billingStore;
   handler.leadStore = leadStore;
   handler.crmAutomationStore = crmAutomationStore;
+  handler.crmConversationStore = crmConversationStore;
   handler.ownerMemoryStore = ownerMemoryStore;
   handler.ownerMemoryMaintenanceStore = ownerMemoryMaintenanceStore;
   handler.tenantRuntimeConfigStore = tenantRuntimeConfigStore;

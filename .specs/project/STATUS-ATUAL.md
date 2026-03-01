@@ -66,6 +66,11 @@ Recomendacao: em toda decisao ou artefato novo, registrar **data (e hora quando 
   - `POST /provider/evolution/webhook` agora tenta envio outbound via Evolution `message/sendText/{instance}`;
   - fallback de compatibilidade de payload (`text` + `textMessage.text`);
   - retorno inclui diagnostico `auto_reply` sem quebrar `status=accepted`.
+- CRM modern inbox MVP (2026-03-01):
+  - backend com persistencia de conversas/mensagens (`crm_conversations` + `crm_messages`, file/postgres);
+  - novos endpoints de inbox/thread/envio/read no modulo 02;
+  - webhook Evolution persiste inbound e atualiza delivery/read por `message_id`;
+  - console CRM agora abre conversa, mostra thread, permite enviar e qualificar lead.
 - Deploy:
   - commit `8474a4e` em `main`.
   - rollout executado com `npm run deploy:dev`.

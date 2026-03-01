@@ -323,6 +323,163 @@ th {
   color: var(--color-muted);
 }
 
+.link-btn {
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-strong);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.inbox-card {
+  overflow: hidden;
+}
+
+.inbox-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: 420px;
+}
+
+.conversation-list {
+  border-right: 1px solid var(--color-border);
+  overflow: auto;
+  max-height: 520px;
+}
+
+.conversation-item {
+  border: 0;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.conversation-item:hover {
+  background: color-mix(in srgb, var(--color-bg-soft) 70%, transparent);
+}
+
+.conversation-item.is-active {
+  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-bg-soft));
+}
+
+.conversation-item__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.conversation-item__name {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.conversation-item__preview {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-item__meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.unread-badge {
+  background: color-mix(in srgb, var(--color-primary-strong) 90%, black);
+  color: white;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+.thread-panel {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 420px;
+}
+
+.thread-header {
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.thread-meta {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+}
+
+.thread-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.thread-actions select {
+  min-width: 140px;
+}
+
+.thread-messages {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+  max-height: 380px;
+}
+
+.thread-message {
+  max-width: min(78%, 640px);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 9px 11px;
+  display: grid;
+  gap: 4px;
+}
+
+.thread-message.is-outbound {
+  justify-self: end;
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-card));
+}
+
+.thread-message.is-inbound {
+  justify-self: start;
+  background: color-mix(in srgb, var(--color-bg-soft) 80%, white);
+}
+
+.thread-message__meta {
+  color: var(--color-muted);
+  font-size: 0.74rem;
+}
+
+.thread-send-form {
+  border-top: 1px solid var(--color-border);
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.thread-send-form input {
+  min-width: 0;
+}
+
 .form {
   display: grid;
   gap: var(--space-3);
@@ -526,6 +683,25 @@ html[data-layout='studio'] td {
   border-bottom-color: rgba(148, 163, 184, 0.2);
 }
 
+html[data-layout='studio'] .conversation-list {
+  border-right-color: rgba(148, 163, 184, 0.2);
+}
+
+html[data-layout='studio'] .conversation-item,
+html[data-layout='studio'] .thread-header,
+html[data-layout='studio'] .thread-send-form {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
+  border-top-color: rgba(148, 163, 184, 0.2);
+}
+
+html[data-layout='studio'] .thread-message.is-inbound {
+  background: rgba(15, 23, 42, 0.42);
+}
+
+html[data-layout='studio'] .thread-message.is-outbound {
+  background: rgba(2, 132, 199, 0.24);
+}
+
 html[data-layout='studio'] .status-pill {
   border-color: rgba(148, 163, 184, 0.26);
   background: rgba(15, 23, 42, 0.52);
@@ -552,6 +728,16 @@ html[data-layout='studio'] .status-pill {
 
   .kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inbox-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .conversation-list {
+    max-height: 200px;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
   }
 }
 

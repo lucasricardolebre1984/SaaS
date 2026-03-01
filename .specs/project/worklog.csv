@@ -182,3 +182,5 @@ date,start_time,end_time,duration_hours,phase,feature,task_id,actor,status,notes
 2026-03-01,10:45,11:35,0.83,Implement,milestone-5-runtime-stability-hotfix-slice,M5B-006,pair,done,Evolution inbound webhook now attempts WhatsApp auto-reply with sendText fallback payload and non-blocking accepted response
 2026-03-01,11:35,11:50,0.25,Validate,milestone-5-runtime-stability-hotfix-slice,M5B-006,pair,done,Validated gates app-platform-api:test and contract-tests:contract-checks after M5B-006
 2026-03-01,11:50,12:20,0.50,Operations,milestone-5-runtime-stability-hotfix-slice,M5B-006,pair,done,Published commits aa0d852 and 596c456 to main and deployed to Ubuntu /srv/SaaS with saas.service active and health ok
+2026-03-01,12:25,13:40,1.25,Implement,crm-modern-inbox-2026-slice,T2..T6,pair,done,Implemented CRM inbox/thread MVP with conversation stores file+postgres webhook persistence send endpoint and UI chat thread with qualification actions
+2026-03-01,13:40,13:55,0.25,Validate,crm-modern-inbox-2026-slice,T2..T6,pair,done,Validated app-platform-api:test app-crm-console:build and contract-tests after CRM inbox MVP integration

@@ -176,3 +176,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,M5B-006 Evolution inbound auto-reply sendText fallback and webhook diagnostic
 2026-03-01,internal,engineering-time,local,0.00,0.00,validation,M5B-006 app-platform-api and contract checks green
 2026-03-01,internal,engineering-time,local,0.00,0.00,operations,M5B-006 main push and Ubuntu deploy with runtime health validation
+2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-modern-inbox-2026-slice T2..T6 inbox thread stores webhook and send flow
+2026-03-01,internal,engineering-time,local,0.00,0.00,validation,crm-modern-inbox-2026-slice gates for api tests crm build and contract checks

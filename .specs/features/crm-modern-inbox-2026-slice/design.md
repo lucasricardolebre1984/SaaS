@@ -1,7 +1,7 @@
 # Design - crm-modern-inbox-2026-slice
 
-Status: Draft
-Date: 2026-02-28
+Status: Approved
+Date: 2026-03-01
 
 ## 1) Architectural fit (SaaS Standard v1)
 - **Módulo 01** (Owner Concierge): orquestra e consulta contexto do CRM via contratos (não “vira” o CRM).
@@ -89,6 +89,11 @@ Comportamento:
 - valida schema outbound
 - enfileira no outbound queue do módulo 02
 - persiste mensagem outbound com `delivery_state=queued`
+
+### 4.4 Stage operations em thread (MVP operacional)
+- o thread permite acao rapida de qualificacao:
+  - `new -> contacted -> qualified`
+- atualizacao manual de stage usa `PATCH /v1/crm/leads/:id/stage` com trigger coerente ao `lead-funnel.transitions.json`.
 
 ## 5) UI (CRM Console)
 

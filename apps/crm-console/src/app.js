@@ -3,11 +3,29 @@ const VALID_PALETTES = ['ocean', 'forest', 'sunset'];
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const API_BASE_STORAGE_KEY = 'crm_console_api_base_v1';
 
-// Editar este mapa para definir tema padrao por cliente/tenant.
 const TENANT_THEME_PRESETS = {
   tenant_automania: { layout: 'fabio2', palette: 'ocean' },
   tenant_clinica: { layout: 'studio', palette: 'forest' },
   tenant_comercial: { layout: 'studio', palette: 'sunset' }
+};
+
+const STAGE_TRIGGERS = {
+  'new->contacted': 'first_contact_attempt',
+  'new->lost': 'explicit_close_lost',
+  'contacted->qualified': 'qualification_passed',
+  'contacted->nurturing': 'not_now_followup_needed',
+  'contacted->lost': 'explicit_close_lost',
+  'qualified->proposal': 'proposal_sent',
+  'qualified->lost': 'explicit_close_lost',
+  'proposal->negotiation': 'objection_or_counteroffer',
+  'proposal->won': 'proposal_accepted',
+  'proposal->lost': 'proposal_rejected',
+  'negotiation->won': 'deal_closed',
+  'negotiation->lost': 'deal_failed',
+  'negotiation->nurturing': 'defer_decision',
+  'nurturing->contacted': 'reengaged',
+  'nurturing->lost': 'nurture_expired',
+  'lost->nurturing': 'reopen_requested'
 };
 
 const rootEl = document.documentElement;
@@ -26,6 +44,17 @@ const leadCount = document.getElementById('leadCount');
 const leadForm = document.getElementById('leadForm');
 const formStatus = document.getElementById('formStatus');
 
+const conversationListEl = document.getElementById('conversationList');
+const conversationCountEl = document.getElementById('conversationCount');
+const threadContactEl = document.getElementById('threadContact');
+const threadMetaEl = document.getElementById('threadMeta');
+const threadMessagesEl = document.getElementById('threadMessages');
+const threadSendForm = document.getElementById('threadSendForm');
+const threadMessageInput = document.getElementById('threadMessageInput');
+const threadStageSelect = document.getElementById('threadStageSelect');
+const threadQualifyBtn = document.getElementById('threadQualifyBtn');
+const threadUpdateStageBtn = document.getElementById('threadUpdateStageBtn');
+
 const kpis = {
   new: document.getElementById('kpi-new'),
   qualified: document.getElementById('kpi-qualified'),
@@ -33,7 +62,12 @@ const kpis = {
   won: document.getElementById('kpi-won'),
   lost: document.getElementById('kpi-lost')
 };
+
 let embeddedMode = false;
+let leadsCache = [];
+let conversationsCache = [];
+let selectedConversationId = null;
+let selectedThreadMessages = [];
 
 function normalizeLayout(layout) {
   return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
@@ -166,23 +200,70 @@ function safeText(value) {
   ));
 }
 
+function formatTime(value) {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '--';
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function getLeadById(leadId) {
+  if (!leadId) return null;
+  return leadsCache.find((item) => item.lead_id === leadId) ?? null;
+}
+
+function getLeadByPhone(phone) {
+  if (!phone) return null;
+  return leadsCache.find((item) => item.phone_e164 === phone) ?? null;
+}
+
+function selectedConversation() {
+  return conversationsCache.find((item) => item.conversation_id === selectedConversationId) ?? null;
+}
+
+function applyThreadMeta(conversation) {
+  if (!conversation) {
+    threadContactEl.textContent = 'Selecione uma conversa';
+    threadMetaEl.textContent = 'Abra uma conversa para ler e responder mensagens.';
+    return;
+  }
+  const linkedLead = getLeadById(conversation.lead_id) ?? getLeadByPhone(conversation.contact_e164);
+  const stage = linkedLead?.stage ?? conversation.lead_stage ?? 'sem_stage';
+  threadContactEl.textContent = conversation.display_name || conversation.contact_e164;
+  threadMetaEl.textContent = `${conversation.contact_e164} | stage: ${stage}`;
+}
+
 function renderLeads(items) {
   if (!items.length) {
-    leadRows.innerHTML = '<tr><td colspan="4" class="empty">Sem leads para este tenant.</td></tr>';
+    leadRows.innerHTML = '<tr><td colspan="5" class="empty">Sem leads para este tenant.</td></tr>';
     leadCount.textContent = '0 items';
     Object.values(kpis).forEach((el) => { el.textContent = '0'; });
     return;
   }
 
+  const conversationByPhone = new Map(conversationsCache.map((item) => [item.contact_e164, item]));
   leadRows.innerHTML = items
-    .map((lead) => `
+    .map((lead) => {
+      const hasConversation = conversationByPhone.has(lead.phone_e164);
+      return `
       <tr>
         <td>${safeText(lead.display_name)}</td>
         <td>${safeText(lead.phone_e164)}</td>
         <td>${safeText(lead.source_channel)}</td>
         <td>${safeText(lead.stage)}</td>
+        <td>
+          ${hasConversation
+            ? `<button class="link-btn" type="button" data-open-phone="${safeText(lead.phone_e164)}">Abrir chat</button>`
+            : '<span class="empty">Sem conversa</span>'}
+        </td>
       </tr>
-    `)
+    `;
+    })
     .join('');
 
   leadCount.textContent = `${items.length} items`;
@@ -194,6 +275,139 @@ function renderLeads(items) {
   Object.entries(counts).forEach(([stage, value]) => {
     kpis[stage].textContent = String(value);
   });
+
+  leadRows.querySelectorAll('[data-open-phone]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const phone = button.getAttribute('data-open-phone') || '';
+      const conversation = conversationsCache.find((item) => item.contact_e164 === phone);
+      if (conversation) {
+        openConversation(conversation.conversation_id, { markRead: true });
+      }
+    });
+  });
+}
+
+function renderConversations(items) {
+  conversationsCache = items;
+  conversationCountEl.textContent = `${items.length} conversas`;
+
+  if (!items.length) {
+    conversationListEl.innerHTML = '<p class="empty">Sem conversas para este tenant.</p>';
+    if (selectedConversationId) {
+      selectedConversationId = null;
+      selectedThreadMessages = [];
+      renderThreadMessages();
+      applyThreadMeta(null);
+    }
+    return;
+  }
+
+  if (!selectedConversationId || !items.some((item) => item.conversation_id === selectedConversationId)) {
+    selectedConversationId = items[0].conversation_id;
+  }
+
+  conversationListEl.innerHTML = items
+    .map((conversation) => {
+      const isActive = conversation.conversation_id === selectedConversationId;
+      const title = conversation.display_name || conversation.contact_e164;
+      const unread = Number(conversation.unread_count ?? 0);
+      return `
+      <button class="conversation-item ${isActive ? 'is-active' : ''}" type="button" data-conversation-id="${safeText(conversation.conversation_id)}">
+        <div class="conversation-item__top">
+          <span class="conversation-item__name">${safeText(title)}</span>
+          ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
+        </div>
+        <p class="conversation-item__preview">${safeText(conversation.last_message_preview || 'Sem mensagens')}</p>
+        <div class="conversation-item__meta">
+          <span>${safeText(conversation.lead_stage || 'sem stage')}</span>
+          <span>${safeText(formatTime(conversation.last_message_at))}</span>
+        </div>
+      </button>
+    `;
+    })
+    .join('');
+
+  conversationListEl.querySelectorAll('[data-conversation-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const conversationId = button.getAttribute('data-conversation-id') || '';
+      openConversation(conversationId, { markRead: true });
+    });
+  });
+}
+
+function renderThreadMessages() {
+  if (!selectedConversationId) {
+    threadMessagesEl.innerHTML = '<p class="empty">Sem conversa selecionada.</p>';
+    return;
+  }
+
+  if (!selectedThreadMessages.length) {
+    threadMessagesEl.innerHTML = '<p class="empty">Sem mensagens nesta conversa.</p>';
+    return;
+  }
+
+  threadMessagesEl.innerHTML = selectedThreadMessages
+    .map((message) => {
+      const isOutbound = message.direction === 'outbound';
+      const cssClass = isOutbound ? 'is-outbound' : 'is-inbound';
+      const directionLabel = isOutbound ? 'saida' : 'entrada';
+      return `
+      <article class="thread-message ${cssClass}">
+        <div>${safeText(message.text || '(sem texto)')}</div>
+        <div class="thread-message__meta">${safeText(directionLabel)} | ${safeText(message.delivery_state || 'unknown')} | ${safeText(formatTime(message.occurred_at))}</div>
+      </article>
+    `;
+    })
+    .join('');
+
+  threadMessagesEl.scrollTop = threadMessagesEl.scrollHeight;
+}
+
+async function loadConversations() {
+  try {
+    const response = await fetch(`${apiBase()}/v1/crm/conversations?tenant_id=${encodeURIComponent(tenantId())}&limit=200`);
+    const body = await response.json();
+    if (!response.ok) {
+      throw new Error(body.error ?? `HTTP ${response.status}`);
+    }
+    renderConversations(body.items ?? []);
+    return body.items ?? [];
+  } catch (error) {
+    conversationListEl.innerHTML = `<p class="empty">Erro ao carregar conversas: ${safeText(error.message)}</p>`;
+    return [];
+  }
+}
+
+async function openConversation(conversationId, options = { markRead: false }) {
+  selectedConversationId = conversationId;
+  renderConversations(conversationsCache);
+  const conversation = selectedConversation();
+  applyThreadMeta(conversation);
+  if (!conversation) {
+    selectedThreadMessages = [];
+    renderThreadMessages();
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBase()}/v1/crm/conversations/${encodeURIComponent(conversationId)}/messages?tenant_id=${encodeURIComponent(tenantId())}&limit=300`);
+    const body = await response.json();
+    if (!response.ok) {
+      throw new Error(body.error ?? `HTTP ${response.status}`);
+    }
+    selectedThreadMessages = body.items ?? [];
+    renderThreadMessages();
+    if (options.markRead && Number(conversation.unread_count ?? 0) > 0) {
+      await fetch(`${apiBase()}/v1/crm/conversations/${encodeURIComponent(conversationId)}/read?tenant_id=${encodeURIComponent(tenantId())}`, {
+        method: 'POST'
+      });
+      await loadConversations();
+      renderLeads(leadsCache);
+      applyThreadMeta(selectedConversation());
+    }
+  } catch (error) {
+    threadMessagesEl.innerHTML = `<p class="empty">Erro ao abrir thread: ${safeText(error.message)}</p>`;
+  }
 }
 
 async function loadLeads() {
@@ -204,11 +418,25 @@ async function loadLeads() {
     if (!response.ok) {
       throw new Error(body.error ?? `HTTP ${response.status}`);
     }
-    renderLeads(body.items ?? []);
+    leadsCache = body.items ?? [];
+    renderLeads(leadsCache);
     formStatus.textContent = 'Leads atualizados.';
   } catch (error) {
+    leadsCache = [];
     renderLeads([]);
     formStatus.textContent = `Erro ao carregar: ${error.message}`;
+  }
+}
+
+async function loadAllData() {
+  await loadConversations();
+  await loadLeads();
+  if (selectedConversationId) {
+    await openConversation(selectedConversationId, { markRead: false });
+  } else {
+    applyThreadMeta(null);
+    selectedThreadMessages = [];
+    renderThreadMessages();
   }
 }
 
@@ -247,7 +475,7 @@ async function createLead(event) {
     }
 
     formStatus.textContent = `Lead ${body.response.status}. Atualizando lista...`;
-    await loadLeads();
+    await loadAllData();
     leadForm.reset();
     document.getElementById('phone').value = '+5511999999999';
   } catch (error) {
@@ -266,6 +494,141 @@ function applyTenantTheme() {
 
   applyVisualMode({ layout: preset.layout, palette: preset.palette, persist: true });
   formStatus.textContent = `Tema aplicado: layout=${preset.layout}, palette=${preset.palette}.`;
+}
+
+async function sendThreadMessage(event) {
+  event.preventDefault();
+  const conversation = selectedConversation();
+  if (!conversation) {
+    formStatus.textContent = 'Selecione uma conversa antes de enviar mensagem.';
+    return;
+  }
+  const text = threadMessageInput.value.trim();
+  if (!text) return;
+
+  formStatus.textContent = 'Enviando mensagem...';
+  try {
+    const response = await fetch(`${apiBase()}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/send`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: crypto.randomUUID(),
+          tenant_id: tenantId(),
+          text
+        }
+      })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.details || body.error || `HTTP ${response.status}`);
+    }
+
+    threadMessageInput.value = '';
+    formStatus.textContent = 'Mensagem enviada para WhatsApp.';
+    await openConversation(conversation.conversation_id, { markRead: false });
+    await loadConversations();
+    renderLeads(leadsCache);
+  } catch (error) {
+    formStatus.textContent = `Falha no envio: ${error.message}`;
+  }
+}
+
+async function updateLeadStage(leadId, currentStage, nextStage) {
+  const key = `${currentStage}->${nextStage}`;
+  const trigger = STAGE_TRIGGERS[key];
+  if (!trigger) {
+    throw new Error(`Transicao nao suportada: ${key}`);
+  }
+
+  const payload = {
+    request: {
+      request_id: crypto.randomUUID(),
+      tenant_id: tenantId(),
+      source_module: 'mod-02-whatsapp-crm',
+      changes: {
+        to_stage: nextStage,
+        trigger
+      }
+    }
+  };
+  if (key === 'lost->nurturing') {
+    payload.request.changes.reason_code = 'reopen_manual';
+  }
+
+  const response = await fetch(`${apiBase()}/v1/crm/leads/${encodeURIComponent(leadId)}/stage`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.error || body.details?.code || `HTTP ${response.status}`);
+  }
+  return body;
+}
+
+async function handleQualifyLead() {
+  const conversation = selectedConversation();
+  if (!conversation) {
+    formStatus.textContent = 'Selecione uma conversa para qualificar.';
+    return;
+  }
+
+  const linkedLead = getLeadById(conversation.lead_id) ?? getLeadByPhone(conversation.contact_e164);
+  if (!linkedLead) {
+    formStatus.textContent = 'Conversa sem lead vinculado ainda.';
+    return;
+  }
+
+  try {
+    formStatus.textContent = 'Aplicando qualificacao...';
+    if (linkedLead.stage === 'new') {
+      await updateLeadStage(linkedLead.lead_id, 'new', 'contacted');
+      await updateLeadStage(linkedLead.lead_id, 'contacted', 'qualified');
+    } else if (linkedLead.stage === 'contacted') {
+      await updateLeadStage(linkedLead.lead_id, 'contacted', 'qualified');
+    } else {
+      formStatus.textContent = `Lead ja esta em stage ${linkedLead.stage}.`;
+      return;
+    }
+
+    await loadAllData();
+    if (selectedConversationId) {
+      await openConversation(selectedConversationId, { markRead: false });
+    }
+    formStatus.textContent = 'Lead qualificado com sucesso.';
+  } catch (error) {
+    formStatus.textContent = `Falha ao qualificar: ${error.message}`;
+  }
+}
+
+async function handleUpdateStage() {
+  const conversation = selectedConversation();
+  if (!conversation) {
+    formStatus.textContent = 'Selecione uma conversa para atualizar stage.';
+    return;
+  }
+  const linkedLead = getLeadById(conversation.lead_id) ?? getLeadByPhone(conversation.contact_e164);
+  if (!linkedLead) {
+    formStatus.textContent = 'Conversa sem lead vinculado ainda.';
+    return;
+  }
+
+  const nextStage = String(threadStageSelect.value || '').trim();
+  if (!nextStage) return;
+
+  try {
+    formStatus.textContent = `Atualizando stage para ${nextStage}...`;
+    await updateLeadStage(linkedLead.lead_id, linkedLead.stage, nextStage);
+    await loadAllData();
+    if (selectedConversationId) {
+      await openConversation(selectedConversationId, { markRead: false });
+    }
+    formStatus.textContent = `Stage atualizado para ${nextStage}.`;
+  } catch (error) {
+    formStatus.textContent = `Falha ao atualizar stage: ${error.message}`;
+  }
 }
 
 mobileMenuBtn.addEventListener('click', () => {
@@ -293,8 +656,12 @@ tenantIdInput.addEventListener('blur', () => {
   }
 });
 
-reloadBtn.addEventListener('click', loadLeads);
+reloadBtn.addEventListener('click', loadAllData);
 leadForm.addEventListener('submit', createLead);
+threadSendForm.addEventListener('submit', sendThreadMessage);
+threadQualifyBtn.addEventListener('click', handleQualifyLead);
+threadUpdateStageBtn.addEventListener('click', handleUpdateStage);
+
 apiBaseInput.addEventListener('change', () => {
   apiBaseInput.value = normalizeApiBase(apiBaseInput.value);
   persistApiBasePreference(apiBaseInput.value);
@@ -354,7 +721,6 @@ async function loadWhatsAppQr() {
       await new Promise((resolve) => setTimeout(resolve, 1200));
     }
 
-    // Fallback: if still pending after polling, force re-create instance once.
     if (finalResponse?.ok && !hasQrOrConnected(finalResponse.ok, finalPayload)) {
       const forceUrl = `${url}${url.includes('?') ? '&' : '?'}force_new=1`;
       statusEl.textContent = 'QR pendente. Recriando instancia para gerar novo QR...';
@@ -376,6 +742,7 @@ async function loadWhatsAppQr() {
       }
       return;
     }
+
     const code = String(finalPayload.code ?? finalPayload.base64 ?? '').trim();
     const base64FromBackend = String(finalPayload.base64 ?? '').trim();
     const pairingCode = String(finalPayload.pairingCode ?? '').trim();
@@ -481,4 +848,4 @@ if (whatsappQrBtn) {
 restoreVisualMode();
 apiBaseInput.value = loadApiBasePreference();
 applyBootstrapFromQuery();
-loadLeads();
+loadAllData();

@@ -3282,6 +3282,22 @@ test('POST /provider/evolution/webhook maps raw MESSAGES_UPSERT inbound into CRM
   assert.ok(created);
   assert.equal(created.phone_e164, '+5511999999999');
   assert.equal(created.source_channel, 'whatsapp');
+
+  const conversationsRes = await fetch(`${baseUrl}/v1/crm/conversations?tenant_id=tenant_automania`);
+  assert.equal(conversationsRes.status, 200);
+  const conversationsBody = await conversationsRes.json();
+  assert.ok(conversationsBody.count >= 1);
+  const conversation = conversationsBody.items.find((item) => item.contact_e164 === '+5511999999999');
+  assert.ok(conversation);
+  assert.equal(conversation.lead_id, created.lead_id);
+
+  const messagesRes = await fetch(
+    `${baseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/messages?tenant_id=tenant_automania`
+  );
+  assert.equal(messagesRes.status, 200);
+  const messagesBody = await messagesRes.json();
+  assert.ok(messagesBody.count >= 1);
+  assert.equal(messagesBody.items.at(-1).direction, 'inbound');
 });
 
 test('POST /provider/evolution/webhook sends auto reply through Evolution with compatibility fallback', async () => {
@@ -3375,6 +3391,131 @@ test('POST /provider/evolution/webhook sends auto reply through Evolution with c
     assert.equal(evolutionRequests[1].body.number, '5511912345678');
     assert.equal(evolutionRequests[1].body.text, 'Recebemos sua mensagem e retornaremos em instantes.');
     assert.equal(evolutionRequests[1].body.textMessage.text, 'Recebemos sua mensagem e retornaremos em instantes.');
+  } finally {
+    await new Promise((resolve, reject) => {
+      appServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await new Promise((resolve, reject) => {
+      evolutionServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    await fs.rm(localStorageDir, { recursive: true, force: true });
+  }
+});
+
+test('CRM conversation endpoints open thread and send outbound message', async () => {
+  const localStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-crm-inbox-'));
+  const evolutionRequests = [];
+  const evolutionServer = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const rawBody = Buffer.concat(chunks).toString('utf8');
+    const parsedBody = rawBody ? JSON.parse(rawBody) : {};
+    evolutionRequests.push({
+      method: req.method,
+      url: req.url,
+      body: parsedBody
+    });
+
+    if (req.method === 'POST' && req.url === '/message/sendText/tenant_automania') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ key: { id: 'provider-msg-out-thread-001' } }));
+      return;
+    }
+
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not_found' }));
+  });
+  await new Promise((resolve) => evolutionServer.listen(0, '127.0.0.1', resolve));
+  const evolutionAddress = evolutionServer.address();
+  const evolutionBaseUrl = `http://127.0.0.1:${evolutionAddress.port}`;
+
+  const appServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: localStorageDir,
+      customerStorageDir: path.join(localStorageDir, 'customers'),
+      agendaStorageDir: path.join(localStorageDir, 'agenda'),
+      billingStorageDir: path.join(localStorageDir, 'billing'),
+      leadStorageDir: path.join(localStorageDir, 'crm'),
+      crmAutomationStorageDir: path.join(localStorageDir, 'crm-automation'),
+      crmConversationStorageDir: path.join(localStorageDir, 'crm-conversations'),
+      ownerMemoryStorageDir: path.join(localStorageDir, 'owner-memory'),
+      evolutionHttpBaseUrl: evolutionBaseUrl,
+      evolutionApiKey: 'test-evolution-key',
+      evolutionInstanceId: 'tenant_automania',
+      evolutionAutoReplyEnabled: false
+    })
+  );
+  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
+  const appAddress = appServer.address();
+  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
+
+  try {
+    const inboundPayload = {
+      event: 'MESSAGES_UPSERT',
+      instance: 'tenant_automania',
+      data: {
+        key: {
+          id: 'thread-msg-in-001',
+          remoteJid: '5511988887777@s.whatsapp.net',
+          fromMe: false
+        },
+        pushName: 'Lead Thread',
+        message: { conversation: 'Primeira mensagem inbound.' }
+      },
+      date_time: '2026-03-01T12:00:00.000Z'
+    };
+    const webhookRes = await fetch(`${appBaseUrl}/provider/evolution/webhook`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(inboundPayload)
+    });
+    assert.equal(webhookRes.status, 200);
+
+    const conversationsRes = await fetch(`${appBaseUrl}/v1/crm/conversations?tenant_id=tenant_automania`);
+    assert.equal(conversationsRes.status, 200);
+    const conversationsBody = await conversationsRes.json();
+    assert.equal(conversationsBody.count, 1);
+    const conversation = conversationsBody.items[0];
+    assert.equal(conversation.contact_e164, '+5511988887777');
+    assert.equal(conversation.unread_count, 1);
+
+    const readRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/read?tenant_id=tenant_automania`,
+      { method: 'POST' }
+    );
+    assert.equal(readRes.status, 200);
+
+    const sendRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/send`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          request: {
+            request_id: 'cf8a473b-bfd0-4f9f-a691-59e9ae2b2ca2',
+            tenant_id: 'tenant_automania',
+            text: 'Resposta pelo inbox.'
+          }
+        })
+      }
+    );
+    assert.equal(sendRes.status, 200);
+    const sendBody = await sendRes.json();
+    assert.equal(sendBody.status, 'sent');
+    assert.equal(sendBody.provider_message_id, 'provider-msg-out-thread-001');
+
+    const messagesRes = await fetch(
+      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/messages?tenant_id=tenant_automania`
+    );
+    assert.equal(messagesRes.status, 200);
+    const messagesBody = await messagesRes.json();
+    assert.equal(messagesBody.count, 2);
+    assert.equal(messagesBody.items[0].direction, 'inbound');
+    assert.equal(messagesBody.items[1].direction, 'outbound');
+    assert.equal(messagesBody.items[1].text, 'Resposta pelo inbox.');
+    assert.equal(evolutionRequests.length >= 1, true);
   } finally {
     await new Promise((resolve, reject) => {
       appServer.close((err) => (err ? reject(err) : resolve()));

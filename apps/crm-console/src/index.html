@@ -87,12 +87,53 @@
                       <th>Telefone</th>
                       <th>Canal</th>
                       <th>Stage</th>
+                      <th>Acoes</th>
                     </tr>
                   </thead>
                   <tbody id="leadRows">
-                    <tr><td colspan="4" class="empty">Sem dados carregados.</td></tr>
+                    <tr><td colspan="5" class="empty">Sem dados carregados.</td></tr>
                   </tbody>
                 </table>
+              </div>
+            </section>
+
+            <section class="card inbox-card">
+              <header class="card__header">
+                <h3>Inbox WhatsApp</h3>
+                <span id="conversationCount" class="status-pill">0 conversas</span>
+              </header>
+              <div class="inbox-layout">
+                <aside id="conversationList" class="conversation-list">
+                  <p class="empty">Sem conversas para este tenant.</p>
+                </aside>
+                <section class="thread-panel">
+                  <header class="thread-header">
+                    <div>
+                      <strong id="threadContact">Selecione uma conversa</strong>
+                      <p id="threadMeta" class="thread-meta">Abra uma conversa para ler e responder mensagens.</p>
+                    </div>
+                    <div class="thread-actions">
+                      <select id="threadStageSelect">
+                        <option value="contacted">contacted</option>
+                        <option value="qualified">qualified</option>
+                        <option value="proposal">proposal</option>
+                        <option value="negotiation">negotiation</option>
+                        <option value="won">won</option>
+                        <option value="lost">lost</option>
+                        <option value="nurturing">nurturing</option>
+                      </select>
+                      <button id="threadQualifyBtn" class="btn btn--ghost" type="button">Qualificar</button>
+                      <button id="threadUpdateStageBtn" class="btn btn--ghost" type="button">Atualizar Stage</button>
+                    </div>
+                  </header>
+                  <div id="threadMessages" class="thread-messages">
+                    <p class="empty">Sem conversa selecionada.</p>
+                  </div>
+                  <form id="threadSendForm" class="thread-send-form">
+                    <input id="threadMessageInput" placeholder="Digite a mensagem para WhatsApp..." />
+                    <button class="btn" type="submit">Enviar</button>
+                  </form>
+                </section>
               </div>
             </section>
           </section>

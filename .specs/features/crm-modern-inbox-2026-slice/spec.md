@@ -1,7 +1,7 @@
 # Spec - crm-modern-inbox-2026-slice
 
-Status: Draft
-Date: 2026-02-28
+Status: Approved
+Date: 2026-03-01
 
 ## Objective
 Evoluir o **módulo 02 (CRM WhatsApp)** de “lista de leads” para um **CRM moderno 2026** com:
@@ -22,8 +22,8 @@ Tudo mantendo:
 - `libs/mod-02-whatsapp-crm/*` (contratos e integração Evolution STD-005)
 
 ## Problem Statement (estado atual)
-1. O endpoint `POST /provider/evolution/webhook` **apenas valida** e retorna `accepted`; **não persiste mensagens**, **não cria lead** e **não atualiza** “conversas”.
-2. O `app-crm-console` é um **shell**: KPIs + listagem/criação de leads; não existe inbox/thread.
+1. O endpoint `POST /provider/evolution/webhook` estava sem persistência de conversas/mensagens para operação de inbox.
+2. O `app-crm-console` estava em modo **shell**: KPIs + listagem/criação de leads, sem abertura de thread.
 
 Resultado: mensagens do WhatsApp **não aparecem no SaaS** e o CRM fica “cego” para a operação real.
 
@@ -69,4 +69,8 @@ Resultado: mensagens do WhatsApp **não aparecem no SaaS** e o CRM fica “cego�
 - WhatsApp no CRM supera e-mail em engajamento e conversão (2026): `https://www.inogic.com/blog/2026/02/whatsapp-messaging-in-crm-why-it-outperforms-email-in-2026/`
 - Transparência/auditoria de ações de IA no CRM (audit cards) (Jan/2026): `https://profound.ly/media/profoundly-hubspot-updates/january-27-2026-hubspot-updates-customer-agent-message-insights?hs_amp=true`
 - Guia 2026 de “unified inbox” e threads de conversa (2026): `https://useconverge.app/learn/unified-inbox-guide`
+
+## Benchmark visual (solicitacao do owner)
+- Referencia de UX de CRM no nivel Monday board informado pelo owner.
+- Observacao: board Monday e privado; validacao externa retornou apenas landing/login (`monday.com: Where Teams Get Work Done`), sem acesso ao board interno sem sessao autenticada.
 

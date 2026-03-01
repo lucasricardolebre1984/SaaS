@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-03-01
-Active phase: Implement + Validate (milestone-5-runtime-stability-hotfix-slice)
-Active feature: milestone-5-runtime-stability-hotfix-slice
+Active phase: Implement + Validate (crm-modern-inbox-2026-slice)
+Active feature: crm-modern-inbox-2026-slice
 
 ## Repo e ambientes (fonte: AGENTS.md)
 - GitHub deploy: https://github.com/lucasricardolebre1984/SaaS (sem branches sandbox).
@@ -45,6 +45,12 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-01: **MUDANCA CRITICA** aplicada por solicitação do owner: CRM operacional no nivel inbox/thread/qualificacao; troca de foco para `crm-modern-inbox-2026-slice` em Implement+Validate.
+- 2026-03-01: implementado MVP de inbox CRM WhatsApp:
+  - novo store de conversas/mensagens file+postgres (`crm-conversation-store-*`);
+  - webhook Evolution persiste inbound em thread e atualiza delivery/read por `message_id`;
+  - novos endpoints REST: `GET /v1/crm/conversations`, `GET /v1/crm/conversations/:id/messages`, `POST /v1/crm/conversations/:id/send`, `POST /v1/crm/conversations/:id/read`;
+  - UI CRM com lista de conversas, abertura de thread, composer de envio, `Qualificar` e update de stage.
 - 2026-03-01: refinamento de compatibilidade `sendText` (fallback com `text` + `textMessage.text`) publicado no commit `596c456`; deploy dev executado (`npm run deploy:dev -- -SkipNpmCi`), Ubuntu `/srv/SaaS` atualizado, `saas.service` ativo e health local/publico OK.
 - 2026-03-01: M5B-006 concluido no backend (`app-platform-api`): webhook Evolution inbound agora tenta auto-resposta via `message/sendText/{instance}` com fallback de payload (`text` -> `textMessage.text`) e diagnostico `auto_reply` no retorno sem quebrar `status=accepted`; testes verdes em `npx nx run app-platform-api:test` e `npx nx run contract-tests:contract-checks`.
 - 2026-02-28: Ubuntu atualizado: remote do git em /srv/SaaS alterado de fabio para https://github.com/lucasricardolebre1984/SaaS.git; pull origin main, npm ci, restart; health 200; servico ativo.
