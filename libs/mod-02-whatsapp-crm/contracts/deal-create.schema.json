@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/deal-create.schema.json",
+  "title": "Module 02 Deal Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "deal": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "deal_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "lead_id": { "type": "string", "format": "uuid" },
+            "account_id": { "type": "string", "format": "uuid" },
+            "contact_id": { "type": "string", "format": "uuid" },
+            "title": { "type": "string", "minLength": 2 },
+            "stage": {
+              "type": "string",
+              "enum": ["new", "contacted", "qualified", "proposal", "won", "lost", "nurturing"]
+            },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "amount": { "type": "number", "minimum": 0 },
+            "expected_close_date": { "type": "string", "format": "date" },
+            "owner_user_id": { "type": "string", "minLength": 1 },
+            "metadata": { "type": "object" }
+          },
+          "required": ["title", "stage"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "deal"]
+    }
+  },
+  "required": ["request"]
+}

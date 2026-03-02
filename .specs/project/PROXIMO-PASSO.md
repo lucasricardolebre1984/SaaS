@@ -16,17 +16,27 @@
 
 ## Proximo passo unico (ativo)
 
-**Abrir execucao formal do `crm-krayin-reference-modernization-slice` a partir da base estabilizada.**
+**Executar T4 (migracoes de dados CRM core) do `crm-krayin-reference-modernization-slice` a partir da base estabilizada.**
 
 Pre-condicoes (ja cumpridas):
 1. Slice de estabilidade M5B encerrado com `GO`.
 2. Gate permanente de regressao de botoes/endpoints ativo no `preprod:validate`.
 3. AWS dev com runtime estavel e evidencias auditaveis.
 
+Passos concluidos em 2026-03-02:
+1. `crm-krayin-reference-modernization-slice` promovido para prioridade ativa.
+2. `spec/design/tasks` aprovados formalmente.
+3. T2 concluido com matriz auditavel:
+   - `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`
+4. T3 concluido com contratos CRM core + exemplos validos:
+   - `libs/mod-02-whatsapp-crm/contracts/{account,contact,deal,activity,task,view}-*.schema.json`
+   - `libs/mod-02-whatsapp-crm/contracts/crm-core-contract-examples.json`
+   - gate verde: `npx nx run contract-tests:contract-checks`
+
 Passo ativo agora:
-1. Promover `crm-krayin-reference-modernization-slice` de Draft para fase ativa.
-2. Fechar aprovacao de `spec/design/tasks` (sem implementar antes do gate).
-3. Executar T2 (gap matrix) como primeiro entregavel auditavel da nova frente.
+1. Executar T4 (migracoes/tabelas CRM core com indices por tenant e timeline).
+2. Garantir smoke Postgres de CRUD basico para deal/activity/task.
+3. Atualizar backlog rastreavel (STATE/STATUS/worklog/costlog) com evidencias do T4.
 
 ---
 
@@ -36,4 +46,4 @@ O ciclo de estabilidade foi fechado. Agora o trabalho passa para evolucao de CRM
 
 ---
 
-*Feature ativa: `crm-krayin-reference-modernization-slice` (fase: Specify/Approval).*
+*Feature ativa: `crm-krayin-reference-modernization-slice` (fase: Implement + Validate, iniciando T3 contract-first).*

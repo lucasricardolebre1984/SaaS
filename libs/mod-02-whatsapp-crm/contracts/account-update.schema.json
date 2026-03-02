@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/account-update.schema.json",
+  "title": "Module 02 Account Update Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-03-clientes"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "account_id": { "type": "string", "format": "uuid" },
+        "patch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "minLength": 2 },
+            "legal_name": { "type": "string", "minLength": 2 },
+            "document_number": { "type": "string", "minLength": 5 },
+            "industry": { "type": "string", "minLength": 2 },
+            "website": { "type": "string", "format": "uri" },
+            "status": { "type": "string", "enum": ["active", "inactive"] },
+            "owner_user_id": { "type": "string", "minLength": 1 },
+            "metadata": { "type": "object" }
+          },
+          "minProperties": 1
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "account_id", "patch"]
+    }
+  },
+  "required": ["request"]
+}

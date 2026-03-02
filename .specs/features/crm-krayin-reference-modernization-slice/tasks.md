@@ -1,6 +1,6 @@
 # Tasks - crm-krayin-reference-modernization-slice
 
-Status: Draft
+Status: Approved
 Date: 2026-03-01
 
 ## FOCO
@@ -32,18 +32,36 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
     - `npx nx run app-crm-console:build`.
 
 ## T2) Gap matrix Krayin x SaaS CRM
-- Status: pending
+- Status: completed
 - Entregar comparativo funcional:
   - disponivel no SaaS atual,
   - faltante critico,
   - opcional.
 - Aceite: backlog priorizado por impacto e dependencia.
+- Evidencia:
+  - matriz publicada em `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`;
+  - fontes auditadas:
+    - Krayin routes no clone local (`packages/Webkul/*/Routes/*`);
+    - endpoint map oficial do SaaS (`docs/PLANTA-ENDPOINTS-SAAS.md`);
+    - runtime/API real (`apps/platform-api/src/app.mjs`) e UI CRM (`apps/crm-console/src/app.js`).
 
-## T3) Contracts (deals/contacts/activities/tasks/views)
-- Status: pending
+## T3) Contracts (deals/accounts/contacts/activities/tasks/views)
+- Status: completed
 - Criar schemas JSON + exemplos validos.
 - Atualizar checks de contratos.
 - Aceite: `contract-tests:contract-checks` verde.
+- Evidencia:
+  - novos schemas em `libs/mod-02-whatsapp-crm/contracts/`:
+    - `account-{create,list,update}.schema.json`
+    - `contact-{create,list,update}.schema.json`
+    - `deal-{create,list,update}.schema.json`
+    - `activity-{create,list}.schema.json`
+    - `task-{create,list}.schema.json`
+    - `view-{create,list}.schema.json`
+  - exemplos validos:
+    - `libs/mod-02-whatsapp-crm/contracts/crm-core-contract-examples.json`
+  - gate verde:
+    - `npx nx run contract-tests:contract-checks`
 
 ## T4) Data model migrations
 - Status: pending

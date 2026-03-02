@@ -1,0 +1,83 @@
+{
+  "account_create": {
+    "request": {
+      "request_id": "7f048987-37ce-4dcb-883f-f640f1a62067",
+      "tenant_id": "tenant_automania",
+      "source_module": "mod-02-whatsapp-crm",
+      "correlation_id": "ccf510af-cf46-4959-aa53-721e126e89f2",
+      "account": {
+        "name": "SaaS Industria Ltda",
+        "status": "active"
+      }
+    }
+  },
+  "contact_create": {
+    "request": {
+      "request_id": "7f66918c-bbf8-4534-baa5-a7a31f2b4190",
+      "tenant_id": "tenant_automania",
+      "source_module": "mod-02-whatsapp-crm",
+      "correlation_id": "1f5b3572-8b9f-45d8-8efa-11d96c8bf84e",
+      "contact": {
+        "display_name": "Lucas Lebre",
+        "phone_e164": "+5516981903443",
+        "status": "active"
+      }
+    }
+  },
+  "deal_create": {
+    "request": {
+      "request_id": "9d2de01a-08ef-4f25-9d77-8ca07ddceb89",
+      "tenant_id": "tenant_automania",
+      "source_module": "mod-02-whatsapp-crm",
+      "correlation_id": "cb26c5e7-a2f0-4f3f-a3ff-81ca95a14f31",
+      "deal": {
+        "title": "Plano SaaS enterprise",
+        "stage": "qualified",
+        "amount": 3500,
+        "currency": "BRL"
+      }
+    }
+  },
+  "activity_create": {
+    "request": {
+      "request_id": "3cad6921-b8de-49d6-a1f7-df5356eb20a8",
+      "tenant_id": "tenant_automania",
+      "source_module": "mod-02-whatsapp-crm",
+      "correlation_id": "4aef2d4d-e3ef-41e0-a04e-3f1f852cfab9",
+      "activity": {
+        "kind": "message",
+        "body": "Cliente pediu proposta atualizada"
+      }
+    }
+  },
+  "task_create": {
+    "request": {
+      "request_id": "53595f64-d994-4609-a0eb-81670b7d91b5",
+      "tenant_id": "tenant_automania",
+      "source_module": "mod-02-whatsapp-crm",
+      "correlation_id": "53677eb5-a196-4f0a-b97b-e4b7fe89aeb0",
+      "task": {
+        "title": "Retornar cliente no WhatsApp",
+        "status": "pending",
+        "priority": "high"
+      }
+    }
+  },
+  "view_create": {
+    "request": {
+      "request_id": "7d52a6f4-5ef7-449f-808e-f43aabec8fd5",
+      "tenant_id": "tenant_automania",
+      "source_module": "mod-02-whatsapp-crm",
+      "correlation_id": "2f76ecf0-165f-4ef1-9d5f-9a1a71a92a94",
+      "view": {
+        "name": "Pipeline Qualificados",
+        "module": "crm.pipeline",
+        "scope": "tenant",
+        "filters": {
+          "stage": "qualified",
+          "channel": "whatsapp"
+        }
+      }
+    }
+  }
+}

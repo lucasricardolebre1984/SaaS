@@ -1,6 +1,6 @@
 # Design - crm-krayin-reference-modernization-slice
 
-Status: Draft
+Status: Approved
 Date: 2026-03-01
 
 ## 1) Architectural Position

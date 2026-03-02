@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/activity-create.schema.json",
+  "title": "Module 02 Activity Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-04-agenda"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "activity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "activity_id": { "type": "string", "format": "uuid" },
+            "deal_id": { "type": "string", "format": "uuid" },
+            "contact_id": { "type": "string", "format": "uuid" },
+            "kind": { "type": "string", "enum": ["note", "task", "message", "call", "meeting", "system"] },
+            "title": { "type": "string", "minLength": 2 },
+            "body": { "type": "string", "minLength": 1 },
+            "occurred_at": { "type": "string", "format": "date-time" },
+            "author_user_id": { "type": "string", "minLength": 1 },
+            "metadata": { "type": "object" }
+          },
+          "required": ["kind", "body"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "activity"]
+    }
+  },
+  "required": ["request"]
+}

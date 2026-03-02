@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/view-create.schema.json",
+  "title": "Module 02 View Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": { "type": "string", "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"] },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "view": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "view_id": { "type": "string", "format": "uuid" },
+            "name": { "type": "string", "minLength": 2 },
+            "scope": { "type": "string", "enum": ["private", "team", "tenant"] },
+            "module": { "type": "string", "enum": ["crm.inbox", "crm.pipeline", "crm.deals", "crm.contacts"] },
+            "is_default": { "type": "boolean" },
+            "filters": { "type": "object" },
+            "columns": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "maxItems": 100
+            },
+            "sort": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "field": { "type": "string", "minLength": 1 },
+                "direction": { "type": "string", "enum": ["asc", "desc"] }
+              },
+              "required": ["field", "direction"]
+            },
+            "metadata": { "type": "object" }
+          },
+          "required": ["name", "module", "filters"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "view"]
+    }
+  },
+  "required": ["request"]
+}

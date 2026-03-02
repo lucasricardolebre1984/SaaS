@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/deal-update.schema.json",
+  "title": "Module 02 Deal Update Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "deal_id": { "type": "string", "format": "uuid" },
+        "patch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": { "type": "string", "minLength": 2 },
+            "stage": {
+              "type": "string",
+              "enum": ["new", "contacted", "qualified", "proposal", "won", "lost", "nurturing"]
+            },
+            "amount": { "type": "number", "minimum": 0 },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "expected_close_date": { "type": "string", "format": "date" },
+            "account_id": { "type": "string", "format": "uuid" },
+            "contact_id": { "type": "string", "format": "uuid" },
+            "owner_user_id": { "type": "string", "minLength": 1 },
+            "metadata": { "type": "object" }
+          },
+          "minProperties": 1
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "deal_id", "patch"]
+    }
+  },
+  "required": ["request"]
+}

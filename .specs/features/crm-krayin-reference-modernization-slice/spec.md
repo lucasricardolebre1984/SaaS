@@ -1,6 +1,6 @@
 # Spec - crm-krayin-reference-modernization-slice
 
-Status: Draft
+Status: Approved
 Date: 2026-03-01
 
 ## Objective

@@ -1,7 +1,7 @@
 # STATE
 
 Last update: 2026-03-02
-Active phase: Specify (crm-krayin-reference-modernization-slice)
+Active phase: Implement + Validate (crm-krayin-reference-modernization-slice)
 Active feature: crm-krayin-reference-modernization-slice
 
 ## Repo e ambientes (fonte: AGENTS.md)
@@ -45,6 +45,8 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-02: T3 do `crm-krayin-reference-modernization-slice` concluido com contratos JSON para `accounts/contacts/deals/activities/tasks/views`, exemplos validos e gate `npx nx run contract-tests:contract-checks` verde; proximo passo ativo atualizado para T4 (migracoes CRM core).
+- 2026-03-02: `crm-krayin-reference-modernization-slice` teve aprovacao formal de `spec/design/tasks` e fechamento do T2 com matriz de gaps auditavel em `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`; proximo passo ativo movido para T3 (contracts CRM core).
 - 2026-03-02: checklist de saida M5B publicado em `.specs/project/MILESTONE-5-RUNTIME-STABILITY-EXIT-CHECKLIST.md` com decisao `GO`.
 - 2026-03-02: ROADMAP atualizado para marcar Milestone 5 como concluido; foco transicionado para `crm-krayin-reference-modernization-slice` em fase de especificacao/aprovacao.
 - 2026-03-02: `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills` executado com novo gate `saas-endpoint-smoke` ativo; run verde com report `tools/reports/preprod-validate-20260302-165103.log` e smoke `tools/reports/saas-endpoint-smoke-20260302-165147.json` (`PASS=25`, `WARN=1`, `FAIL=0`).

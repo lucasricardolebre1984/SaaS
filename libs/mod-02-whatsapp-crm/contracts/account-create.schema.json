@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/account-create.schema.json",
+  "title": "Module 02 Account Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-03-clientes"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "account": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "account_id": { "type": "string", "format": "uuid" },
+            "external_key": { "type": "string", "minLength": 3 },
+            "name": { "type": "string", "minLength": 2 },
+            "legal_name": { "type": "string", "minLength": 2 },
+            "document_number": { "type": "string", "minLength": 5 },
+            "industry": { "type": "string", "minLength": 2 },
+            "website": { "type": "string", "format": "uri" },
+            "status": { "type": "string", "enum": ["active", "inactive"] },
+            "owner_user_id": { "type": "string", "minLength": 1 },
+            "metadata": { "type": "object" }
+          },
+          "required": ["name"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "account"]
+    }
+  },
+  "required": ["request"]
+}

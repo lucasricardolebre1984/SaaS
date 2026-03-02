@@ -1,7 +1,7 @@
 # Status Atual — Fabio SaaS (Modelo Universal)
 
 **Documento:** STATUS-ATUAL  
-**Ultima atualizacao:** 2026-03-02 (rastreabilidade e auditoria: data/hora em decisoes e artefatos)  
+**Ultima atualizacao:** 2026-03-02 (rastreabilidade e auditoria: data/hora em decisoes e artefatos; T2 gap matrix concluido)  
 **Objetivo:** Snapshot rastreavel do estado do repositorio, modelo de aprendizado continuo e conformidade com specs.
 
 ---
@@ -126,10 +126,10 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 
 ## 6. Proximo passo natural
 
-- **Slice ativo:** `milestone-5-runtime-stability-hotfix-slice`.
-- **Objetivo imediato:** fechar UAT real de OpenAI voz/whisper e Evolution QR no ambiente AWS dev.
-- **Gate principal:** `npx nx run app-platform-api:test` + `npx nx run app-crm-console:build` + `npx nx run app-owner-console:build` + validacao manual em `dev.automaniaai.com.br`.
-- **Runbook:** `apps/platform-api/RUNBOOK-aws-deploy-dev.md`.
+- **Slice ativo:** `crm-krayin-reference-modernization-slice`.
+- **Objetivo imediato:** executar T4 (migracoes Postgres do CRM core) mantendo rastreabilidade por endpoint/tenant/trace.
+- **Gate principal:** smoke Postgres para CRUD basico de deal/activity/task + atualizacao de `STATE.md`, `worklog.csv` e `costlog.csv`.
+- **Referencia:** `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`.
 
 ---
 
@@ -199,4 +199,28 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 - ROADMAP atualizado para `Milestone 5 (completed)`.
 - Proximo foco formalizado em `PROXIMO-PASSO.md`:
   - `crm-krayin-reference-modernization-slice` em fase `Specify/Approval`.
+
+## Update 2026-03-02 (Krayin gap matrix T2 concluido)
+- `spec/design/tasks` do slice `crm-krayin-reference-modernization-slice` promovidos para `Approved`.
+- Matriz de gaps publicada com backlog priorizado P0/P1/P2:
+  - `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`
+- Evidencia foi cruzada entre:
+  - rotas reais do clone Krayin (`packages/Webkul/*/Routes/*`);
+  - endpoint map canonico (`docs/PLANTA-ENDPOINTS-SAAS.md`);
+  - runtime/API/UI do SaaS (`apps/platform-api/src/app.mjs`, `apps/crm-console/src/app.js`).
+- Proximo passo ativo formalizado: T3 contracts CRM core (Implement + Validate).
+
+## Update 2026-03-02 (T3 contracts CRM core concluido)
+- Contratos JSON adicionados em `libs/mod-02-whatsapp-crm/contracts/` para:
+  - `accounts`: create/list/update
+  - `contacts`: create/list/update
+  - `deals`: create/list/update
+  - `activities`: create/list
+  - `tasks`: create/list
+  - `views`: create/list
+- Arquivo de exemplos validos publicado:
+  - `libs/mod-02-whatsapp-crm/contracts/crm-core-contract-examples.json`
+- Gate executado e aprovado:
+  - `npx nx run contract-tests:contract-checks`
+- Proximo passo ativo formalizado: T4 migracoes CRM core.
 

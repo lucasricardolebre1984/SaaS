@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/task-create.schema.json",
+  "title": "Module 02 Task Create Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "source_module": {
+          "type": "string",
+          "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-04-agenda"]
+        },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "task": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "task_id": { "type": "string", "format": "uuid" },
+            "deal_id": { "type": "string", "format": "uuid" },
+            "contact_id": { "type": "string", "format": "uuid" },
+            "title": { "type": "string", "minLength": 2 },
+            "description": { "type": "string" },
+            "due_at": { "type": "string", "format": "date-time" },
+            "status": { "type": "string", "enum": ["pending", "in_progress", "done", "canceled"] },
+            "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+            "assignee_user_id": { "type": "string", "minLength": 1 },
+            "metadata": { "type": "object" }
+          },
+          "required": ["title", "status"]
+        }
+      },
+      "required": ["request_id", "tenant_id", "source_module", "task"]
+    }
+  },
+  "required": ["request"]
+}
