@@ -172,7 +172,7 @@ powershell -ExecutionPolicy Bypass -File tools/smoke-saas-endpoints.ps1 -BaseUrl
 
 - Endpoint map acima foi derivado do codigo atual do repo.
 - Smoke auditavel executado em `2026-03-02` com script `tools/smoke-saas-endpoints.ps1`.
-- Resultado do run mais recente (`tools/reports/saas-endpoint-smoke-20260302-120836.json`):
+- Resultado do run mais recente (`tools/reports/saas-endpoint-smoke-20260302-165147.json`):
   - `PASS=25`
   - `WARN=1`
   - `FAIL=0`

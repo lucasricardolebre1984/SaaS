@@ -38,6 +38,9 @@ const outboundQueueSchema = readJson('libs/mod-02-whatsapp-crm/integration/outbo
 const leadCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-create.schema.json');
 const leadStageUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-stage-update.schema.json');
 const leadListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/lead-list.schema.json');
+const conversationListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/conversation-list.schema.json');
+const messageListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/message-list.schema.json');
+const conversationSendSchema = readJson('libs/mod-02-whatsapp-crm/contracts/conversation-send.schema.json');
 const campaignCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/campaign-create.schema.json');
 const campaignStateUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/campaign-state-update.schema.json');
 const campaignListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/campaign-list.schema.json');
@@ -86,6 +89,9 @@ const validateOutboundQueue = ajv.compile(outboundQueueSchema);
 const validateLeadCreateRequest = ajv.compile(leadCreateSchema.properties.request);
 const validateLeadStageUpdateRequest = ajv.compile(leadStageUpdateSchema.properties.request);
 const validateLeadListResponse = ajv.compile(leadListSchema);
+const validateConversationListResponse = ajv.compile(conversationListSchema);
+const validateMessageListResponse = ajv.compile(messageListSchema);
+const validateConversationSendRequest = ajv.compile(conversationSendSchema.properties.request);
 const validateCampaignCreateRequest = ajv.compile(campaignCreateSchema.properties.request);
 const validateCampaignStateUpdateRequest = ajv.compile(campaignStateUpdateSchema.properties.request);
 const validateCampaignListResponse = ajv.compile(campaignListSchema);
@@ -266,6 +272,22 @@ export function leadStageUpdateValid(body) {
 export function leadListValid(body) {
   const ok = validateLeadListResponse(body);
   return { ok: Boolean(ok), errors: validateLeadListResponse.errors ?? [] };
+}
+
+export function conversationListValid(body) {
+  const ok = validateConversationListResponse(body);
+  return { ok: Boolean(ok), errors: validateConversationListResponse.errors ?? [] };
+}
+
+export function messageListValid(body) {
+  const ok = validateMessageListResponse(body);
+  return { ok: Boolean(ok), errors: validateMessageListResponse.errors ?? [] };
+}
+
+export function conversationSendValid(body) {
+  const ok = validateConversationSendRequest(body?.request);
+  const errors = [...(validateConversationSendRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
 }
 
 export function campaignCreateValid(body) {

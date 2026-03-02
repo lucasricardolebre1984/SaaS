@@ -181,3 +181,15 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 - Observacao do WARN:
   - `POST /v1/crm/conversations/:id/send` retornou `502` no smoke com numero sintetico de teste; endpoint respondeu e persistiu trilha, falha ficou no provider de envio (esperado em numero nao real).
 
+## Update 2026-03-02 (Gate permanente + alinhamento de contexto)
+- `tools/preprod-validate.ps1` agora inclui gate `saas-endpoint-smoke` por padrao.
+- Parametros de contingencia adicionados:
+  - `-SkipSaasEndpointSmoke`
+  - `-SaasEndpointSmokeBaseUrl`
+  - `-SaasEndpointSmokeTenantId`
+- Drift documental resolvido: prioridade ativa unificada em `milestone-5-runtime-stability-hotfix-slice` nos docs centrais.
+- `crm-modern-inbox-2026-slice` fechado em `tasks.md` com T1/T7 concluídos e evidências vinculadas.
+- Validacao executada:
+  - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
+  - reports: `tools/reports/preprod-validate-20260302-165103.log` e `tools/reports/saas-endpoint-smoke-20260302-165147.json`
+

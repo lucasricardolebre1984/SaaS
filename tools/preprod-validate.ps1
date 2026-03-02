@@ -1,6 +1,9 @@
 param(
   [switch]$SkipSmokePostgres,
-  [switch]$SkipOperationalDrills
+  [switch]$SkipOperationalDrills,
+  [switch]$SkipSaasEndpointSmoke,
+  [string]$SaasEndpointSmokeBaseUrl = 'https://dev.automaniaai.com.br/api',
+  [string]$SaasEndpointSmokeTenantId = 'tenant_automania'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -53,6 +56,9 @@ try {
   Write-Report ("Repo root: {0}" -f $repoRoot)
   Write-Report ("SkipSmokePostgres: {0}" -f [bool]$SkipSmokePostgres)
   Write-Report ("SkipOperationalDrills: {0}" -f [bool]$SkipOperationalDrills)
+  Write-Report ("SkipSaasEndpointSmoke: {0}" -f [bool]$SkipSaasEndpointSmoke)
+  Write-Report ("SaasEndpointSmokeBaseUrl: {0}" -f $SaasEndpointSmokeBaseUrl)
+  Write-Report ("SaasEndpointSmokeTenantId: {0}" -f $SaasEndpointSmokeTenantId)
 
   $gates = @(
     @{ Name = 'runtime-tests'; Command = @('npx', 'nx', 'run', 'app-platform-api:test') },
@@ -64,6 +70,24 @@ try {
 
   if (-not $SkipSmokePostgres) {
     $gates += @{ Name = 'smoke-postgres'; Command = @('npm', 'run', 'smoke:postgres') }
+  }
+
+  if (-not $SkipSaasEndpointSmoke) {
+    $gates += @{
+      Name = 'saas-endpoint-smoke'
+      Command = @(
+        'pwsh',
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        "$repoRoot/tools/smoke-saas-endpoints.ps1",
+        '-BaseUrl',
+        $SaasEndpointSmokeBaseUrl,
+        '-TenantId',
+        $SaasEndpointSmokeTenantId
+      )
+    }
   }
 
   if (-not $SkipOperationalDrills) {

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/message-list.schema.json",
+  "title": "Module 02 CRM Message List Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "conversation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "contact_e164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+        "display_name": { "type": ["string", "null"] },
+        "lead_id": { "type": ["string", "null"] },
+        "last_message_preview": { "type": "string" },
+        "last_message_at": { "type": ["string", "null"], "format": "date-time" },
+        "unread_count": { "type": "integer", "minimum": 0 },
+        "metadata": { "type": "object" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "conversation_id",
+        "tenant_id",
+        "contact_e164",
+        "last_message_preview",
+        "unread_count",
+        "metadata",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "message_row_id": { "type": "string", "format": "uuid" },
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "conversation_id": { "type": "string", "format": "uuid" },
+          "provider": { "type": "string", "minLength": 1 },
+          "provider_message_id": { "type": ["string", "null"] },
+          "direction": { "type": "string", "enum": ["inbound", "outbound"] },
+          "message_type": { "type": "string", "minLength": 1 },
+          "text": { "type": "string" },
+          "delivery_state": {
+            "type": "string",
+            "enum": ["queued", "sent", "delivered", "read", "failed", "received", "unknown"]
+          },
+          "occurred_at": { "type": "string", "format": "date-time" },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "message_row_id",
+          "tenant_id",
+          "conversation_id",
+          "provider",
+          "direction",
+          "message_type",
+          "text",
+          "delivery_state",
+          "occurred_at",
+          "metadata",
+          "created_at"
+        ]
+      }
+    }
+  },
+  "required": ["tenant_id", "conversation", "count", "items"]
+}

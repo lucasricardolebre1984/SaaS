@@ -1,6 +1,6 @@
 # Tasks - crm-modern-inbox-2026-slice
 
-Status: In progress
+Status: Completed
 Date: 2026-03-01
 
 ## FOCO
@@ -10,13 +10,19 @@ Sem “CRM completo” além do necessário para operar WhatsApp-first no SaaS.
 ## Tasks
 
 ### T1) Contratos (schemas) do módulo 02
-- Status: pending
+- Status: completed
 - Criar schemas:
   - `conversation-list.schema.json`
   - `message-list.schema.json`
   - `conversation-send.schema.json`
 - Atualizar checklist de integração (STD-005) com itens de persistência e idempotência.
 - **Aceite:** `contract-tests:contract-checks` passa e os schemas têm exemplos válidos.
+- Evidencia:
+  - `libs/mod-02-whatsapp-crm/contracts/conversation-list.schema.json`
+  - `libs/mod-02-whatsapp-crm/contracts/message-list.schema.json`
+  - `libs/mod-02-whatsapp-crm/contracts/conversation-send.schema.json`
+  - `apps/platform-api/src/schemas.mjs` (validadores `conversationListValid`, `messageListValid`, `conversationSendValid`)
+  - `apps/platform-api/src/app.mjs` (validação contract-first em `GET /v1/crm/conversations`, `GET /v1/crm/conversations/:id/messages`, `POST /v1/crm/conversations/:id/send`)
 
 ### T2) Data model + migrations (Postgres)
 - Status: completed
@@ -80,11 +86,14 @@ Sem “CRM completo” além do necessário para operar WhatsApp-first no SaaS.
    - recursos: inbox lateral, thread, envio, abrir chat pela tabela de leads, botao `Qualificar` e update de stage.
 
 ### T7) Integração Evolution dev (AWS)
-- Status: pending
+- Status: completed
 - Configurar Evolution para apontar webhook para o SaaS:
   - URL: `https://dev.automaniaai.com.br/api/provider/evolution/webhook`
   - eventos mínimos: inbound + delivery + read
 - **Aceite:** mensagem enviada do WhatsApp chega e aparece no inbox do SaaS.
+- Evidencia:
+  - `tools/reports/saas-endpoint-smoke-20260302-120836.json` (`PASS=25`, `WARN=1`, `FAIL=0`)
+  - conversa real `+5516981903443` em `tenant_automania` com inbound/outbound `delivery_state=sent` (validado via API em 2026-03-02)
 
 ## Evidências (obrigatório)
 - Logs de gate:

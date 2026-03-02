@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-03-02
-Active phase: Implement + Validate (crm-modern-inbox-2026-slice)
-Active feature: crm-modern-inbox-2026-slice
+Active phase: Implement + Validate (milestone-5-runtime-stability-hotfix-slice)
+Active feature: milestone-5-runtime-stability-hotfix-slice
 
 ## Repo e ambientes (fonte: AGENTS.md)
 - GitHub deploy: https://github.com/lucasricardolebre1984/SaaS (sem branches sandbox).
@@ -45,6 +45,10 @@ Active feature: crm-modern-inbox-2026-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-02: `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills` executado com novo gate `saas-endpoint-smoke` ativo; run verde com report `tools/reports/preprod-validate-20260302-165103.log` e smoke `tools/reports/saas-endpoint-smoke-20260302-165147.json` (`PASS=25`, `WARN=1`, `FAIL=0`).
+- 2026-03-02: alinhamento anti-drift aplicado entre `AGENTS.md`, `PROXIMO-PASSO.md` e `STATE.md` para manter feature/fase ativa unica (`milestone-5-runtime-stability-hotfix-slice`) com fechamento via gate operacional.
+- 2026-03-02: `crm-modern-inbox-2026-slice` fechado em tasks (T1/T7 concluidos) com contracts de conversa (`conversation-list`, `message-list`, `conversation-send`) e validacao contract-first ligada nas rotas de conversas/mensagens/envio.
+- 2026-03-02: gate `preprod:validate` atualizado com regressao permanente de botoes/endpoints via `saas-endpoint-smoke` (skip contingencia: `-SkipSaasEndpointSmoke`).
 - 2026-03-02: smoke tecnico endpoint-a-endpoint publicado em `tools/smoke-saas-endpoints.ps1` (prova executavel para agentes) e validado em `https://dev.automaniaai.com.br/api` com report `tools/reports/saas-endpoint-smoke-20260302-120836.json` (`PASS=25`, `WARN=1`, `FAIL=0`), cobrindo Owner/CRM/Clientes/Agenda/Cobranca/QR + trilha `execution_receipts`.
 - 2026-03-02: hotfix anti-alucinacao aplicado no `POST /v1/owner-concierge/interaction`: respostas que afirmam conclusao sem comprovante de persistencia agora sao bloqueadas por guardrails, com evento auditavel `owner.response.claim.blocked` e `execution_receipts` no payload de resposta para rastreio por endpoint/correlation_id/trace_id.
 - 2026-03-02: auditoria completa de endpoint/button mapping solicitada pelo owner; publicada planta rastreavel em `docs/PLANTA-ENDPOINTS-SAAS.md` com inventario backend (publico + interno), matriz Owner/CRM (botao -> endpoint) e gaps operacionais para eliminar erro de rota em novas sessoes de agentes.

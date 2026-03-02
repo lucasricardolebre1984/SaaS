@@ -1,8 +1,8 @@
-# Proximo passo do SaaS matriz (deploy AWS)
+# Proximo passo do SaaS matriz
 
-**Foco:** produto e operacao do SaaS matriz em ambiente real (dev AWS), com rastreabilidade.
+**Foco:** estabilidade operacional com rastreabilidade 100% (botao -> endpoint -> evidencia).
 
-**Ultima atualizacao:** 2026-02-28
+**Ultima atualizacao:** 2026-03-02
 
 ---
 
@@ -16,21 +16,23 @@
 
 ## Proximo passo unico (ativo)
 
-Fechar UAT operacional Evolution no AWS dev (`dev.automaniaai.com.br`):
+**Encerrar formalmente o slice `milestone-5-runtime-stability-hotfix-slice` com gate permanente de regressao de botoes/endpoints.**
 
-1. ~~Validar `audio/transcribe` e `audio/speech` no modulo 01~~ — OK (confirmado).
-2. ~~Validar Evolution no modulo 02~~ — OK (2026-02-28): `evolution-aws-check.sh` no Ubuntu; Evolution 200 OK; instancia `tenant_automania` state `open`; health publico 200.
-3. ~~Registrar evidencias finais de UAT~~ — OK: `STATE.md`, `STATUS-ATUAL.md`, `worklog.csv`, `costlog.csv` atualizados.
+Status atual ja validado:
+1. `audio/transcribe` e `audio/speech` (modulo 01) — OK.
+2. Evolution AWS dev (modulo 02) — OK (`tenant_automania` conectado).
+3. Smoke endpoint-a-endpoint Owner/CRM/Clientes/Agenda/Cobranca — OK (`PASS=25`, `WARN=1`, `FAIL=0`) no report `tools/reports/saas-endpoint-smoke-20260302-120836.json`.
 
-**Proximo passo natural:** Encerrar slice `milestone-5-runtime-stability-hotfix-slice` (exit checklist) ou validar manualmente no browser: abrir `https://dev.automaniaai.com.br/crm/`, Gerar QR Code e fluxo completo; depois fechar fase em STATE/ROADMAP.
-
-Repo e ambientes documentados em AGENTS.md (GitHub SaaS, Ubuntu /srv/SaaS e /srv/evolution).
+Passo de fechamento:
+1. ~~Rodar gate completo: `npm run preprod:validate`~~ — OK (`preprod-validate-20260302-165103.log`).
+2. Registrar artifacts e decisao GO/NOGO no checklist de saida do slice.
+3. Atualizar ROADMAP/STATE com fechamento do ciclo.
 
 ---
 
 ## Resumo (leigo)
 
-O SaaS matriz esta no AWS dev com hotfix aplicado; audio OpenAI e Evolution (instancia conectada, state open) validados. UAT Evolution registrada (2026-02-28). Proximo: encerrar slice (exit checklist) ou validar no browser CRM + QR e fechar fase.
+Agora o sistema ja tem teste executavel que verifica os botoes principais do SaaS inteiro contra a API real. Proximo passo e apenas fechar formalmente o ciclo de estabilidade com o gate completo e registrar a decisao final.
 
 ---
 

@@ -9,6 +9,8 @@ import {
   chargeCreateValid,
   chargeListValid,
   chargeUpdateValid,
+  conversationListValid,
+  conversationSendValid,
   contextPromotionValid,
   contextRetrievalRequestValid,
   contextRetrievalResponseValid,
@@ -28,6 +30,7 @@ import {
   leadCreateValid,
   leadListValid,
   leadStageUpdateValid,
+  messageListValid,
   memoryEntryCreateValid,
   memoryEntryListValid,
   outboundQueueValid,
@@ -4416,11 +4419,19 @@ export function createApp(options = {}) {
             lead_stage: linkedLead?.stage ?? null
           };
         });
-        return json(res, 200, {
+        const response = {
           tenant_id: tenantId,
           count: items.length,
           items
-        });
+        };
+        const responseValidation = conversationListValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'response_contract_error',
+            details: responseValidation.errors
+          });
+        }
+        return json(res, 200, response);
       }
 
       const conversationMessagesMatch = path.match(/^\/v1\/crm\/conversations\/([^/]+)\/messages$/);
@@ -4440,12 +4451,20 @@ export function createApp(options = {}) {
         const limitRaw = Number(parsedUrl.searchParams.get('limit') ?? 200);
         const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 200;
         const items = await crmConversationStore.listMessages(tenantId, conversationId, { limit });
-        return json(res, 200, {
+        const response = {
           tenant_id: tenantId,
           conversation,
           count: items.length,
           items
-        });
+        };
+        const responseValidation = messageListValid(response);
+        if (!responseValidation.ok) {
+          return json(res, 500, {
+            error: 'response_contract_error',
+            details: responseValidation.errors
+          });
+        }
+        return json(res, 200, response);
       }
 
       const conversationReadMatch = path.match(/^\/v1\/crm\/conversations\/([^/]+)\/read$/);
@@ -4474,7 +4493,14 @@ export function createApp(options = {}) {
         if (body === null) {
           return json(res, 400, { error: 'invalid_json' });
         }
-        const request = body?.request && typeof body.request === 'object' ? body.request : {};
+        const validation = conversationSendValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+        const request = body.request;
         const tenantId = String(request.tenant_id ?? '').trim();
         if (!tenantId) {
           return json(res, 400, { error: 'missing_tenant_id' });

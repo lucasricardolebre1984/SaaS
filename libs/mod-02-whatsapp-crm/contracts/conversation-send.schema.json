@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automaniaai.com.br/fabio/schemas/mod-02/conversation-send.schema.json",
+  "title": "Module 02 CRM Conversation Send Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000 }
+      },
+      "required": ["tenant_id", "text"]
+    }
+  },
+  "required": ["request"]
+}
