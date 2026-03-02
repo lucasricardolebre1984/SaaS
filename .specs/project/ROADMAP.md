@@ -1,6 +1,6 @@
 # ROADMAP
 
-Last update: 2026-02-26
+Last update: 2026-03-02
 
 ## Milestone 0 - Institutional Foundation (completed)
 Objective: Create governance, architecture baseline, and metrics operating system.
@@ -203,7 +203,7 @@ Status update:
   - feature implemented and validated: milestone-4-episode-recall-slice (M4E-001a..d episode_context in recall; provider instructions + system message; gates passed)
   - feature implemented: milestone-4-long-memory-promotion-slice (promocao episodio -> memoria longa; evento memory.promoted.from_episode; PROXIMO-PASSO: memoria/contexto/aprendizado fechados no produto)
 
-## Milestone 5 - AWS Deployment Bootstrap (in progress)
+## Milestone 5 - AWS Deployment Bootstrap (completed)
 Objective: Put the matrix SaaS in AWS dev with production-grade persistence and operational gates.
 
 Deliverables:
@@ -230,7 +230,14 @@ Status update:
 - stabilization slice opened:
   - `milestone-5-runtime-stability-hotfix-slice`
   - scope: provider-error runtime sanitize + mobile owner console fixes + branch/protection hygiene
-  - status: implement complete, AWS rollout validation pending.
+  - status: completed (UAT + gates + deploy evidence).
+- stabilization/exit closure completed:
+  - permanent endpoint/button smoke gate integrated into `preprod:validate`
+  - reports:
+    - `tools/reports/preprod-validate-20260302-165103.log`
+    - `tools/reports/saas-endpoint-smoke-20260302-165147.json`
+  - exit checklist GO:
+    - `.specs/project/MILESTONE-5-RUNTIME-STABILITY-EXIT-CHECKLIST.md`
 
 ## Parking Lot (do not execute now)
 - Multi-brand color palette system for each SaaS

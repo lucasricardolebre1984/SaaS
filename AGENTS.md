@@ -101,10 +101,10 @@ Always update:
 See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
-- Active feature: `milestone-5-runtime-stability-hotfix-slice`
-- Active phase: Implement + Validate (fechamento operacional com gate de botoes/endpoints SaaS)
+- Active feature: `crm-krayin-reference-modernization-slice`
+- Active phase: Specify (aprovar spec/design/tasks antes de implementar)
 
-Gate de regressao de botoes/endpoints (owner+crm+modulos 03..05):
+Gate de regressao de botoes/endpoints (owner+crm+modulos 03..05) permanece obrigatorio:
 - integrado em `npm run preprod:validate` via `tools/smoke-saas-endpoints.ps1`
 - skip de contingencia: `-SkipSaasEndpointSmoke`
 

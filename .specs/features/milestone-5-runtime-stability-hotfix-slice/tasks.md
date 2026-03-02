@@ -1,7 +1,7 @@
 # Tasks - milestone-5-runtime-stability-hotfix-slice
 
-Status: In progress
-Date: 2026-02-27
+Status: Completed
+Date: 2026-03-02
 
 ## M5B-001 - Sanitizacao de API key tenant runtime
 - Status: completed
@@ -34,11 +34,16 @@ Date: 2026-02-27
   - deploy executado em AWS dev (`/srv/SaaS`) com `saas.service` ativo e health `200`.
 
 ## M5B-005 - UAT operacional OpenAI + Evolution (dev)
-- Status: pending
-- Output esperado:
-  - validar voice/whisper em runtime dev com chave OpenAI valida por tenant.
-  - validar `Gerar QR Code` do modulo 02 com instance Evolution ativa.
-  - registrar evidencias finais de UAT em `STATUS-ATUAL.md`.
+- Status: completed
+- Output:
+  - voice/whisper validados em runtime dev com tenant config ativo.
+  - `Gerar QR Code` validado no modulo 02 com instance Evolution ativa (`connected/open`).
+  - evidencias finais registradas em `STATE.md`, `STATUS-ATUAL.md`, `worklog.csv`, `costlog.csv`.
+  - smoke endpoint-a-endpoint Owner/CRM/Clientes/Agenda/Cobranca validado.
+- Evidencias:
+  - `tools/reports/preprod-validate-20260302-165103.log`
+  - `tools/reports/saas-endpoint-smoke-20260302-165147.json` (`PASS=25`, `WARN=1`, `FAIL=0`)
+  - health publico: `https://dev.automaniaai.com.br/api/health` (`200`)
 
 ## M5B-006 - Hotfix auto-resposta inbound WhatsApp (Evolution)
 - Status: completed
@@ -63,3 +68,6 @@ Date: 2026-02-27
 - Deploy dev:
   - `npm run deploy:dev` (pass)
   - `https://dev.automaniaai.com.br/api/health` (200)
+- Gate operacional atualizado:
+  - `tools/preprod-validate.ps1` inclui `saas-endpoint-smoke` por padrao
+  - flags de contingencia: `-SkipSaasEndpointSmoke`, `-SaasEndpointSmokeBaseUrl`, `-SaasEndpointSmokeTenantId`

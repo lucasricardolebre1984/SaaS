@@ -193,3 +193,10 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
   - reports: `tools/reports/preprod-validate-20260302-165103.log` e `tools/reports/saas-endpoint-smoke-20260302-165147.json`
 
+## Update 2026-03-02 (Encerramento M5B + transicao)
+- Checklist de saida fechado com `GO`:
+  - `.specs/project/MILESTONE-5-RUNTIME-STABILITY-EXIT-CHECKLIST.md`
+- ROADMAP atualizado para `Milestone 5 (completed)`.
+- Proximo foco formalizado em `PROXIMO-PASSO.md`:
+  - `crm-krayin-reference-modernization-slice` em fase `Specify/Approval`.
+

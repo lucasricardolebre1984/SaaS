@@ -1,8 +1,8 @@
 # STATE
 
 Last update: 2026-03-02
-Active phase: Implement + Validate (milestone-5-runtime-stability-hotfix-slice)
-Active feature: milestone-5-runtime-stability-hotfix-slice
+Active phase: Specify (crm-krayin-reference-modernization-slice)
+Active feature: crm-krayin-reference-modernization-slice
 
 ## Repo e ambientes (fonte: AGENTS.md)
 - GitHub deploy: https://github.com/lucasricardolebre1984/SaaS (sem branches sandbox).
@@ -45,6 +45,8 @@ Active feature: milestone-5-runtime-stability-hotfix-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-02: checklist de saida M5B publicado em `.specs/project/MILESTONE-5-RUNTIME-STABILITY-EXIT-CHECKLIST.md` com decisao `GO`.
+- 2026-03-02: ROADMAP atualizado para marcar Milestone 5 como concluido; foco transicionado para `crm-krayin-reference-modernization-slice` em fase de especificacao/aprovacao.
 - 2026-03-02: `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills` executado com novo gate `saas-endpoint-smoke` ativo; run verde com report `tools/reports/preprod-validate-20260302-165103.log` e smoke `tools/reports/saas-endpoint-smoke-20260302-165147.json` (`PASS=25`, `WARN=1`, `FAIL=0`).
 - 2026-03-02: alinhamento anti-drift aplicado entre `AGENTS.md`, `PROXIMO-PASSO.md` e `STATE.md` para manter feature/fase ativa unica (`milestone-5-runtime-stability-hotfix-slice`) com fechamento via gate operacional.
 - 2026-03-02: `crm-modern-inbox-2026-slice` fechado em tasks (T1/T7 concluidos) com contracts de conversa (`conversation-list`, `message-list`, `conversation-send`) e validacao contract-first ligada nas rotas de conversas/mensagens/envio.

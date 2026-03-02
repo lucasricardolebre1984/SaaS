@@ -16,24 +16,24 @@
 
 ## Proximo passo unico (ativo)
 
-**Encerrar formalmente o slice `milestone-5-runtime-stability-hotfix-slice` com gate permanente de regressao de botoes/endpoints.**
+**Abrir execucao formal do `crm-krayin-reference-modernization-slice` a partir da base estabilizada.**
 
-Status atual ja validado:
-1. `audio/transcribe` e `audio/speech` (modulo 01) — OK.
-2. Evolution AWS dev (modulo 02) — OK (`tenant_automania` conectado).
-3. Smoke endpoint-a-endpoint Owner/CRM/Clientes/Agenda/Cobranca — OK (`PASS=25`, `WARN=1`, `FAIL=0`) no report `tools/reports/saas-endpoint-smoke-20260302-120836.json`.
+Pre-condicoes (ja cumpridas):
+1. Slice de estabilidade M5B encerrado com `GO`.
+2. Gate permanente de regressao de botoes/endpoints ativo no `preprod:validate`.
+3. AWS dev com runtime estavel e evidencias auditaveis.
 
-Passo de fechamento:
-1. ~~Rodar gate completo: `npm run preprod:validate`~~ — OK (`preprod-validate-20260302-165103.log`).
-2. Registrar artifacts e decisao GO/NOGO no checklist de saida do slice.
-3. Atualizar ROADMAP/STATE com fechamento do ciclo.
+Passo ativo agora:
+1. Promover `crm-krayin-reference-modernization-slice` de Draft para fase ativa.
+2. Fechar aprovacao de `spec/design/tasks` (sem implementar antes do gate).
+3. Executar T2 (gap matrix) como primeiro entregavel auditavel da nova frente.
 
 ---
 
 ## Resumo (leigo)
 
-Agora o sistema ja tem teste executavel que verifica os botoes principais do SaaS inteiro contra a API real. Proximo passo e apenas fechar formalmente o ciclo de estabilidade com o gate completo e registrar a decisao final.
+O ciclo de estabilidade foi fechado. Agora o trabalho passa para evolucao de CRM enterprise (referencia Krayin-like), mantendo a base tecnica atual e executando por fatias com gate de aprovacao.
 
 ---
 
-*Feature ativa: `milestone-5-runtime-stability-hotfix-slice`.*
+*Feature ativa: `crm-krayin-reference-modernization-slice` (fase: Specify/Approval).*
