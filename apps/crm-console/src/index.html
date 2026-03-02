@@ -103,6 +103,11 @@
               <label>Buscar
                 <input id="leadSearchInput" type="search" placeholder="Nome, telefone ou ID..." />
               </label>
+              <label>View salva
+                <select id="savedViewSelect">
+                  <option value="">Padrao</option>
+                </select>
+              </label>
               <label>Stage
                 <select id="leadStageFilter">
                   <option value="all">Todos</option>
@@ -127,6 +132,8 @@
                   <option value="channel">Por canal</option>
                 </select>
               </label>
+              <button id="saveViewBtn" class="btn btn--ghost" type="button">Salvar view</button>
+              <button id="deleteViewBtn" class="btn btn--ghost" type="button">Excluir view</button>
               <button id="leadClearFiltersBtn" class="btn btn--ghost" type="button">Limpar filtros</button>
             </section>
 
@@ -223,6 +230,17 @@
                     <h5>Atividades</h5>
                     <ul id="detailActivityList">
                       <li class="empty">Sem atividades.</li>
+                    </ul>
+                  </section>
+                  <section class="detail-tasks">
+                    <h5>Tarefas de Follow-up</h5>
+                    <form id="detailTaskForm" class="detail-task-form">
+                      <input id="detailTaskTitle" placeholder="Nova tarefa..." />
+                      <input id="detailTaskDue" type="datetime-local" />
+                      <button class="btn btn--ghost" type="submit">Adicionar</button>
+                    </form>
+                    <ul id="detailTaskList">
+                      <li class="empty">Sem tarefas.</li>
                     </ul>
                   </section>
                 </aside>

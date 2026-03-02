@@ -68,6 +68,9 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
   - cards de atividade enriquecidos com badges de direcao e delivery;
   - command bar e board-tabs estilo CRM enterprise para aproximar fidelidade Krayin-like;
   - barras graficas dinamicas (stage/canal) no painel lateral;
+  - views salvas de filtro (`save/apply/delete`) por tenant;
+  - kanban com drag-and-drop para update de stage (quando agrupado por stage);
+  - tarefas de follow-up por lead no painel de detalhe (persistidas por tenant);
   - builds verdes apos v2:
     - `npx nx run app-crm-console:build`
     - `npx nx run app-owner-console:build`.

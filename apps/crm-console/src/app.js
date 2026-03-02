@@ -64,6 +64,9 @@ const pipelineViewCardEl = document.getElementById('pipelineViewCard');
 const leadsViewCardEl = document.getElementById('leadsViewCard');
 const pipelineBoardEl = document.getElementById('pipelineBoard');
 const leadSearchInput = document.getElementById('leadSearchInput');
+const savedViewSelect = document.getElementById('savedViewSelect');
+const saveViewBtn = document.getElementById('saveViewBtn');
+const deleteViewBtn = document.getElementById('deleteViewBtn');
 const leadStageFilter = document.getElementById('leadStageFilter');
 const leadChannelFilter = document.getElementById('leadChannelFilter');
 const leadGroupBy = document.getElementById('leadGroupBy');
@@ -74,6 +77,10 @@ const detailLeadPhoneEl = document.getElementById('detailLeadPhone');
 const detailLeadChannelEl = document.getElementById('detailLeadChannel');
 const detailLeadIdEl = document.getElementById('detailLeadId');
 const detailActivityListEl = document.getElementById('detailActivityList');
+const detailTaskForm = document.getElementById('detailTaskForm');
+const detailTaskTitleInput = document.getElementById('detailTaskTitle');
+const detailTaskDueInput = document.getElementById('detailTaskDue');
+const detailTaskListEl = document.getElementById('detailTaskList');
 const stageBarsEl = document.getElementById('stageBars');
 const channelBarsEl = document.getElementById('channelBars');
 
@@ -96,12 +103,16 @@ let inboxPollingTimer = null;
 let inboxPollingInFlight = false;
 const INBOX_POLL_INTERVAL_MS = 5000;
 let currentMainView = 'inbox';
+let activeSavedViewId = '';
+let tasksByLead = {};
 const filters = {
   search: '',
   stage: 'all',
   channel: 'all',
   groupBy: 'stage'
 };
+const SAVED_VIEW_KEY_PREFIX = 'crm_console_saved_views_v1';
+const TASKS_KEY_PREFIX = 'crm_console_tasks_v1';
 
 const PIPELINE_COLUMNS = [
   { id: 'new', label: 'New' },
@@ -199,6 +210,55 @@ function tenantId() {
   return tenantIdInput.value.trim();
 }
 
+function tenantStorageSuffix() {
+  return tenantId().toLowerCase() || 'default';
+}
+
+function savedViewStorageKey() {
+  return `${SAVED_VIEW_KEY_PREFIX}:${tenantStorageSuffix()}`;
+}
+
+function taskStorageKey() {
+  return `${TASKS_KEY_PREFIX}:${tenantStorageSuffix()}`;
+}
+
+function loadSavedViews() {
+  try {
+    const raw = localStorage.getItem(savedViewStorageKey());
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => item && typeof item === 'object' && item.id && item.name && item.filters);
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedViews(views) {
+  try {
+    localStorage.setItem(savedViewStorageKey(), JSON.stringify(views));
+  } catch {
+    // no-op
+  }
+}
+
+function loadTasks() {
+  try {
+    const raw = localStorage.getItem(taskStorageKey());
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistTasks() {
+  try {
+    localStorage.setItem(taskStorageKey(), JSON.stringify(tasksByLead));
+  } catch {
+    // no-op
+  }
+}
+
 function applyBootstrapFromQuery() {
   const params = new URLSearchParams(window.location.search || '');
   const tenant = params.get('tenant');
@@ -237,6 +297,8 @@ function applyBootstrapFromQuery() {
       persist: true
     });
   }
+  tasksByLead = loadTasks();
+  renderSavedViewOptions();
 }
 
 function safeText(value) {
@@ -308,6 +370,7 @@ function renderDetailPanel() {
   detailLeadPhoneEl.textContent = leadPhone;
   detailLeadChannelEl.textContent = leadChannel;
   detailLeadIdEl.textContent = leadId;
+  renderDetailTasks(linkedLead);
 
   if (!selectedThreadMessages.length) {
     detailActivityListEl.innerHTML = '<li class="empty">Sem atividades.</li>';
@@ -340,6 +403,96 @@ function renderDetailPanel() {
   detailActivityListEl.innerHTML = activities;
 }
 
+function renderDetailTasks(lead) {
+  if (!lead?.lead_id) {
+    detailTaskListEl.innerHTML = '<li class="empty">Sem tarefas.</li>';
+    return;
+  }
+  const leadTasks = Array.isArray(tasksByLead[lead.lead_id]) ? tasksByLead[lead.lead_id] : [];
+  if (!leadTasks.length) {
+    detailTaskListEl.innerHTML = '<li class="empty">Sem tarefas.</li>';
+    return;
+  }
+
+  detailTaskListEl.innerHTML = leadTasks
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'done' ? 1 : -1;
+      return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+    })
+    .map((task) => {
+      const done = task.status === 'done';
+      return `
+        <li class="detail-task-item ${done ? 'is-done' : ''}">
+          <div class="detail-task-item__top">
+            <span class="detail-task-item__title">${safeText(task.title || '(sem titulo)')}</span>
+            <span class="detail-task-item__meta">${safeText(done ? 'concluida' : 'pendente')}</span>
+          </div>
+          <div class="detail-task-item__meta">Criada: ${safeText(formatTime(task.created_at))}</div>
+          <div class="detail-task-item__meta">Prazo: ${safeText(formatTime(task.due_at))}</div>
+          <div class="detail-task-actions">
+            <button class="btn btn--ghost" type="button" data-task-toggle="${safeText(task.id)}">${done ? 'Reabrir' : 'Concluir'}</button>
+            <button class="btn btn--ghost" type="button" data-task-remove="${safeText(task.id)}">Remover</button>
+          </div>
+        </li>
+      `;
+    })
+    .join('');
+}
+
+function addDetailTask(event) {
+  event.preventDefault();
+  const conversation = selectedConversation();
+  const linkedLead = getLinkedLeadForConversation(conversation);
+  if (!linkedLead?.lead_id) {
+    formStatus.textContent = 'Selecione uma conversa com lead para criar tarefa.';
+    return;
+  }
+  const title = String(detailTaskTitleInput.value || '').trim();
+  if (!title) return;
+  const dueAt = String(detailTaskDueInput.value || '').trim();
+  const leadId = linkedLead.lead_id;
+  if (!Array.isArray(tasksByLead[leadId])) {
+    tasksByLead[leadId] = [];
+  }
+  tasksByLead[leadId].push({
+    id: `task_${crypto.randomUUID()}`,
+    title,
+    due_at: dueAt ? new Date(dueAt).toISOString() : '',
+    created_at: new Date().toISOString(),
+    status: 'pending'
+  });
+  persistTasks();
+  detailTaskTitleInput.value = '';
+  detailTaskDueInput.value = '';
+  renderDetailTasks(linkedLead);
+  formStatus.textContent = `Tarefa criada para ${linkedLead.display_name || linkedLead.phone_e164}.`;
+}
+
+function handleTaskActionClick(event) {
+  const toggleId = event.target?.getAttribute?.('data-task-toggle');
+  const removeId = event.target?.getAttribute?.('data-task-remove');
+  if (!toggleId && !removeId) return;
+  const conversation = selectedConversation();
+  const linkedLead = getLinkedLeadForConversation(conversation);
+  if (!linkedLead?.lead_id) return;
+  const leadId = linkedLead.lead_id;
+  const leadTasks = Array.isArray(tasksByLead[leadId]) ? tasksByLead[leadId] : [];
+  if (!leadTasks.length) return;
+
+  if (toggleId) {
+    tasksByLead[leadId] = leadTasks.map((task) => (
+      task.id === toggleId
+        ? { ...task, status: task.status === 'done' ? 'pending' : 'done' }
+        : task
+    ));
+  } else if (removeId) {
+    tasksByLead[leadId] = leadTasks.filter((task) => task.id !== removeId);
+  }
+
+  persistTasks();
+  renderDetailTasks(linkedLead);
+}
+
 function switchMainView(nextView) {
   const validViews = new Set(['inbox', 'pipeline', 'leads']);
   currentMainView = validViews.has(nextView) ? nextView : 'inbox';
@@ -351,6 +504,87 @@ function switchMainView(nextView) {
   viewInboxBtn.classList.toggle('is-active', currentMainView === 'inbox');
   viewPipelineBtn.classList.toggle('is-active', currentMainView === 'pipeline');
   viewLeadsBtn.classList.toggle('is-active', currentMainView === 'leads');
+}
+
+function applyFiltersToInputs() {
+  leadSearchInput.value = filters.search;
+  leadStageFilter.value = filters.stage;
+  leadChannelFilter.value = filters.channel;
+  leadGroupBy.value = filters.groupBy;
+}
+
+function renderSavedViewOptions() {
+  const views = loadSavedViews();
+  const options = ['<option value="">Padrao</option>']
+    .concat(views.map((view) => `<option value="${safeText(view.id)}">${safeText(view.name)}</option>`))
+    .join('');
+  savedViewSelect.innerHTML = options;
+  savedViewSelect.value = views.some((view) => view.id === activeSavedViewId) ? activeSavedViewId : '';
+}
+
+function resetFiltersToDefault() {
+  filters.search = '';
+  filters.stage = 'all';
+  filters.channel = 'all';
+  filters.groupBy = 'stage';
+  activeSavedViewId = '';
+}
+
+function applySavedViewById(viewId) {
+  const views = loadSavedViews();
+  const selected = views.find((view) => view.id === viewId);
+  if (!selected) {
+    resetFiltersToDefault();
+    applyFiltersToInputs();
+    refreshLeadViews();
+    renderSavedViewOptions();
+    return;
+  }
+  filters.search = String(selected.filters.search ?? '');
+  filters.stage = String(selected.filters.stage ?? 'all');
+  filters.channel = String(selected.filters.channel ?? 'all');
+  filters.groupBy = String(selected.filters.groupBy ?? 'stage');
+  activeSavedViewId = selected.id;
+  applyFiltersToInputs();
+  refreshLeadViews();
+  renderSavedViewOptions();
+}
+
+function saveCurrentView() {
+  const name = window.prompt('Nome da view:');
+  if (!name || !name.trim()) return;
+  const trimmed = name.trim();
+  const views = loadSavedViews();
+  const id = `view_${crypto.randomUUID()}`;
+  views.push({
+    id,
+    name: trimmed,
+    filters: {
+      search: filters.search,
+      stage: filters.stage,
+      channel: filters.channel,
+      groupBy: filters.groupBy
+    }
+  });
+  persistSavedViews(views);
+  activeSavedViewId = id;
+  renderSavedViewOptions();
+  formStatus.textContent = `View "${trimmed}" salva.`;
+}
+
+function deleteActiveView() {
+  if (!activeSavedViewId) {
+    formStatus.textContent = 'Selecione uma view salva para excluir.';
+    return;
+  }
+  const views = loadSavedViews();
+  const selected = views.find((view) => view.id === activeSavedViewId);
+  const next = views.filter((view) => view.id !== activeSavedViewId);
+  persistSavedViews(next);
+  const removedName = selected?.name || activeSavedViewId;
+  activeSavedViewId = '';
+  renderSavedViewOptions();
+  formStatus.textContent = `View "${removedName}" removida.`;
 }
 
 function getFilteredLeads(sourceLeads = []) {
@@ -422,8 +656,17 @@ function renderPipeline(leads = []) {
     const columnLeads = grouped.get(column.id) ?? [];
     const cards = columnLeads.length
       ? columnLeads.map((lead) => {
+        const leadId = String(lead.lead_id || '');
+        const currentStage = String(lead.stage || '');
+        const draggable = filters.groupBy === 'stage' && leadId.length > 0 ? 'true' : 'false';
         return `
-          <article class="pipeline-lead" data-open-phone="${safeText(lead.phone_e164)}">
+          <article
+            class="pipeline-lead"
+            data-open-phone="${safeText(lead.phone_e164)}"
+            data-lead-id="${safeText(leadId)}"
+            data-current-stage="${safeText(currentStage)}"
+            draggable="${draggable}"
+          >
             <div class="pipeline-lead__name">${safeText(lead.display_name || lead.phone_e164)}</div>
             <div class="pipeline-lead__meta">${safeText(lead.phone_e164)}</div>
             <div class="pipeline-lead__meta">${safeText(lead.source_channel || 'whatsapp')}</div>
@@ -434,7 +677,7 @@ function renderPipeline(leads = []) {
       : '<p class="empty">Sem leads</p>';
 
     return `
-      <section class="pipeline-column">
+      <section class="pipeline-column" data-column-key="${safeText(column.id)}">
         <header class="pipeline-column__header">
           <span class="pipeline-column__title">${safeText(column.label)}</span>
           <span class="pipeline-column__count">${columnLeads.length}</span>
@@ -453,6 +696,68 @@ function renderPipeline(leads = []) {
         openConversation(conversation.conversation_id, { markRead: true });
       } else {
         formStatus.textContent = `Lead ${phone} sem conversa ativa ainda.`;
+      }
+    });
+  });
+
+  const stageSet = new Set(PIPELINE_COLUMNS.map((item) => item.id));
+  if (filters.groupBy !== 'stage') return;
+
+  pipelineBoardEl.querySelectorAll('.pipeline-lead[draggable="true"]').forEach((node) => {
+    node.addEventListener('dragstart', (event) => {
+      const leadId = node.getAttribute('data-lead-id') || '';
+      const fromStage = node.getAttribute('data-current-stage') || '';
+      event.dataTransfer?.setData('application/json', JSON.stringify({ leadId, fromStage }));
+      event.dataTransfer?.setData('text/plain', `${leadId}|${fromStage}`);
+      node.classList.add('is-dragging');
+    });
+    node.addEventListener('dragend', () => {
+      node.classList.remove('is-dragging');
+      pipelineBoardEl.querySelectorAll('.pipeline-column').forEach((columnEl) => {
+        columnEl.classList.remove('is-drop-target');
+      });
+    });
+  });
+
+  pipelineBoardEl.querySelectorAll('.pipeline-column').forEach((columnEl) => {
+    columnEl.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      const targetStage = String(columnEl.getAttribute('data-column-key') || '');
+      if (stageSet.has(targetStage)) {
+        columnEl.classList.add('is-drop-target');
+      }
+    });
+    columnEl.addEventListener('dragleave', () => {
+      columnEl.classList.remove('is-drop-target');
+    });
+    columnEl.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      columnEl.classList.remove('is-drop-target');
+      const targetStage = String(columnEl.getAttribute('data-column-key') || '');
+      if (!stageSet.has(targetStage)) return;
+
+      let payload = null;
+      try {
+        payload = JSON.parse(event.dataTransfer?.getData('application/json') || '{}');
+      } catch {
+        payload = null;
+      }
+      const fallback = String(event.dataTransfer?.getData('text/plain') || '');
+      const [fallbackLeadId = '', fallbackFromStage = ''] = fallback.split('|');
+      const leadId = String(payload?.leadId || fallbackLeadId || '');
+      const fromStage = String(payload?.fromStage || fallbackFromStage || '');
+      if (!leadId || !fromStage || fromStage === targetStage) return;
+
+      try {
+        formStatus.textContent = `Movendo lead para ${targetStage}...`;
+        await updateLeadStage(leadId, fromStage, targetStage);
+        await loadAllData();
+        if (selectedConversationId) {
+          await openConversation(selectedConversationId, { markRead: false });
+        }
+        formStatus.textContent = `Lead movido: ${fromStage} -> ${targetStage}.`;
+      } catch (error) {
+        formStatus.textContent = `Falha no drag-and-drop: ${error.message}`;
       }
     });
   });
@@ -740,6 +1045,7 @@ async function loadLeads() {
 async function loadAllData() {
   await loadConversations();
   await loadLeads();
+  renderSavedViewOptions();
   if (selectedConversationId) {
     await openConversation(selectedConversationId, { markRead: false });
   } else {
@@ -1069,32 +1375,48 @@ applyTenantThemeBtn.addEventListener('click', applyTenantTheme);
 viewInboxBtn.addEventListener('click', () => switchMainView('inbox'));
 viewPipelineBtn.addEventListener('click', () => switchMainView('pipeline'));
 viewLeadsBtn.addEventListener('click', () => switchMainView('leads'));
+savedViewSelect.addEventListener('change', () => {
+  const viewId = String(savedViewSelect.value || '').trim();
+  if (!viewId) {
+    resetFiltersToDefault();
+    applyFiltersToInputs();
+    refreshLeadViews();
+    renderSavedViewOptions();
+    return;
+  }
+  applySavedViewById(viewId);
+});
+saveViewBtn.addEventListener('click', saveCurrentView);
+deleteViewBtn.addEventListener('click', deleteActiveView);
 leadSearchInput.addEventListener('input', () => {
   filters.search = leadSearchInput.value.trim();
+  activeSavedViewId = '';
+  renderSavedViewOptions();
   refreshLeadViews();
 });
 leadStageFilter.addEventListener('change', () => {
   filters.stage = String(leadStageFilter.value || 'all').toLowerCase();
+  activeSavedViewId = '';
+  renderSavedViewOptions();
   refreshLeadViews();
 });
 leadChannelFilter.addEventListener('change', () => {
   filters.channel = String(leadChannelFilter.value || 'all').toLowerCase();
+  activeSavedViewId = '';
+  renderSavedViewOptions();
   refreshLeadViews();
 });
 leadGroupBy.addEventListener('change', () => {
   filters.groupBy = String(leadGroupBy.value || 'stage').toLowerCase();
+  activeSavedViewId = '';
+  renderSavedViewOptions();
   refreshLeadViews();
 });
 leadClearFiltersBtn.addEventListener('click', () => {
-  filters.search = '';
-  filters.stage = 'all';
-  filters.channel = 'all';
-  filters.groupBy = 'stage';
-  leadSearchInput.value = '';
-  leadStageFilter.value = 'all';
-  leadChannelFilter.value = 'all';
-  leadGroupBy.value = 'stage';
+  resetFiltersToDefault();
+  applyFiltersToInputs();
   refreshLeadViews();
+  renderSavedViewOptions();
 });
 tenantIdInput.addEventListener('blur', () => {
   const tenant = tenantId().toLowerCase();
@@ -1105,6 +1427,12 @@ tenantIdInput.addEventListener('blur', () => {
       persist: true
     });
   }
+  tasksByLead = loadTasks();
+  activeSavedViewId = '';
+  renderSavedViewOptions();
+  resetFiltersToDefault();
+  applyFiltersToInputs();
+  loadAllData();
 });
 
 reloadBtn.addEventListener('click', loadAllData);
@@ -1114,6 +1442,8 @@ threadAiSuggestBtn.addEventListener('click', handleAiSuggestReply);
 threadQualifyBtn.addEventListener('click', handleQualifyLead);
 threadAiExecuteBtn.addEventListener('click', handleAiExecute);
 threadUpdateStageBtn.addEventListener('click', handleUpdateStage);
+detailTaskForm.addEventListener('submit', addDetailTask);
+detailTaskListEl.addEventListener('click', handleTaskActionClick);
 
 apiBaseInput.addEventListener('change', () => {
   apiBaseInput.value = normalizeApiBase(apiBaseInput.value);
