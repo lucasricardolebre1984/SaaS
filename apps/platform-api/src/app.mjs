@@ -3,6 +3,21 @@ import {
   campaignCreateValid,
   campaignListValid,
   campaignStateUpdateValid,
+  accountCreateValid,
+  accountListValid,
+  accountUpdateValid,
+  contactCreateValid,
+  contactListValid,
+  contactUpdateValid,
+  dealCreateValid,
+  dealListValid,
+  dealUpdateValid,
+  activityCreateValid,
+  activityListValid,
+  taskCreateValid,
+  taskListValid,
+  viewCreateValid,
+  viewListValid,
   appointmentCreateValid,
   appointmentUpdateValid,
   billingLifecycleEventPayloadValid,
@@ -56,6 +71,7 @@ import { createBillingStore } from './billing-store.mjs';
 import { createLeadStore } from './lead-store.mjs';
 import { createCrmAutomationStore } from './crm-automation-store.mjs';
 import { createCrmConversationStore } from './crm-conversation-store.mjs';
+import { createCrmCoreStore } from './crm-core-store.mjs';
 import { createOwnerMemoryStore } from './owner-memory-store.mjs';
 import { createOwnerMemoryMaintenanceStore } from './owner-memory-maintenance-store.mjs';
 import { createOwnerShortMemoryStore } from './owner-short-memory-store.mjs';
@@ -2202,6 +2218,61 @@ function crmConversationInfo(store) {
   };
 }
 
+function crmCoreInfo(store) {
+  if (store.backend === 'postgres') {
+    return {
+      backend: 'postgres',
+      storage_dir: null
+    };
+  }
+
+  return {
+    backend: 'file',
+    storage_dir: store.storageDir
+  };
+}
+
+function createCrmCoreLifecycleEvent({
+  eventName,
+  tenantId,
+  sourceModule = 'mod-02-whatsapp-crm',
+  targetModule = 'mod-01-owner-concierge',
+  correlationId,
+  traceId,
+  causationId,
+  status = 'info',
+  payload = {}
+}) {
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: eventName,
+    tenant_id: tenantId,
+    source_module: sourceModule,
+    target_module: targetModule,
+    emitted_at: new Date().toISOString(),
+    correlation_id: correlationId,
+    ...(causationId ? { causation_id: causationId } : {}),
+    trace_id: traceId,
+    status,
+    payload
+  };
+}
+
+function parseOptionalPositiveInt(value, fallback, max = 500) {
+  if (value == null) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.min(Math.floor(parsed), max);
+}
+
+function toListWindow(items, pagination) {
+  const limit = pagination.limit;
+  const offset = pagination.offset;
+  return items.slice(offset, offset + limit);
+}
+
 function appendFallbackReason(existingValue, newReason) {
   const existing = typeof existingValue === 'string' ? existingValue.trim() : '';
   if (!existing) return newReason;
@@ -2548,6 +2619,13 @@ export function createApp(options = {}) {
   const crmConversationStore = createCrmConversationStore({
     backend,
     storageDir: options.crmConversationStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
+  });
+  const crmCoreStore = createCrmCoreStore({
+    backend,
+    storageDir: options.crmCoreStorageDir ?? options.orchestrationStorageDir,
     pgConnectionString,
     pgSchema,
     pgAutoMigrate
@@ -2945,6 +3023,7 @@ export function createApp(options = {}) {
           crm_leads: leadInfo(leadStore),
           crm_automation: crmAutomationInfo(crmAutomationStore),
           crm_conversations: crmConversationInfo(crmConversationStore),
+          crm_core: crmCoreInfo(crmCoreStore),
           owner_memory: ownerMemoryInfo(ownerMemoryStore, ownerEmbeddingProvider),
           owner_memory_maintenance: ownerMemoryMaintenanceInfo(ownerMemoryMaintenanceStore),
           tenant_runtime_config: tenantRuntimeConfigInfo(tenantRuntimeConfigStore),
@@ -4392,6 +4471,1048 @@ export function createApp(options = {}) {
         }
 
         return json(res, 200, response);
+      }
+
+      if (method === 'POST' && path === '/v1/crm/accounts') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = accountCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let createResult;
+        try {
+          createResult = await crmCoreStore.createAccount({
+            account_id: request.account.account_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            external_key: request.account.external_key ?? null,
+            name: request.account.name,
+            legal_name: request.account.legal_name ?? null,
+            document_number: request.account.document_number ?? null,
+            industry: request.account.industry ?? null,
+            website: request.account.website ?? null,
+            status: request.account.status ?? 'active',
+            owner_user_id: request.account.owner_user_id ?? null,
+            metadata: request.account.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const event = createCrmCoreLifecycleEvent({
+            eventName: 'crm.account.created',
+            tenantId: request.tenant_id,
+            sourceModule: request.source_module,
+            correlationId,
+            traceId,
+            status: 'info',
+            payload: {
+              account_id: createResult.account.account_id,
+              status: createResult.account.status
+            }
+          });
+          const eventResult = await validateAndPersistEvent(store, event);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = event.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            account: createResult.account,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      const accountPatchMatch = path.match(/^\/v1\/crm\/accounts\/([^/]+)$/);
+      if (method === 'PATCH' && accountPatchMatch) {
+        const accountId = decodeURIComponent(accountPatchMatch[1] ?? '').trim();
+        if (!accountId) {
+          return json(res, 400, { error: 'missing_account_id' });
+        }
+
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = accountUpdateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        if (request.account_id !== accountId) {
+          return json(res, 400, { error: 'account_id_mismatch' });
+        }
+
+        let updateResult;
+        try {
+          updateResult = await crmCoreStore.updateAccount(request.tenant_id, accountId, request.patch);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+        if (!updateResult.ok && updateResult.code === 'not_found') {
+          return json(res, 404, { error: 'not_found' });
+        }
+        if (!updateResult.ok) {
+          return json(res, 400, { error: updateResult.code ?? 'update_error' });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        const event = createCrmCoreLifecycleEvent({
+          eventName: 'crm.account.updated',
+          tenantId: request.tenant_id,
+          sourceModule: request.source_module,
+          correlationId,
+          traceId,
+          status: 'info',
+          payload: {
+            account_id: updateResult.account.account_id,
+            status: updateResult.account.status
+          }
+        });
+        const eventResult = await validateAndPersistEvent(store, event);
+        if (!eventResult.ok) {
+          return json(res, 500, {
+            error: eventResult.type,
+            details: eventResult.details
+          });
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'updated',
+            account: updateResult.account,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: event.name
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/accounts') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const limitRaw = parsedUrl.searchParams.get('limit');
+        const offsetRaw = parsedUrl.searchParams.get('offset');
+        const limit = limitRaw == null ? 100 : parseOptionalPositiveInt(limitRaw, 100, 200);
+        const offset = offsetRaw == null ? 0 : parseOptionalPositiveInt(offsetRaw, 0, 10000);
+        if (limit == null || limit < 1) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+        if (offset == null) {
+          return json(res, 400, { error: 'invalid_offset' });
+        }
+
+        const filters = {};
+        const status = String(parsedUrl.searchParams.get('status') ?? '').trim();
+        const ownerUserId = String(parsedUrl.searchParams.get('owner_user_id') ?? '').trim();
+        const query = String(parsedUrl.searchParams.get('query') ?? '').trim();
+        if (status) filters.status = status;
+        if (ownerUserId) filters.owner_user_id = ownerUserId;
+        if (query) filters.query = query;
+
+        const validation = accountListValid({
+          request: {
+            request_id: randomUUID(),
+            tenant_id: tenantId,
+            source_module: 'mod-02-whatsapp-crm',
+            filters,
+            pagination: { limit, offset }
+          }
+        });
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const allItems = await crmCoreStore.listAccounts(tenantId, filters);
+        const items = toListWindow(allItems, { limit, offset });
+        return json(res, 200, {
+          tenant_id: tenantId,
+          count: items.length,
+          total: allItems.length,
+          items
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/crm/contacts') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = contactCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let createResult;
+        try {
+          createResult = await crmCoreStore.createContact({
+            contact_id: request.contact.contact_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            account_id: request.contact.account_id ?? null,
+            external_key: request.contact.external_key ?? null,
+            display_name: request.contact.display_name,
+            job_title: request.contact.job_title ?? null,
+            phone_e164: request.contact.phone_e164 ?? null,
+            email: request.contact.email ?? null,
+            status: request.contact.status ?? 'active',
+            metadata: request.contact.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const event = createCrmCoreLifecycleEvent({
+            eventName: 'crm.contact.created',
+            tenantId: request.tenant_id,
+            sourceModule: request.source_module,
+            correlationId,
+            traceId,
+            status: 'info',
+            payload: {
+              contact_id: createResult.contact.contact_id,
+              status: createResult.contact.status
+            }
+          });
+          const eventResult = await validateAndPersistEvent(store, event);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = event.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            contact: createResult.contact,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      const contactPatchMatch = path.match(/^\/v1\/crm\/contacts\/([^/]+)$/);
+      if (method === 'PATCH' && contactPatchMatch) {
+        const contactId = decodeURIComponent(contactPatchMatch[1] ?? '').trim();
+        if (!contactId) {
+          return json(res, 400, { error: 'missing_contact_id' });
+        }
+
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = contactUpdateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        if (request.contact_id !== contactId) {
+          return json(res, 400, { error: 'contact_id_mismatch' });
+        }
+
+        let updateResult;
+        try {
+          updateResult = await crmCoreStore.updateContact(request.tenant_id, contactId, request.patch);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+        if (!updateResult.ok && updateResult.code === 'not_found') {
+          return json(res, 404, { error: 'not_found' });
+        }
+        if (!updateResult.ok) {
+          return json(res, 400, { error: updateResult.code ?? 'update_error' });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        const event = createCrmCoreLifecycleEvent({
+          eventName: 'crm.contact.updated',
+          tenantId: request.tenant_id,
+          sourceModule: request.source_module,
+          correlationId,
+          traceId,
+          status: 'info',
+          payload: {
+            contact_id: updateResult.contact.contact_id,
+            status: updateResult.contact.status
+          }
+        });
+        const eventResult = await validateAndPersistEvent(store, event);
+        if (!eventResult.ok) {
+          return json(res, 500, {
+            error: eventResult.type,
+            details: eventResult.details
+          });
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'updated',
+            contact: updateResult.contact,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: event.name
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/contacts') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const limitRaw = parsedUrl.searchParams.get('limit');
+        const offsetRaw = parsedUrl.searchParams.get('offset');
+        const limit = limitRaw == null ? 100 : parseOptionalPositiveInt(limitRaw, 100, 200);
+        const offset = offsetRaw == null ? 0 : parseOptionalPositiveInt(offsetRaw, 0, 10000);
+        if (limit == null || limit < 1) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+        if (offset == null) {
+          return json(res, 400, { error: 'invalid_offset' });
+        }
+
+        const filters = {};
+        const accountId = String(parsedUrl.searchParams.get('account_id') ?? '').trim();
+        const status = String(parsedUrl.searchParams.get('status') ?? '').trim();
+        const query = String(parsedUrl.searchParams.get('query') ?? '').trim();
+        if (accountId) filters.account_id = accountId;
+        if (status) filters.status = status;
+        if (query) filters.query = query;
+
+        const validation = contactListValid({
+          request: {
+            request_id: randomUUID(),
+            tenant_id: tenantId,
+            source_module: 'mod-02-whatsapp-crm',
+            filters,
+            pagination: { limit, offset }
+          }
+        });
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const allItems = await crmCoreStore.listContacts(tenantId, filters);
+        const items = toListWindow(allItems, { limit, offset });
+        return json(res, 200, {
+          tenant_id: tenantId,
+          count: items.length,
+          total: allItems.length,
+          items
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/crm/deals') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = dealCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let createResult;
+        try {
+          createResult = await crmCoreStore.createDeal({
+            deal_id: request.deal.deal_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            lead_id: request.deal.lead_id ?? null,
+            account_id: request.deal.account_id ?? null,
+            contact_id: request.deal.contact_id ?? null,
+            external_key: request.deal.external_key ?? null,
+            title: request.deal.title,
+            stage: request.deal.stage,
+            amount: request.deal.amount ?? null,
+            currency: request.deal.currency ?? null,
+            expected_close_date: request.deal.expected_close_date ?? null,
+            owner_user_id: request.deal.owner_user_id ?? null,
+            metadata: request.deal.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const event = createCrmCoreLifecycleEvent({
+            eventName: 'crm.deal.created',
+            tenantId: request.tenant_id,
+            sourceModule: request.source_module,
+            correlationId,
+            traceId,
+            status: 'info',
+            payload: {
+              deal_id: createResult.deal.deal_id,
+              stage: createResult.deal.stage
+            }
+          });
+          const eventResult = await validateAndPersistEvent(store, event);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = event.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            deal: createResult.deal,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      const dealPatchMatch = path.match(/^\/v1\/crm\/deals\/([^/]+)$/);
+      if (method === 'PATCH' && dealPatchMatch) {
+        const dealId = decodeURIComponent(dealPatchMatch[1] ?? '').trim();
+        if (!dealId) {
+          return json(res, 400, { error: 'missing_deal_id' });
+        }
+
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = dealUpdateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        if (request.deal_id !== dealId) {
+          return json(res, 400, { error: 'deal_id_mismatch' });
+        }
+
+        const previousDeal = await crmCoreStore.getDealById(request.tenant_id, dealId);
+        if (!previousDeal) {
+          return json(res, 404, { error: 'not_found' });
+        }
+
+        let updateResult;
+        try {
+          updateResult = await crmCoreStore.updateDeal(request.tenant_id, dealId, request.patch);
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+        if (!updateResult.ok && updateResult.code === 'not_found') {
+          return json(res, 404, { error: 'not_found' });
+        }
+        if (!updateResult.ok) {
+          return json(res, 400, { error: updateResult.code ?? 'update_error' });
+        }
+
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+        const updatedEvent = createCrmCoreLifecycleEvent({
+          eventName: 'crm.deal.updated',
+          tenantId: request.tenant_id,
+          sourceModule: request.source_module,
+          correlationId,
+          traceId,
+          status: 'info',
+          payload: {
+            deal_id: updateResult.deal.deal_id,
+            stage: updateResult.deal.stage
+          }
+        });
+        const updatedEventResult = await validateAndPersistEvent(store, updatedEvent);
+        if (!updatedEventResult.ok) {
+          return json(res, 500, {
+            error: updatedEventResult.type,
+            details: updatedEventResult.details
+          });
+        }
+
+        let stageLifecycleEventName = null;
+        if (Object.hasOwn(request.patch, 'stage') && previousDeal.stage !== updateResult.deal.stage) {
+          const stageEvent = createCrmCoreLifecycleEvent({
+            eventName: 'crm.deal.stage.changed',
+            tenantId: request.tenant_id,
+            sourceModule: request.source_module,
+            correlationId,
+            traceId,
+            causationId: updatedEvent.event_id,
+            status: 'info',
+            payload: {
+              deal_id: updateResult.deal.deal_id,
+              from_stage: previousDeal.stage,
+              to_stage: updateResult.deal.stage
+            }
+          });
+          const stageEventResult = await validateAndPersistEvent(store, stageEvent);
+          if (!stageEventResult.ok) {
+            return json(res, 500, {
+              error: stageEventResult.type,
+              details: stageEventResult.details
+            });
+          }
+          stageLifecycleEventName = stageEvent.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: 'updated',
+            deal: updateResult.deal,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: updatedEvent.name,
+              stage_lifecycle_event_name: stageLifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/deals') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const limitRaw = parsedUrl.searchParams.get('limit');
+        const offsetRaw = parsedUrl.searchParams.get('offset');
+        const limit = limitRaw == null ? 100 : parseOptionalPositiveInt(limitRaw, 100, 200);
+        const offset = offsetRaw == null ? 0 : parseOptionalPositiveInt(offsetRaw, 0, 10000);
+        if (limit == null || limit < 1) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+        if (offset == null) {
+          return json(res, 400, { error: 'invalid_offset' });
+        }
+
+        const filters = {};
+        const stage = String(parsedUrl.searchParams.get('stage') ?? '').trim();
+        const accountId = String(parsedUrl.searchParams.get('account_id') ?? '').trim();
+        const contactId = String(parsedUrl.searchParams.get('contact_id') ?? '').trim();
+        const ownerUserId = String(parsedUrl.searchParams.get('owner_user_id') ?? '').trim();
+        const query = String(parsedUrl.searchParams.get('query') ?? '').trim();
+        if (stage) filters.stage = stage;
+        if (accountId) filters.account_id = accountId;
+        if (contactId) filters.contact_id = contactId;
+        if (ownerUserId) filters.owner_user_id = ownerUserId;
+        if (query) filters.query = query;
+
+        const validation = dealListValid({
+          request: {
+            request_id: randomUUID(),
+            tenant_id: tenantId,
+            source_module: 'mod-02-whatsapp-crm',
+            filters,
+            pagination: { limit, offset }
+          }
+        });
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const allItems = await crmCoreStore.listDeals(tenantId, filters);
+        const items = toListWindow(allItems, { limit, offset });
+        return json(res, 200, {
+          tenant_id: tenantId,
+          count: items.length,
+          total: allItems.length,
+          items
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/crm/activities') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = activityCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let createResult;
+        try {
+          createResult = await crmCoreStore.createActivity({
+            activity_id: request.activity.activity_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            deal_id: request.activity.deal_id ?? null,
+            contact_id: request.activity.contact_id ?? null,
+            kind: request.activity.kind,
+            title: request.activity.title ?? null,
+            body: request.activity.body,
+            occurred_at: request.activity.occurred_at ?? new Date().toISOString(),
+            author_user_id: request.activity.author_user_id ?? null,
+            metadata: request.activity.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const event = createCrmCoreLifecycleEvent({
+            eventName: 'crm.activity.created',
+            tenantId: request.tenant_id,
+            sourceModule: request.source_module,
+            correlationId,
+            traceId,
+            status: 'info',
+            payload: {
+              activity_id: createResult.activity.activity_id,
+              deal_id: createResult.activity.deal_id ?? null,
+              kind: createResult.activity.kind
+            }
+          });
+          const eventResult = await validateAndPersistEvent(store, event);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = event.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            activity: createResult.activity,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/activities') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const limitRaw = parsedUrl.searchParams.get('limit');
+        const offsetRaw = parsedUrl.searchParams.get('offset');
+        const limit = limitRaw == null ? 200 : parseOptionalPositiveInt(limitRaw, 200, 500);
+        const offset = offsetRaw == null ? 0 : parseOptionalPositiveInt(offsetRaw, 0, 10000);
+        if (limit == null || limit < 1) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+        if (offset == null) {
+          return json(res, 400, { error: 'invalid_offset' });
+        }
+
+        const filters = {};
+        const dealId = String(parsedUrl.searchParams.get('deal_id') ?? '').trim();
+        const contactId = String(parsedUrl.searchParams.get('contact_id') ?? '').trim();
+        const kind = String(parsedUrl.searchParams.get('kind') ?? '').trim();
+        const since = String(parsedUrl.searchParams.get('since') ?? '').trim();
+        if (dealId) filters.deal_id = dealId;
+        if (contactId) filters.contact_id = contactId;
+        if (kind) filters.kind = kind;
+        if (since) filters.since = since;
+
+        const validation = activityListValid({
+          request: {
+            request_id: randomUUID(),
+            tenant_id: tenantId,
+            source_module: 'mod-02-whatsapp-crm',
+            filters,
+            pagination: { limit, offset }
+          }
+        });
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const allItems = await crmCoreStore.listActivities(tenantId, filters);
+        const items = toListWindow(allItems, { limit, offset });
+        return json(res, 200, {
+          tenant_id: tenantId,
+          count: items.length,
+          total: allItems.length,
+          items
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/crm/tasks') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = taskCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let createResult;
+        try {
+          createResult = await crmCoreStore.createTask({
+            task_id: request.task.task_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            deal_id: request.task.deal_id ?? null,
+            contact_id: request.task.contact_id ?? null,
+            title: request.task.title,
+            description: request.task.description ?? null,
+            due_at: request.task.due_at ?? null,
+            status: request.task.status,
+            priority: request.task.priority ?? 'medium',
+            assignee_user_id: request.task.assignee_user_id ?? null,
+            metadata: request.task.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const event = createCrmCoreLifecycleEvent({
+            eventName: 'crm.task.created',
+            tenantId: request.tenant_id,
+            sourceModule: request.source_module,
+            correlationId,
+            traceId,
+            status: 'info',
+            payload: {
+              task_id: createResult.task.task_id,
+              deal_id: createResult.task.deal_id ?? null,
+              status: createResult.task.status,
+              priority: createResult.task.priority
+            }
+          });
+          const eventResult = await validateAndPersistEvent(store, event);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = event.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            task: createResult.task,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/tasks') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const limitRaw = parsedUrl.searchParams.get('limit');
+        const offsetRaw = parsedUrl.searchParams.get('offset');
+        const limit = limitRaw == null ? 100 : parseOptionalPositiveInt(limitRaw, 100, 200);
+        const offset = offsetRaw == null ? 0 : parseOptionalPositiveInt(offsetRaw, 0, 10000);
+        if (limit == null || limit < 1) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+        if (offset == null) {
+          return json(res, 400, { error: 'invalid_offset' });
+        }
+
+        const filters = {};
+        const dealId = String(parsedUrl.searchParams.get('deal_id') ?? '').trim();
+        const contactId = String(parsedUrl.searchParams.get('contact_id') ?? '').trim();
+        const assignee = String(parsedUrl.searchParams.get('assignee_user_id') ?? '').trim();
+        const status = String(parsedUrl.searchParams.get('status') ?? '').trim();
+        const priority = String(parsedUrl.searchParams.get('priority') ?? '').trim();
+        if (dealId) filters.deal_id = dealId;
+        if (contactId) filters.contact_id = contactId;
+        if (assignee) filters.assignee_user_id = assignee;
+        if (status) filters.status = status;
+        if (priority) filters.priority = priority;
+
+        const validation = taskListValid({
+          request: {
+            request_id: randomUUID(),
+            tenant_id: tenantId,
+            source_module: 'mod-02-whatsapp-crm',
+            filters,
+            pagination: { limit, offset }
+          }
+        });
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const allItems = await crmCoreStore.listTasks(tenantId, filters);
+        const items = toListWindow(allItems, { limit, offset });
+        return json(res, 200, {
+          tenant_id: tenantId,
+          count: items.length,
+          total: allItems.length,
+          items
+        });
+      }
+
+      if (method === 'POST' && path === '/v1/crm/views') {
+        const body = await readJsonBody(req);
+        if (body === null) {
+          return json(res, 400, { error: 'invalid_json' });
+        }
+
+        const validation = viewCreateValid(body);
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const request = body.request;
+        const correlationId = request.correlation_id ?? randomUUID();
+        const traceId = randomUUID();
+
+        let createResult;
+        try {
+          createResult = await crmCoreStore.createView({
+            view_id: request.view.view_id ?? randomUUID(),
+            tenant_id: request.tenant_id,
+            owner_user_id: request.view.owner_user_id ?? null,
+            name: request.view.name,
+            scope: request.view.scope ?? 'private',
+            module: request.view.module,
+            is_default: request.view.is_default === true,
+            filters: request.view.filters ?? {},
+            columns: request.view.columns ?? [],
+            sort: request.view.sort ?? {},
+            metadata: request.view.metadata ?? {}
+          });
+        } catch (error) {
+          return json(res, 500, {
+            error: 'storage_error',
+            details: String(error.message ?? error)
+          });
+        }
+
+        let lifecycleEventName = null;
+        if (createResult.action !== 'idempotent') {
+          const event = createCrmCoreLifecycleEvent({
+            eventName: 'crm.view.created',
+            tenantId: request.tenant_id,
+            sourceModule: request.source_module,
+            correlationId,
+            traceId,
+            status: 'info',
+            payload: {
+              view_id: createResult.view.view_id,
+              module: createResult.view.module,
+              scope: createResult.view.scope
+            }
+          });
+          const eventResult = await validateAndPersistEvent(store, event);
+          if (!eventResult.ok) {
+            return json(res, 500, {
+              error: eventResult.type,
+              details: eventResult.details
+            });
+          }
+          lifecycleEventName = event.name;
+        }
+
+        return json(res, 200, {
+          response: {
+            request_id: request.request_id,
+            status: createResult.action,
+            view: createResult.view,
+            orchestration: {
+              correlation_id: correlationId,
+              lifecycle_event_name: lifecycleEventName
+            }
+          }
+        });
+      }
+
+      if (method === 'GET' && path === '/v1/crm/views') {
+        const tenantId = String(parsedUrl.searchParams.get('tenant_id') ?? '').trim();
+        if (!tenantId) {
+          return json(res, 400, { error: 'missing_tenant_id' });
+        }
+
+        const limitRaw = parsedUrl.searchParams.get('limit');
+        const offsetRaw = parsedUrl.searchParams.get('offset');
+        const limit = limitRaw == null ? 100 : parseOptionalPositiveInt(limitRaw, 100, 200);
+        const offset = offsetRaw == null ? 0 : parseOptionalPositiveInt(offsetRaw, 0, 10000);
+        if (limit == null || limit < 1) {
+          return json(res, 400, { error: 'invalid_limit' });
+        }
+        if (offset == null) {
+          return json(res, 400, { error: 'invalid_offset' });
+        }
+
+        const filters = {};
+        const module = String(parsedUrl.searchParams.get('module') ?? '').trim();
+        const scope = String(parsedUrl.searchParams.get('scope') ?? '').trim();
+        const ownerUserId = String(parsedUrl.searchParams.get('owner_user_id') ?? '').trim();
+        if (module) filters.module = module;
+        if (scope) filters.scope = scope;
+        if (ownerUserId) filters.owner_user_id = ownerUserId;
+
+        const validation = viewListValid({
+          request: {
+            request_id: randomUUID(),
+            tenant_id: tenantId,
+            source_module: 'mod-02-whatsapp-crm',
+            filters,
+            pagination: { limit, offset }
+          }
+        });
+        if (!validation.ok) {
+          return json(res, 400, {
+            error: 'validation_error',
+            details: validation.errors
+          });
+        }
+
+        const allItems = await crmCoreStore.listViews(tenantId, filters);
+        const items = toListWindow(allItems, { limit, offset });
+        return json(res, 200, {
+          tenant_id: tenantId,
+          count: items.length,
+          total: allItems.length,
+          items
+        });
       }
 
       if (method === 'GET' && path === '/v1/crm/conversations') {
@@ -7319,6 +8440,7 @@ export function createApp(options = {}) {
   handler.leadStore = leadStore;
   handler.crmAutomationStore = crmAutomationStore;
   handler.crmConversationStore = crmConversationStore;
+  handler.crmCoreStore = crmCoreStore;
   handler.ownerMemoryStore = ownerMemoryStore;
   handler.ownerMemoryMaintenanceStore = ownerMemoryMaintenanceStore;
   handler.tenantRuntimeConfigStore = tenantRuntimeConfigStore;

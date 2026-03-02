@@ -299,6 +299,111 @@ function validLeadCreateRequest(overrides = {}) {
   };
 }
 
+function validAccountCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '2d6e00d0-2c00-4026-bd6c-95f129ce895f',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      account: {
+        account_id: '9f731cf7-be48-488f-9b1f-b0b60fb66438',
+        external_key: 'acc-ext-001',
+        name: 'SaaS Holdings',
+        status: 'active'
+      },
+      ...overrides
+    }
+  };
+}
+
+function validContactCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: 'a7f4af6e-a97a-4b51-b845-f6e2525c7382',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      contact: {
+        contact_id: 'ed4e5320-90be-4fc6-91d9-8f127e6f8768',
+        external_key: 'ct-ext-001',
+        display_name: 'Lucas Lebre',
+        phone_e164: '+5516981903443',
+        status: 'active'
+      },
+      ...overrides
+    }
+  };
+}
+
+function validDealCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: 'fe17dba0-7e6e-493d-b500-0ba57f63dd90',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      deal: {
+        deal_id: '70878137-e18c-452d-b1a6-3749e1933f43',
+        external_key: 'deal-ext-001',
+        title: 'Plano Enterprise',
+        stage: 'qualified',
+        amount: 3500,
+        currency: 'BRL'
+      },
+      ...overrides
+    }
+  };
+}
+
+function validActivityCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '5f1f9e8f-cceb-4379-b4f0-f456ea57074f',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      activity: {
+        activity_id: '5d919e65-f194-4dda-aeb7-f8466fd58e00',
+        kind: 'message',
+        body: 'Cliente pediu proposta atualizada'
+      },
+      ...overrides
+    }
+  };
+}
+
+function validTaskCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '28eb95ea-9f07-4f05-ba84-43bef719d8cc',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      task: {
+        task_id: 'f8df0c0e-b95e-4f60-8f0b-cafdd99d1a33',
+        title: 'Retornar proposta',
+        status: 'pending',
+        priority: 'high'
+      },
+      ...overrides
+    }
+  };
+}
+
+function validViewCreateRequest(overrides = {}) {
+  return {
+    request: {
+      request_id: '4184f56b-a97f-4707-b64a-84f34eba4c03',
+      tenant_id: 'tenant_automania',
+      source_module: 'mod-02-whatsapp-crm',
+      view: {
+        view_id: '7438f387-5b16-4dcb-ab57-567dd4f06e2d',
+        name: 'Pipeline Qualificados',
+        module: 'crm.pipeline',
+        scope: 'tenant',
+        filters: { stage: 'qualified' }
+      },
+      ...overrides
+    }
+  };
+}
+
 function validCampaignCreateRequest(overrides = {}) {
   return {
     request: {
@@ -476,6 +581,8 @@ test('GET /health returns runtime metadata', async () => {
   assert.ok(typeof body.crm_leads.storage_dir === 'string');
   assert.equal(body.crm_automation.backend, 'file');
   assert.ok(typeof body.crm_automation.storage_dir === 'string');
+  assert.equal(body.crm_core.backend, 'file');
+  assert.ok(typeof body.crm_core.storage_dir === 'string');
   assert.equal(body.owner_memory.backend, 'file');
   assert.ok(typeof body.owner_memory.storage_dir === 'string');
   assert.ok(typeof body.owner_memory.embedding_mode === 'string');
@@ -1278,6 +1385,185 @@ test('POST/PATCH/GET /v1/crm/leads creates, transitions, and lists leads', async
   assert.equal(listRes.status, 200);
   const listBody = await listRes.json();
   assert.ok(listBody.items.some((item) => item.lead_id === leadId));
+});
+
+test('T5 CRM core APIs support deal -> activity -> stage update flow with audit trace', async () => {
+  const accountRes = await fetch(`${baseUrl}/v1/crm/accounts`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validAccountCreateRequest())
+  });
+  assert.equal(accountRes.status, 200);
+  const accountBody = await accountRes.json();
+  const accountId = accountBody.response.account.account_id;
+  assert.equal(accountBody.response.status, 'created');
+
+  const accountPatchRes = await fetch(`${baseUrl}/v1/crm/accounts/${accountId}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: 'c328fc84-994f-42f8-a312-a8d8f41341d8',
+        tenant_id: 'tenant_automania',
+        source_module: 'mod-02-whatsapp-crm',
+        account_id: accountId,
+        patch: {
+          industry: 'SaaS',
+          status: 'active'
+        }
+      }
+    })
+  });
+  assert.equal(accountPatchRes.status, 200);
+
+  const contactRes = await fetch(`${baseUrl}/v1/crm/contacts`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validContactCreateRequest({
+      contact: {
+        contact_id: '17757a30-6ca9-4333-b86f-7f8fa4c8f4a4',
+        external_key: 'ct-ext-002',
+        account_id: accountId,
+        display_name: 'Lucas Lebre',
+        phone_e164: '+5516981903443',
+        status: 'active'
+      }
+    }))
+  });
+  assert.equal(contactRes.status, 200);
+  const contactBody = await contactRes.json();
+  const contactId = contactBody.response.contact.contact_id;
+
+  const contactPatchRes = await fetch(`${baseUrl}/v1/crm/contacts/${contactId}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: 'c99f00eb-93f9-4745-ad95-df0ef9dbb654',
+        tenant_id: 'tenant_automania',
+        source_module: 'mod-02-whatsapp-crm',
+        contact_id: contactId,
+        patch: {
+          job_title: 'Owner',
+          status: 'active'
+        }
+      }
+    })
+  });
+  assert.equal(contactPatchRes.status, 200);
+
+  const dealCorrelationId = '26c717dd-fc38-4bc4-a8c7-dc54ef5a5237';
+  const dealRes = await fetch(`${baseUrl}/v1/crm/deals`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validDealCreateRequest({
+      correlation_id: dealCorrelationId,
+      deal: {
+        deal_id: '2daee4fb-c64e-4c50-9825-d5136a8c49de',
+        external_key: 'deal-ext-002',
+        account_id: accountId,
+        contact_id: contactId,
+        title: 'Plano Enterprise',
+        stage: 'qualified',
+        amount: 4200,
+        currency: 'BRL'
+      }
+    }))
+  });
+  assert.equal(dealRes.status, 200);
+  const dealBody = await dealRes.json();
+  const dealId = dealBody.response.deal.deal_id;
+  assert.equal(dealBody.response.orchestration.correlation_id, dealCorrelationId);
+
+  const activityRes = await fetch(`${baseUrl}/v1/crm/activities`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validActivityCreateRequest({
+      correlation_id: dealCorrelationId,
+      activity: {
+        activity_id: 'a3b3f834-7cb5-45cf-a4b9-f11cc5bc2a96',
+        deal_id: dealId,
+        kind: 'message',
+        body: 'Cliente pediu proposta para assinatura.'
+      }
+    }))
+  });
+  assert.equal(activityRes.status, 200);
+
+  const dealPatchRes = await fetch(`${baseUrl}/v1/crm/deals/${dealId}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: 'f2ffb70e-b2eb-4335-95b3-bf8e626d4cfb',
+        tenant_id: 'tenant_automania',
+        source_module: 'mod-02-whatsapp-crm',
+        correlation_id: dealCorrelationId,
+        deal_id: dealId,
+        patch: {
+          stage: 'proposal'
+        }
+      }
+    })
+  });
+  assert.equal(dealPatchRes.status, 200);
+  const dealPatchBody = await dealPatchRes.json();
+  assert.equal(dealPatchBody.response.deal.stage, 'proposal');
+  assert.equal(dealPatchBody.response.orchestration.stage_lifecycle_event_name, 'crm.deal.stage.changed');
+
+  const taskRes = await fetch(`${baseUrl}/v1/crm/tasks`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validTaskCreateRequest({
+      correlation_id: dealCorrelationId,
+      task: {
+        task_id: '16302689-5fd8-43fc-a288-c3a95a7f8f86',
+        deal_id: dealId,
+        title: 'Enviar proposta comercial',
+        status: 'pending',
+        priority: 'high'
+      }
+    }))
+  });
+  assert.equal(taskRes.status, 200);
+
+  const viewRes = await fetch(`${baseUrl}/v1/crm/views`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(validViewCreateRequest())
+  });
+  assert.equal(viewRes.status, 200);
+
+  const dealsListRes = await fetch(`${baseUrl}/v1/crm/deals?tenant_id=tenant_automania&stage=proposal`);
+  assert.equal(dealsListRes.status, 200);
+  const dealsListBody = await dealsListRes.json();
+  assert.ok(dealsListBody.items.some((item) => item.deal_id === dealId));
+
+  const activitiesListRes = await fetch(`${baseUrl}/v1/crm/activities?tenant_id=tenant_automania&deal_id=${dealId}`);
+  assert.equal(activitiesListRes.status, 200);
+  const activitiesListBody = await activitiesListRes.json();
+  assert.ok(activitiesListBody.items.some((item) => item.deal_id === dealId));
+
+  const tasksListRes = await fetch(`${baseUrl}/v1/crm/tasks?tenant_id=tenant_automania&deal_id=${dealId}`);
+  assert.equal(tasksListRes.status, 200);
+  const tasksListBody = await tasksListRes.json();
+  assert.ok(tasksListBody.items.some((item) => item.deal_id === dealId));
+
+  const viewsListRes = await fetch(`${baseUrl}/v1/crm/views?tenant_id=tenant_automania&module=crm.pipeline`);
+  assert.equal(viewsListRes.status, 200);
+  const viewsListBody = await viewsListRes.json();
+  assert.ok(viewsListBody.items.length >= 1);
+
+  const traceRes = await fetch(
+    `${baseUrl}/internal/orchestration/trace?correlation_id=${dealCorrelationId}`
+  );
+  assert.equal(traceRes.status, 200);
+  const traceBody = await traceRes.json();
+  assert.ok(traceBody.events.some((item) => item.name === 'crm.deal.created'));
+  assert.ok(traceBody.events.some((item) => item.name === 'crm.activity.created'));
+  assert.ok(traceBody.events.some((item) => item.name === 'crm.deal.updated'));
+  assert.ok(traceBody.events.some((item) => item.name === 'crm.deal.stage.changed'));
+  assert.ok(traceBody.events.some((item) => item.name === 'crm.task.created'));
 });
 
 test('POST/PATCH/GET /v1/crm/campaigns creates, transitions, and lists campaigns', async () => {

@@ -83,10 +83,35 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
     - resultado: `Postgres smoke passed` com contagem `crm_deals=1`, `crm_activities=1`, `crm_tasks=1`.
 
 ## T5) Backend APIs (MVP enterprise)
-- Status: pending
+- Status: completed
 - Implementar endpoints de deals/contacts/activities/tasks/views.
 - Integrar com eventos auditaveis.
 - Aceite: testes de API cobrindo fluxo deal->activity->stage update.
+- Evidencia:
+  - novos endpoints em `apps/platform-api/src/app.mjs`:
+    - `POST/PATCH/GET /v1/crm/accounts`
+    - `POST/PATCH/GET /v1/crm/contacts`
+    - `POST/PATCH/GET /v1/crm/deals`
+    - `POST/GET /v1/crm/activities`
+    - `POST/GET /v1/crm/tasks`
+    - `POST/GET /v1/crm/views`
+  - store core multi-backend adicionado:
+    - `apps/platform-api/src/crm-core-store.mjs`
+    - `apps/platform-api/src/crm-core-store-file.mjs`
+    - `apps/platform-api/src/crm-core-store-postgres.mjs`
+  - eventos auditaveis CRM core adicionados em `libs/core/orchestration-contracts/schemas/events.schema.json`:
+    - `crm.account.{created,updated}`
+    - `crm.contact.{created,updated}`
+    - `crm.deal.{created,updated,stage.changed}`
+    - `crm.activity.created`
+    - `crm.task.created`
+    - `crm.view.created`
+  - teste de fluxo T5 adicionado em `apps/platform-api/src/app.test.mjs`:
+    - `T5 CRM core APIs support deal -> activity -> stage update flow with audit trace`
+  - gates verdes:
+    - `npx nx run app-platform-api:test` (`63/63` pass)
+    - `npx nx run contract-tests:contract-checks`
+    - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
 
 ## T6) CRM UI - Inbox + Pipeline + Detail panel
 - Status: in_progress

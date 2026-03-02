@@ -49,6 +49,21 @@ const followupListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/followup
 const crmAiSuggestReplySchema = readJson('libs/mod-02-whatsapp-crm/contracts/crm-ai-suggest-reply.schema.json');
 const crmAiQualifySchema = readJson('libs/mod-02-whatsapp-crm/contracts/crm-ai-qualify.schema.json');
 const crmAiExecuteSchema = readJson('libs/mod-02-whatsapp-crm/contracts/crm-ai-execute.schema.json');
+const accountCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/account-create.schema.json');
+const accountListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/account-list.schema.json');
+const accountUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/account-update.schema.json');
+const contactCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/contact-create.schema.json');
+const contactListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/contact-list.schema.json');
+const contactUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/contact-update.schema.json');
+const dealCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/deal-create.schema.json');
+const dealListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/deal-list.schema.json');
+const dealUpdateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/deal-update.schema.json');
+const activityCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/activity-create.schema.json');
+const activityListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/activity-list.schema.json');
+const taskCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/task-create.schema.json');
+const taskListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/task-list.schema.json');
+const viewCreateSchema = readJson('libs/mod-02-whatsapp-crm/contracts/view-create.schema.json');
+const viewListSchema = readJson('libs/mod-02-whatsapp-crm/contracts/view-list.schema.json');
 const customerCreateSchema = readJson('libs/mod-03-clientes/contracts/customer-create.schema.json');
 const customerListSchema = readJson('libs/mod-03-clientes/contracts/customer-list.schema.json');
 const customerEventsSchema = readJson('libs/mod-03-clientes/contracts/customer-events.schema.json');
@@ -100,6 +115,21 @@ const validateFollowupListResponse = ajv.compile(followupListSchema);
 const validateCrmAiSuggestReplyRequest = ajv.compile(crmAiSuggestReplySchema.properties.request);
 const validateCrmAiQualifyRequest = ajv.compile(crmAiQualifySchema.properties.request);
 const validateCrmAiExecuteRequest = ajv.compile(crmAiExecuteSchema.properties.request);
+const validateAccountCreateRequest = ajv.compile(accountCreateSchema.properties.request);
+const validateAccountListSchema = ajv.compile(accountListSchema);
+const validateAccountUpdateRequest = ajv.compile(accountUpdateSchema.properties.request);
+const validateContactCreateRequest = ajv.compile(contactCreateSchema.properties.request);
+const validateContactListSchema = ajv.compile(contactListSchema);
+const validateContactUpdateRequest = ajv.compile(contactUpdateSchema.properties.request);
+const validateDealCreateRequest = ajv.compile(dealCreateSchema.properties.request);
+const validateDealListSchema = ajv.compile(dealListSchema);
+const validateDealUpdateRequest = ajv.compile(dealUpdateSchema.properties.request);
+const validateActivityCreateRequest = ajv.compile(activityCreateSchema.properties.request);
+const validateActivityListSchema = ajv.compile(activityListSchema);
+const validateTaskCreateRequest = ajv.compile(taskCreateSchema.properties.request);
+const validateTaskListSchema = ajv.compile(taskListSchema);
+const validateViewCreateRequest = ajv.compile(viewCreateSchema.properties.request);
+const validateViewListSchema = ajv.compile(viewListSchema);
 const validateCustomerCreateRequest = ajv.compile(customerCreateSchema.properties.request);
 const validateCustomerListResponse = ajv.compile(customerListSchema);
 const validateCustomerLifecycleEventPayload = ajv.compile(customerEventsSchema);
@@ -334,6 +364,90 @@ export function crmAiExecuteValid(body) {
   const ok = validateCrmAiExecuteRequest(body?.request);
   const errors = [...(validateCrmAiExecuteRequest.errors ?? [])];
   return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function accountCreateValid(body) {
+  const ok = validateAccountCreateRequest(body?.request);
+  const errors = [...(validateAccountCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function accountListValid(body) {
+  const ok = validateAccountListSchema(body);
+  return { ok: Boolean(ok), errors: validateAccountListSchema.errors ?? [] };
+}
+
+export function accountUpdateValid(body) {
+  const ok = validateAccountUpdateRequest(body?.request);
+  const errors = [...(validateAccountUpdateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function contactCreateValid(body) {
+  const ok = validateContactCreateRequest(body?.request);
+  const errors = [...(validateContactCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function contactListValid(body) {
+  const ok = validateContactListSchema(body);
+  return { ok: Boolean(ok), errors: validateContactListSchema.errors ?? [] };
+}
+
+export function contactUpdateValid(body) {
+  const ok = validateContactUpdateRequest(body?.request);
+  const errors = [...(validateContactUpdateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function dealCreateValid(body) {
+  const ok = validateDealCreateRequest(body?.request);
+  const errors = [...(validateDealCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function dealListValid(body) {
+  const ok = validateDealListSchema(body);
+  return { ok: Boolean(ok), errors: validateDealListSchema.errors ?? [] };
+}
+
+export function dealUpdateValid(body) {
+  const ok = validateDealUpdateRequest(body?.request);
+  const errors = [...(validateDealUpdateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function activityCreateValid(body) {
+  const ok = validateActivityCreateRequest(body?.request);
+  const errors = [...(validateActivityCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function activityListValid(body) {
+  const ok = validateActivityListSchema(body);
+  return { ok: Boolean(ok), errors: validateActivityListSchema.errors ?? [] };
+}
+
+export function taskCreateValid(body) {
+  const ok = validateTaskCreateRequest(body?.request);
+  const errors = [...(validateTaskCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function taskListValid(body) {
+  const ok = validateTaskListSchema(body);
+  return { ok: Boolean(ok), errors: validateTaskListSchema.errors ?? [] };
+}
+
+export function viewCreateValid(body) {
+  const ok = validateViewCreateRequest(body?.request);
+  const errors = [...(validateViewCreateRequest.errors ?? [])];
+  return { ok: Boolean(ok) && errors.length === 0, errors };
+}
+
+export function viewListValid(body) {
+  const ok = validateViewListSchema(body);
+  return { ok: Boolean(ok), errors: validateViewListSchema.errors ?? [] };
 }
 
 export function orchestrationCommandValid(body) {

@@ -208,3 +208,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-02,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T3 contracts completed and validated by contract-checks
 2026-03-02,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T4 migrations completed with postgres CRUD smoke evidence
 2026-03-02,internal,engineering-time,local,0.00,0.00,validation,crm-krayin-reference-modernization-slice T4 validation gates app-platform-api:test and contract-checks green
+2026-03-02,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T5 backend APIs with auditable events and app-platform-api test flow
+2026-03-02,internal,engineering-time,local,0.00,0.00,validation,crm-krayin-reference-modernization-slice T5 gates app-platform-api test contract-checks preprod-validate

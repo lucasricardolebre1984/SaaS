@@ -127,8 +127,8 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 ## 6. Proximo passo natural
 
 - **Slice ativo:** `crm-krayin-reference-modernization-slice`.
-- **Objetivo imediato:** executar T5 (APIs backend CRM enterprise MVP) mantendo rastreabilidade por endpoint/tenant/trace.
-- **Gate principal:** `app-platform-api:test` + `contract-tests:contract-checks` com fluxo `deal -> activity -> stage update` coberto.
+- **Objetivo imediato:** executar T6 (UI CRM enterprise) acoplando os endpoints backend T5 sem regressao de inbox/thread.
+- **Gate principal:** `app-crm-console:build` + `app-owner-console:build` + `preprod:validate` mantendo fluxo `deal -> activity -> stage update` e smoke de botoes/endpoints.
 - **Referencia:** `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`.
 
 ---
@@ -238,4 +238,31 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - `npx nx run app-platform-api:test` (`62/62` pass)
   - `npx nx run contract-tests:contract-checks`
 - Proximo passo ativo formalizado: T5 APIs backend CRM enterprise MVP.
+
+## Update 2026-03-02 (T5 APIs CRM core concluido)
+- APIs CRM core implementadas em `apps/platform-api/src/app.mjs`:
+  - `POST/PATCH/GET /v1/crm/accounts`
+  - `POST/PATCH/GET /v1/crm/contacts`
+  - `POST/PATCH/GET /v1/crm/deals`
+  - `POST/GET /v1/crm/activities`
+  - `POST/GET /v1/crm/tasks`
+  - `POST/GET /v1/crm/views`
+- Store dedicado CRM core adicionado com backend `file+postgres`:
+  - `apps/platform-api/src/crm-core-store.mjs`
+  - `apps/platform-api/src/crm-core-store-file.mjs`
+  - `apps/platform-api/src/crm-core-store-postgres.mjs`
+- Trilha auditavel expandida em `libs/core/orchestration-contracts/schemas/events.schema.json`:
+  - `crm.account.{created,updated}`
+  - `crm.contact.{created,updated}`
+  - `crm.deal.{created,updated,stage.changed}`
+  - `crm.activity.created`
+  - `crm.task.created`
+  - `crm.view.created`
+- Teste de fluxo fim-a-fim T5 adicionado:
+  - `T5 CRM core APIs support deal -> activity -> stage update flow with audit trace` em `apps/platform-api/src/app.test.mjs`
+- Gates executados e aprovados:
+  - `npx nx run app-platform-api:test` (`63/63` pass)
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
+- Proximo passo ativo formalizado: T6 UI CRM enterprise (inbox + pipeline + detail panel) consumindo endpoints T5.
 

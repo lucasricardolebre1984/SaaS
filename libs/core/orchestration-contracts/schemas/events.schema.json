@@ -23,6 +23,16 @@
         "module.task.failed",
         "crm.lead.created",
         "crm.lead.converted",
+        "crm.account.created",
+        "crm.account.updated",
+        "crm.contact.created",
+        "crm.contact.updated",
+        "crm.deal.created",
+        "crm.deal.updated",
+        "crm.deal.stage.changed",
+        "crm.activity.created",
+        "crm.task.created",
+        "crm.view.created",
         "crm.campaign.created",
         "crm.campaign.state.changed",
         "crm.followup.scheduled",
@@ -441,6 +451,233 @@
               "customer_id": { "type": "string", "format": "uuid" }
             },
             "required": ["lead_id", "customer_id"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.account.created" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-03-clientes"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "account_id": { "type": "string", "format": "uuid" },
+              "status": { "type": "string", "enum": ["active", "inactive"] }
+            },
+            "required": ["account_id", "status"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.account.updated" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-03-clientes"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "account_id": { "type": "string", "format": "uuid" },
+              "status": { "type": "string", "enum": ["active", "inactive"] }
+            },
+            "required": ["account_id", "status"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.contact.created" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-03-clientes"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "contact_id": { "type": "string", "format": "uuid" },
+              "status": { "type": "string", "enum": ["active", "inactive"] }
+            },
+            "required": ["contact_id", "status"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.contact.updated" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-03-clientes"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "contact_id": { "type": "string", "format": "uuid" },
+              "status": { "type": "string", "enum": ["active", "inactive"] }
+            },
+            "required": ["contact_id", "status"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.deal.created" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "deal_id": { "type": "string", "format": "uuid" },
+              "stage": {
+                "type": "string",
+                "enum": ["new", "contacted", "qualified", "proposal", "won", "lost", "nurturing"]
+              }
+            },
+            "required": ["deal_id", "stage"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.deal.updated" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "deal_id": { "type": "string", "format": "uuid" },
+              "stage": {
+                "type": "string",
+                "enum": ["new", "contacted", "qualified", "proposal", "won", "lost", "nurturing"]
+              }
+            },
+            "required": ["deal_id", "stage"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.deal.stage.changed" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "deal_id": { "type": "string", "format": "uuid" },
+              "from_stage": {
+                "type": "string",
+                "enum": ["new", "contacted", "qualified", "proposal", "won", "lost", "nurturing"]
+              },
+              "to_stage": {
+                "type": "string",
+                "enum": ["new", "contacted", "qualified", "proposal", "won", "lost", "nurturing"]
+              }
+            },
+            "required": ["deal_id", "from_stage", "to_stage"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.activity.created" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-04-agenda"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "activity_id": { "type": "string", "format": "uuid" },
+              "deal_id": { "type": ["string", "null"], "format": "uuid" },
+              "kind": { "type": "string", "enum": ["note", "task", "message", "call", "meeting", "system"] }
+            },
+            "required": ["activity_id", "deal_id", "kind"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.task.created" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm", "mod-04-agenda"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "deal_id": { "type": ["string", "null"], "format": "uuid" },
+              "status": { "type": "string", "enum": ["pending", "in_progress", "done", "canceled"] },
+              "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] }
+            },
+            "required": ["task_id", "deal_id", "status", "priority"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "crm.view.created" } } },
+      "then": {
+        "properties": {
+          "source_module": {
+            "enum": ["mod-01-owner-concierge", "mod-02-whatsapp-crm"]
+          },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "view_id": { "type": "string", "format": "uuid" },
+              "module": { "type": "string", "enum": ["crm.inbox", "crm.pipeline", "crm.deals", "crm.contacts"] },
+              "scope": { "type": "string", "enum": ["private", "team", "tenant"] }
+            },
+            "required": ["view_id", "module", "scope"]
           }
         }
       }
