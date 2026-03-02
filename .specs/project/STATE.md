@@ -45,6 +45,7 @@ Active feature: crm-modern-inbox-2026-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-02: smoke tecnico endpoint-a-endpoint publicado em `tools/smoke-saas-endpoints.ps1` (prova executavel para agentes) e validado em `https://dev.automaniaai.com.br/api` com report `tools/reports/saas-endpoint-smoke-20260302-120836.json` (`PASS=25`, `WARN=1`, `FAIL=0`), cobrindo Owner/CRM/Clientes/Agenda/Cobranca/QR + trilha `execution_receipts`.
 - 2026-03-02: hotfix anti-alucinacao aplicado no `POST /v1/owner-concierge/interaction`: respostas que afirmam conclusao sem comprovante de persistencia agora sao bloqueadas por guardrails, com evento auditavel `owner.response.claim.blocked` e `execution_receipts` no payload de resposta para rastreio por endpoint/correlation_id/trace_id.
 - 2026-03-02: auditoria completa de endpoint/button mapping solicitada pelo owner; publicada planta rastreavel em `docs/PLANTA-ENDPOINTS-SAAS.md` com inventario backend (publico + interno), matriz Owner/CRM (botao -> endpoint) e gaps operacionais para eliminar erro de rota em novas sessoes de agentes.
 - 2026-03-01: rodada de funcoes enterprise no CRM: views salvas de filtros por tenant, kanban com drag-and-drop para transicao de stage (guardrails de transicao existentes), e tarefas de follow-up por lead no detalhe (persistencia local tenant-scoped). Objetivo: aproximar fidelidade funcional 99% do layout/operacao de CRM de referencia sem clonar codigo.

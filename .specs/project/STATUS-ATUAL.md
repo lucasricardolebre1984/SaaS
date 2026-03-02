@@ -171,3 +171,13 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - `npx nx run app-owner-console:build`
   - `npx nx run app-crm-console:build`
 
+## Update 2026-03-02 (Smoke executavel de endpoints)
+- Novo script auditavel: `tools/smoke-saas-endpoints.ps1`.
+- Objetivo: validar endpoint-a-endpoint o que os botoes de Owner/CRM/Clientes/Agenda/Cobranca chamam no backend real.
+- Run validado em dev AWS:
+  - `powershell -ExecutionPolicy Bypass -File tools/smoke-saas-endpoints.ps1 -BaseUrl https://dev.automaniaai.com.br/api -TenantId tenant_automania`
+  - report: `tools/reports/saas-endpoint-smoke-20260302-120836.json`
+  - resultado: `PASS=25`, `WARN=1`, `FAIL=0`
+- Observacao do WARN:
+  - `POST /v1/crm/conversations/:id/send` retornou `502` no smoke com numero sintetico de teste; endpoint respondeu e persistiu trilha, falha ficou no provider de envio (esperado em numero nao real).
+

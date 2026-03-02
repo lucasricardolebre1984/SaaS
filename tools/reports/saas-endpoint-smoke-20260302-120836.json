@@ -1,0 +1,247 @@
+﻿{
+    "summary":  {
+                    "run_at":  "2026-03-02T12:09:19",
+                    "base_url":  "https://dev.automaniaai.com.br/api",
+                    "tenant_id":  "tenant_automania",
+                    "pass":  25,
+                    "warn":  1,
+                    "fail":  0,
+                    "total":  26
+                },
+    "results":  [
+                    {
+                        "step":  "health",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/health",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:37"
+                    },
+                    {
+                        "step":  "runtime-config:get",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/owner-concierge/runtime-config?tenant_id=tenant_automania",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:37"
+                    },
+                    {
+                        "step":  "owner:interaction",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/owner-concierge/interaction",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:54"
+                    },
+                    {
+                        "step":  "owner:interaction:receipts",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/owner-concierge/interaction",
+                        "status":  200,
+                        "note":  "execution_receipts_present",
+                        "timestamp":  "2026-03-02T12:08:54"
+                    },
+                    {
+                        "step":  "customers:create",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/customers",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:54"
+                    },
+                    {
+                        "step":  "customers:list",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/customers?tenant_id=tenant_automania",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:54"
+                    },
+                    {
+                        "step":  "customers:detail",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/customers/a08d930e-2a54-4c96-acc4-61f38bb60c4e?tenant_id=tenant_automania",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:54"
+                    },
+                    {
+                        "step":  "agenda:appointments:create",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/agenda/appointments",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:54"
+                    },
+                    {
+                        "step":  "agenda:reminders:create",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/agenda/reminders",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:54"
+                    },
+                    {
+                        "step":  "agenda:reminders:list",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/agenda/reminders?tenant_id=tenant_automania",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:54"
+                    },
+                    {
+                        "step":  "billing:charges:create",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/billing/charges",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:55"
+                    },
+                    {
+                        "step":  "billing:payments:create",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/billing/payments",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:55"
+                    },
+                    {
+                        "step":  "billing:charges:list",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/billing/charges?tenant_id=tenant_automania",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:55"
+                    },
+                    {
+                        "step":  "crm:leads:create",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/crm/leads",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:55"
+                    },
+                    {
+                        "step":  "crm:leads:stage",
+                        "outcome":  "PASS",
+                        "method":  "PATCH",
+                        "path":  "/v1/crm/leads/13ff4f7c-3bd0-4e7b-896e-0aa769cb1fbc/stage",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:55"
+                    },
+                    {
+                        "step":  "crm:leads:list",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/crm/leads?tenant_id=tenant_automania",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:08:55"
+                    },
+                    {
+                        "step":  "provider:evolution:webhook",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/provider/evolution/webhook",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:09:04"
+                    },
+                    {
+                        "step":  "crm:conversations:list",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/crm/conversations?tenant_id=tenant_automania\u0026limit=200",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:09:04"
+                    },
+                    {
+                        "step":  "crm:messages:list",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/crm/conversations/9ce36209-9edf-4ace-95ab-6e268ba359f1/messages?tenant_id=tenant_automania\u0026limit=50",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:09:04"
+                    },
+                    {
+                        "step":  "crm:conversations:read",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/crm/conversations/9ce36209-9edf-4ace-95ab-6e268ba359f1/read?tenant_id=tenant_automania",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:09:04"
+                    },
+                    {
+                        "step":  "crm:conversations:send",
+                        "outcome":  "WARN",
+                        "method":  "POST",
+                        "path":  "/v1/crm/conversations/9ce36209-9edf-4ace-95ab-6e268ba359f1/send",
+                        "status":  502,
+                        "note":  "provider_send_error_but_endpoint_persisted",
+                        "timestamp":  "2026-03-02T12:09:04"
+                    },
+                    {
+                        "step":  "crm:ai:suggest-reply",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/crm/conversations/9ce36209-9edf-4ace-95ab-6e268ba359f1/ai/suggest-reply",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:09:13"
+                    },
+                    {
+                        "step":  "crm:ai:qualify",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/crm/conversations/9ce36209-9edf-4ace-95ab-6e268ba359f1/ai/qualify",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:09:19"
+                    },
+                    {
+                        "step":  "crm:ai:execute-update-stage",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/v1/crm/conversations/9ce36209-9edf-4ace-95ab-6e268ba359f1/ai/execute",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:09:19"
+                    },
+                    {
+                        "step":  "whatsapp:evolution:qr",
+                        "outcome":  "PASS",
+                        "method":  "GET",
+                        "path":  "/v1/whatsapp/evolution/qr?tenant_id=tenant_automania",
+                        "status":  200,
+                        "note":  "qr_or_connected_state",
+                        "timestamp":  "2026-03-02T12:09:19"
+                    },
+                    {
+                        "step":  "provider:evolution:outbound:validate",
+                        "outcome":  "PASS",
+                        "method":  "POST",
+                        "path":  "/provider/evolution/outbound/validate",
+                        "status":  200,
+                        "note":  "ok",
+                        "timestamp":  "2026-03-02T12:09:19"
+                    }
+                ]
+}

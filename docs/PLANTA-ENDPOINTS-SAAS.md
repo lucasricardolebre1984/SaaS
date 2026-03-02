@@ -163,9 +163,17 @@ rg -n "fetch\\(|fetchJsonOrThrow\\(|/v1/|/provider/|/internal/" apps/owner-conso
 
 # listeners de botoes/form
 rg -n "addEventListener\\('click'|addEventListener\\('submit'" apps/owner-console/src/app.js apps/crm-console/src/app.js
+
+# smoke executavel endpoint-a-endpoint (dev AWS)
+powershell -ExecutionPolicy Bypass -File tools/smoke-saas-endpoints.ps1 -BaseUrl https://dev.automaniaai.com.br/api -TenantId tenant_automania
 ```
 
 ## 8) Estado desta auditoria (checkpoint)
 
 - Endpoint map acima foi derivado do codigo atual do repo.
-- Existe alteracao local em andamento em `apps/platform-api/src/app.mjs` (hotfix de anti-alucinacao de execucao), ainda sem commit.
+- Smoke auditavel executado em `2026-03-02` com script `tools/smoke-saas-endpoints.ps1`.
+- Resultado do run mais recente (`tools/reports/saas-endpoint-smoke-20260302-120836.json`):
+  - `PASS=25`
+  - `WARN=1`
+  - `FAIL=0`
+- Unico `WARN` no fluxo `POST /v1/crm/conversations/:id/send`: endpoint e persistencia OK, provider Evolution retornou `502` no envio para numero de teste sintatico (comportamento esperado para smoke sem destinatario real).

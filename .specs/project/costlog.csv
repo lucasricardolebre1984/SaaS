@@ -201,3 +201,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice v4 enterprise functions views dragdrop tasks
 2026-03-02,internal,engineering-time,local,0.00,0.00,governance,endpoint map audit and traceability plant in docs/PLANTA-ENDPOINTS-SAAS.md
 2026-03-02,internal,engineering-time,local,0.00,0.00,implementation,owner interaction anti-hallucination guard with execution receipts and contract updates validated by tests
+2026-03-02,internal,engineering-time,local,0.00,0.00,validation,smoke endpoint audit script and dev execution report saas-endpoint-smoke-20260302-120836
