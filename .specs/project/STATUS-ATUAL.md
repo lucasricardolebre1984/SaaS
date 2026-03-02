@@ -127,8 +127,8 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 ## 6. Proximo passo natural
 
 - **Slice ativo:** `crm-krayin-reference-modernization-slice`.
-- **Objetivo imediato:** executar T4 (migracoes Postgres do CRM core) mantendo rastreabilidade por endpoint/tenant/trace.
-- **Gate principal:** smoke Postgres para CRUD basico de deal/activity/task + atualizacao de `STATE.md`, `worklog.csv` e `costlog.csv`.
+- **Objetivo imediato:** executar T5 (APIs backend CRM enterprise MVP) mantendo rastreabilidade por endpoint/tenant/trace.
+- **Gate principal:** `app-platform-api:test` + `contract-tests:contract-checks` com fluxo `deal -> activity -> stage update` coberto.
 - **Referencia:** `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`.
 
 ---
@@ -223,4 +223,19 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 - Gate executado e aprovado:
   - `npx nx run contract-tests:contract-checks`
 - Proximo passo ativo formalizado: T4 migracoes CRM core.
+
+## Update 2026-03-02 (T4 migracoes CRM core concluido)
+- Baseline SQL de runtime Postgres expandido com tabelas CRM core:
+  - `crm_accounts`, `crm_contacts`, `crm_deals`, `crm_activities`, `crm_tasks`, `crm_views`
+  - arquivo: `apps/platform-api/sql/orchestration-postgres.sql`
+- Mapa de dados atualizado para refletir novas entidades:
+  - `libs/core/data-model/table-map.json`
+- Smoke Postgres atualizado para aplicar SQL baseline e validar CRUD basico real:
+  - arquivo: `tools/smoke-postgres-orchestration.ps1`
+  - comando executado: `powershell -ExecutionPolicy Bypass -File tools/smoke-postgres-orchestration.ps1`
+  - resultado: `Postgres smoke passed` com contagens `crm_deals=1`, `crm_activities=1`, `crm_tasks=1`.
+- Gates de validacao apos T4:
+  - `npx nx run app-platform-api:test` (`62/62` pass)
+  - `npx nx run contract-tests:contract-checks`
+- Proximo passo ativo formalizado: T5 APIs backend CRM enterprise MVP.
 

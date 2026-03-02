@@ -61,6 +61,48 @@
       "foreign_keys": ["tenant_id -> tenants.id"]
     },
     {
+      "name": "crm_accounts",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "crm-core",
+      "columns": ["id", "tenant_id", "name", "legal_name", "document_number", "industry", "website", "status", "owner_user_id", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
+      "name": "crm_contacts",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "crm-core",
+      "columns": ["id", "tenant_id", "account_id", "display_name", "job_title", "phone_e164", "email", "status", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "account_id -> crm_accounts.id"]
+    },
+    {
+      "name": "crm_deals",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "crm-core",
+      "columns": ["id", "tenant_id", "lead_id", "account_id", "contact_id", "title", "stage", "amount", "currency", "expected_close_date", "owner_user_id", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "lead_id -> crm_leads.id", "account_id -> crm_accounts.id", "contact_id -> crm_contacts.id"]
+    },
+    {
+      "name": "crm_activities",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "crm-core",
+      "columns": ["id", "tenant_id", "deal_id", "contact_id", "kind", "title", "body", "occurred_at", "author_user_id", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "deal_id -> crm_deals.id", "contact_id -> crm_contacts.id"]
+    },
+    {
+      "name": "crm_tasks",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "crm-core",
+      "columns": ["id", "tenant_id", "deal_id", "contact_id", "title", "description", "due_at", "status", "priority", "assignee_user_id", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id", "deal_id -> crm_deals.id", "contact_id -> crm_contacts.id"]
+    },
+    {
+      "name": "crm_views",
+      "owner_module": "mod-02-whatsapp-crm",
+      "domain": "crm-core",
+      "columns": ["id", "tenant_id", "owner_user_id", "name", "scope", "module", "is_default", "filters_json", "columns_json", "sort_json", "created_at", "updated_at"],
+      "foreign_keys": ["tenant_id -> tenants.id"]
+    },
+    {
       "name": "crm_lead_stage_history",
       "owner_module": "mod-02-whatsapp-crm",
       "domain": "leads",

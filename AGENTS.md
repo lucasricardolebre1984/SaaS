@@ -102,7 +102,7 @@ See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
 - Active feature: `crm-krayin-reference-modernization-slice`
-- Active phase: Implement + Validate (T4 migracoes CRM core)
+- Active phase: Implement + Validate (T5 APIs CRM enterprise MVP)
 
 Gate de regressao de botoes/endpoints (owner+crm+modulos 03..05) permanece obrigatorio:
 - integrado em `npm run preprod:validate` via `tools/smoke-saas-endpoints.ps1`

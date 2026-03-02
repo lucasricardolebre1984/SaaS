@@ -206,3 +206,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-02,internal,engineering-time,local,0.00,0.00,governance,m5b exit checklist publication and roadmap/status transition to next feature
 2026-03-02,internal,engineering-time,local,0.00,0.00,specification,crm-krayin-reference-modernization-slice T2 gap matrix completed with audited sources and prioritized backlog
 2026-03-02,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T3 contracts completed and validated by contract-checks
+2026-03-02,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T4 migrations completed with postgres CRUD smoke evidence
+2026-03-02,internal,engineering-time,local,0.00,0.00,validation,crm-krayin-reference-modernization-slice T4 validation gates app-platform-api:test and contract-checks green

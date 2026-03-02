@@ -240,6 +240,147 @@ CREATE UNIQUE INDEX IF NOT EXISTS crm_followups_tenant_external_key_ux
 CREATE INDEX IF NOT EXISTS crm_followups_tenant_schedule_idx
   ON public.crm_followups (tenant_id, status, schedule_at);
 
+CREATE TABLE IF NOT EXISTS public.crm_accounts (
+  account_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  external_key TEXT NULL,
+  name TEXT NOT NULL,
+  legal_name TEXT NULL,
+  document_number TEXT NULL,
+  industry TEXT NULL,
+  website TEXT NULL,
+  status TEXT NOT NULL,
+  owner_user_id TEXT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS crm_accounts_tenant_external_key_ux
+  ON public.crm_accounts (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS crm_accounts_tenant_status_idx
+  ON public.crm_accounts (tenant_id, status, created_at);
+
+CREATE TABLE IF NOT EXISTS public.crm_contacts (
+  contact_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  account_id UUID NULL REFERENCES public.crm_accounts(account_id),
+  external_key TEXT NULL,
+  display_name TEXT NOT NULL,
+  job_title TEXT NULL,
+  phone_e164 TEXT NULL,
+  email TEXT NULL,
+  status TEXT NOT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS crm_contacts_tenant_external_key_ux
+  ON public.crm_contacts (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS crm_contacts_tenant_account_idx
+  ON public.crm_contacts (tenant_id, account_id, created_at);
+
+CREATE INDEX IF NOT EXISTS crm_contacts_tenant_phone_idx
+  ON public.crm_contacts (tenant_id, phone_e164);
+
+CREATE TABLE IF NOT EXISTS public.crm_deals (
+  deal_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  lead_id UUID NULL REFERENCES public.crm_leads(lead_id),
+  account_id UUID NULL REFERENCES public.crm_accounts(account_id),
+  contact_id UUID NULL REFERENCES public.crm_contacts(contact_id),
+  external_key TEXT NULL,
+  title TEXT NOT NULL,
+  stage TEXT NOT NULL,
+  amount NUMERIC(14, 2) NULL,
+  currency CHAR(3) NULL,
+  expected_close_date DATE NULL,
+  owner_user_id TEXT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS crm_deals_tenant_external_key_ux
+  ON public.crm_deals (tenant_id, external_key)
+  WHERE external_key IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS crm_deals_tenant_stage_idx
+  ON public.crm_deals (tenant_id, stage, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS crm_deals_tenant_expected_close_idx
+  ON public.crm_deals (tenant_id, expected_close_date);
+
+CREATE TABLE IF NOT EXISTS public.crm_activities (
+  activity_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  deal_id UUID NULL REFERENCES public.crm_deals(deal_id),
+  contact_id UUID NULL REFERENCES public.crm_contacts(contact_id),
+  kind TEXT NOT NULL,
+  title TEXT NULL,
+  body TEXT NOT NULL,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  author_user_id TEXT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS crm_activities_tenant_occurred_idx
+  ON public.crm_activities (tenant_id, occurred_at DESC);
+
+CREATE INDEX IF NOT EXISTS crm_activities_tenant_deal_idx
+  ON public.crm_activities (tenant_id, deal_id, occurred_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.crm_tasks (
+  task_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  deal_id UUID NULL REFERENCES public.crm_deals(deal_id),
+  contact_id UUID NULL REFERENCES public.crm_contacts(contact_id),
+  title TEXT NOT NULL,
+  description TEXT NULL,
+  due_at TIMESTAMPTZ NULL,
+  status TEXT NOT NULL,
+  priority TEXT NOT NULL,
+  assignee_user_id TEXT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS crm_tasks_tenant_status_due_idx
+  ON public.crm_tasks (tenant_id, status, due_at);
+
+CREATE INDEX IF NOT EXISTS crm_tasks_tenant_assignee_due_idx
+  ON public.crm_tasks (tenant_id, assignee_user_id, due_at);
+
+CREATE TABLE IF NOT EXISTS public.crm_views (
+  view_id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  owner_user_id TEXT NULL,
+  name TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  module TEXT NOT NULL,
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  filters_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  columns_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  sort_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS crm_views_tenant_owner_module_name_ux
+  ON public.crm_views (tenant_id, COALESCE(owner_user_id, ''), module, name);
+
+CREATE INDEX IF NOT EXISTS crm_views_tenant_module_scope_idx
+  ON public.crm_views (tenant_id, module, scope, updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS public.owner_memory_entries (
   memory_id UUID PRIMARY KEY,
   tenant_id TEXT NOT NULL,

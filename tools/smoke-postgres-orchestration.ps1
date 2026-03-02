@@ -11,6 +11,7 @@ $composeProject = 'fabio-postgres-smoke'
 $apiHealthUrl = "http://127.0.0.1:$Port/health"
 $apiBaseUrl = "http://127.0.0.1:$Port"
 $dsn = 'postgres://fabio:fabio@127.0.0.1:55432/fabio_dev'
+$schemaSqlPath = Join-Path $repoRoot 'apps/platform-api/sql/orchestration-postgres.sql'
 
 $apiStdout = Join-Path $repoRoot 'tools/postgres-smoke/api-stdout.log'
 $apiStderr = Join-Path $repoRoot 'tools/postgres-smoke/api-stderr.log'
@@ -44,6 +45,46 @@ function Wait-ForApi {
   throw "API did not become ready in time."
 }
 
+function Invoke-PostgresSql {
+  param(
+    [Parameter(Mandatory = $true)][string]$Sql,
+    [switch]$Scalar
+  )
+
+  $args = @(
+    'compose', '-p', $composeProject, '-f', $composeFile,
+    'exec', '-T', 'postgres',
+    'psql', '-U', 'fabio', '-d', 'fabio_dev', '-v', 'ON_ERROR_STOP=1'
+  )
+  if ($Scalar) {
+    $args += @('-tAc', $Sql)
+  } else {
+    $args += @('-c', $Sql)
+  }
+  $raw = & docker @args
+  if ($LASTEXITCODE -ne 0) {
+    throw "Postgres SQL command failed: $Sql"
+  }
+  if ($Scalar) {
+    return (($raw | Select-Object -First 1).ToString().Trim())
+  }
+  return $raw
+}
+
+function Invoke-PostgresSqlFile {
+  param([Parameter(Mandatory = $true)][string]$Path)
+  if (-not (Test-Path $Path)) {
+    throw "Missing SQL file: $Path"
+  }
+  $sql = Get-Content $Path -Raw
+  $result = $sql | & docker compose -p $composeProject -f $composeFile exec -T postgres `
+    psql -U fabio -d fabio_dev -v ON_ERROR_STOP=1
+  if ($LASTEXITCODE -ne 0) {
+    throw "Postgres SQL file apply failed: $Path"
+  }
+  return $result
+}
+
 try {
   Set-Location $repoRoot
   Write-Host 'Starting Postgres container...'
@@ -51,6 +92,9 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'docker compose up failed.' }
 
   Wait-ForPostgres
+
+  Write-Host 'Applying orchestration baseline SQL...'
+  Invoke-PostgresSqlFile -Path $schemaSqlPath | Out-Null
 
   Write-Host 'Starting app-platform-api with postgres backend...'
   if (Test-Path $apiStdout) { Remove-Item -Force $apiStdout }
@@ -224,6 +268,93 @@ try {
   if ($leadCreate.response.status -notin @('created', 'idempotent')) {
     throw 'Lead create did not return created/idempotent.'
   }
+  $leadId = $leadCreate.response.lead.lead_id
+
+  Write-Host 'Running CRM core SQL CRUD smoke (deals/activities/tasks)...'
+  $nowIso = (Get-Date).ToUniversalTime().ToString('o')
+  $today = (Get-Date).ToString('yyyy-MM-dd')
+  $accountId = [guid]::NewGuid().ToString()
+  $contactId = [guid]::NewGuid().ToString()
+  $dealId = [guid]::NewGuid().ToString()
+  $activityId = [guid]::NewGuid().ToString()
+  $taskId = [guid]::NewGuid().ToString()
+  $taskKeepId = [guid]::NewGuid().ToString()
+  $viewId = [guid]::NewGuid().ToString()
+
+  [void](Invoke-PostgresSql -Sql @"
+INSERT INTO public.crm_accounts (account_id, tenant_id, external_key, name, status, created_at, updated_at)
+VALUES ('$accountId', 'tenant_automania', 'smoke-account-$accountId', 'Conta Smoke', 'active', '$nowIso', '$nowIso')
+"@)
+
+  [void](Invoke-PostgresSql -Sql @"
+INSERT INTO public.crm_contacts (contact_id, tenant_id, account_id, external_key, display_name, phone_e164, status, created_at, updated_at)
+VALUES ('$contactId', 'tenant_automania', '$accountId', 'smoke-contact-$contactId', 'Contato Smoke', '+5511987654321', 'active', '$nowIso', '$nowIso')
+"@)
+
+  [void](Invoke-PostgresSql -Sql @"
+INSERT INTO public.crm_deals (deal_id, tenant_id, lead_id, account_id, contact_id, external_key, title, stage, amount, currency, expected_close_date, created_at, updated_at)
+VALUES ('$dealId', 'tenant_automania', '$leadId', '$accountId', '$contactId', 'smoke-deal-$dealId', 'Deal Smoke', 'qualified', 1200.00, 'BRL', '$today', '$nowIso', '$nowIso')
+"@)
+  $dealStageBefore = Invoke-PostgresSql -Scalar -Sql "SELECT stage FROM public.crm_deals WHERE deal_id = '$dealId'"
+  if ($dealStageBefore -ne 'qualified') {
+    throw "Expected crm_deals stage qualified, got $dealStageBefore."
+  }
+  [void](Invoke-PostgresSql -Sql "UPDATE public.crm_deals SET stage = 'proposal', updated_at = '$nowIso' WHERE deal_id = '$dealId'")
+  $dealStageAfter = Invoke-PostgresSql -Scalar -Sql "SELECT stage FROM public.crm_deals WHERE deal_id = '$dealId'"
+  if ($dealStageAfter -ne 'proposal') {
+    throw "Expected crm_deals stage proposal after update, got $dealStageAfter."
+  }
+
+  [void](Invoke-PostgresSql -Sql @"
+INSERT INTO public.crm_activities (activity_id, tenant_id, deal_id, contact_id, kind, title, body, occurred_at, created_at, updated_at)
+VALUES ('$activityId', 'tenant_automania', '$dealId', '$contactId', 'note', 'Atividade Smoke', 'Primeira nota de atividade', '$nowIso', '$nowIso', '$nowIso')
+"@)
+  $activityBodyBefore = Invoke-PostgresSql -Scalar -Sql "SELECT body FROM public.crm_activities WHERE activity_id = '$activityId'"
+  if ($activityBodyBefore -notlike '*Primeira nota*') {
+    throw "Expected crm_activities body initial value, got $activityBodyBefore."
+  }
+  [void](Invoke-PostgresSql -Sql "UPDATE public.crm_activities SET body = 'Nota atualizada smoke', updated_at = '$nowIso' WHERE activity_id = '$activityId'")
+  $activityBodyAfter = Invoke-PostgresSql -Scalar -Sql "SELECT body FROM public.crm_activities WHERE activity_id = '$activityId'"
+  if ($activityBodyAfter -notlike '*atualizada*') {
+    throw "Expected updated crm_activities body, got $activityBodyAfter."
+  }
+
+  [void](Invoke-PostgresSql -Sql @"
+INSERT INTO public.crm_tasks (task_id, tenant_id, deal_id, contact_id, title, description, due_at, status, priority, created_at, updated_at)
+VALUES ('$taskId', 'tenant_automania', '$dealId', '$contactId', 'Task Smoke', 'Task inicial', '$nowIso', 'pending', 'high', '$nowIso', '$nowIso')
+"@)
+  $taskStatusBefore = Invoke-PostgresSql -Scalar -Sql "SELECT status FROM public.crm_tasks WHERE task_id = '$taskId'"
+  if ($taskStatusBefore -ne 'pending') {
+    throw "Expected crm_tasks status pending, got $taskStatusBefore."
+  }
+  [void](Invoke-PostgresSql -Sql "UPDATE public.crm_tasks SET status = 'done', updated_at = '$nowIso' WHERE task_id = '$taskId'")
+  $taskStatusAfter = Invoke-PostgresSql -Scalar -Sql "SELECT status FROM public.crm_tasks WHERE task_id = '$taskId'"
+  if ($taskStatusAfter -ne 'done') {
+    throw "Expected crm_tasks status done after update, got $taskStatusAfter."
+  }
+  [void](Invoke-PostgresSql -Sql "DELETE FROM public.crm_tasks WHERE task_id = '$taskId'")
+  [void](Invoke-PostgresSql -Sql @"
+INSERT INTO public.crm_tasks (task_id, tenant_id, deal_id, contact_id, title, description, due_at, status, priority, created_at, updated_at)
+VALUES ('$taskKeepId', 'tenant_automania', '$dealId', '$contactId', 'Task Smoke Keep', 'Task final para contagem', '$nowIso', 'pending', 'medium', '$nowIso', '$nowIso')
+"@)
+
+  [void](Invoke-PostgresSql -Sql @"
+INSERT INTO public.crm_views (view_id, tenant_id, owner_user_id, name, scope, module, is_default, filters_json, columns_json, sort_json, created_at, updated_at)
+VALUES (
+  '$viewId',
+  'tenant_automania',
+  'owner-smoke',
+  'Pipeline Smoke',
+  'tenant',
+  'crm.pipeline',
+  false,
+  '{\"stage\":\"proposal\"}'::jsonb,
+  '[\"title\",\"stage\",\"amount\"]'::jsonb,
+  '{\"field\":\"updated_at\",\"direction\":\"desc\"}'::jsonb,
+  '$nowIso',
+  '$nowIso'
+)
+"@)
 
   $campaignPayload = @{
     request = @{
@@ -413,43 +544,24 @@ try {
   }
 
   Write-Host 'Validating persisted rows in Postgres...'
-  $commandCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.orchestration_commands;"
-  $eventCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.orchestration_events;"
-  $queueCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.orchestration_module_task_queue;"
-  $billingChargeCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.billing_charges;"
-  $billingPaymentCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.billing_payments;"
-  $crmLeadCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.crm_leads;"
-  $crmCampaignCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.crm_campaigns;"
-  $crmFollowupCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.crm_followups;"
-  $ownerMemoryCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_memory_entries;"
-  $ownerPromotionCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_context_promotions;"
-  $ownerReembedScheduleCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_memory_reembed_schedules;"
-  $ownerReembedRunsCountRaw = & docker compose -p $composeProject -f $composeFile exec -T postgres `
-    psql -U fabio -d fabio_dev -tAc "select count(*) from public.owner_memory_reembed_runs;"
-
-  $commandCount = [int]($commandCountRaw | Select-Object -First 1).Trim()
-  $eventCount = [int]($eventCountRaw | Select-Object -First 1).Trim()
-  $queueCount = [int]($queueCountRaw | Select-Object -First 1).Trim()
-  $billingChargeCount = [int]($billingChargeCountRaw | Select-Object -First 1).Trim()
-  $billingPaymentCount = [int]($billingPaymentCountRaw | Select-Object -First 1).Trim()
-  $crmLeadCount = [int]($crmLeadCountRaw | Select-Object -First 1).Trim()
-  $crmCampaignCount = [int]($crmCampaignCountRaw | Select-Object -First 1).Trim()
-  $crmFollowupCount = [int]($crmFollowupCountRaw | Select-Object -First 1).Trim()
-  $ownerMemoryCount = [int]($ownerMemoryCountRaw | Select-Object -First 1).Trim()
-  $ownerPromotionCount = [int]($ownerPromotionCountRaw | Select-Object -First 1).Trim()
-  $ownerReembedScheduleCount = [int]($ownerReembedScheduleCountRaw | Select-Object -First 1).Trim()
-  $ownerReembedRunsCount = [int]($ownerReembedRunsCountRaw | Select-Object -First 1).Trim()
+  $commandCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.orchestration_commands;")
+  $eventCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.orchestration_events;")
+  $queueCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.orchestration_module_task_queue;")
+  $billingChargeCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.billing_charges;")
+  $billingPaymentCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.billing_payments;")
+  $crmLeadCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_leads;")
+  $crmCampaignCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_campaigns;")
+  $crmFollowupCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_followups;")
+  $crmAccountsCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_accounts;")
+  $crmContactsCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_contacts;")
+  $crmDealsCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_deals;")
+  $crmActivitiesCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_activities;")
+  $crmTasksCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_tasks;")
+  $crmViewsCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_views;")
+  $ownerMemoryCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.owner_memory_entries;")
+  $ownerPromotionCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.owner_context_promotions;")
+  $ownerReembedScheduleCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.owner_memory_reembed_schedules;")
+  $ownerReembedRunsCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.owner_memory_reembed_runs;")
 
   if ($commandCount -lt 3) { throw "Expected >=3 commands, got $commandCount." }
   if ($eventCount -lt 6) { throw "Expected >=6 events, got $eventCount." }
@@ -459,6 +571,12 @@ try {
   if ($crmLeadCount -lt 1) { throw "Expected >=1 crm lead row, got $crmLeadCount." }
   if ($crmCampaignCount -lt 1) { throw "Expected >=1 crm campaign row, got $crmCampaignCount." }
   if ($crmFollowupCount -lt 1) { throw "Expected >=1 crm followup row, got $crmFollowupCount." }
+  if ($crmAccountsCount -lt 1) { throw "Expected >=1 crm account row, got $crmAccountsCount." }
+  if ($crmContactsCount -lt 1) { throw "Expected >=1 crm contact row, got $crmContactsCount." }
+  if ($crmDealsCount -lt 1) { throw "Expected >=1 crm deal row, got $crmDealsCount." }
+  if ($crmActivitiesCount -lt 1) { throw "Expected >=1 crm activity row, got $crmActivitiesCount." }
+  if ($crmTasksCount -lt 1) { throw "Expected >=1 crm task row, got $crmTasksCount." }
+  if ($crmViewsCount -lt 1) { throw "Expected >=1 crm view row, got $crmViewsCount." }
   if ($ownerMemoryCount -lt 1) { throw "Expected >=1 owner memory row, got $ownerMemoryCount." }
   if ($ownerPromotionCount -lt 1) { throw "Expected >=1 owner promotion row, got $ownerPromotionCount." }
   if ($ownerReembedScheduleCount -lt 1) { throw "Expected >=1 owner memory reembed schedule row, got $ownerReembedScheduleCount." }
@@ -470,7 +588,7 @@ try {
   Write-Host "billing_correlation_id=$billingCorrelation"
   Write-Host "memory_correlation_id=$memoryCorrelation"
   Write-Host "followup_correlation_id=$followupCorrelation"
-  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount crm_campaigns=$crmCampaignCount crm_followups=$crmFollowupCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount owner_reembed_schedules=$ownerReembedScheduleCount owner_reembed_runs=$ownerReembedRunsCount"
+  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount crm_campaigns=$crmCampaignCount crm_followups=$crmFollowupCount crm_accounts=$crmAccountsCount crm_contacts=$crmContactsCount crm_deals=$crmDealsCount crm_activities=$crmActivitiesCount crm_tasks=$crmTasksCount crm_views=$crmViewsCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount owner_reembed_schedules=$ownerReembedScheduleCount owner_reembed_runs=$ownerReembedRunsCount"
 }
 finally {
   if ($apiProcess -and -not $apiProcess.HasExited) {

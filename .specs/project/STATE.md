@@ -45,6 +45,7 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-02: T4 do `crm-krayin-reference-modernization-slice` concluido com migracoes SQL de `crm_accounts`, `crm_contacts`, `crm_deals`, `crm_activities`, `crm_tasks`, `crm_views`; smoke Postgres atualizado para aplicar baseline SQL e validar CRUD basico de `deal/activity/task` com resultado `Postgres smoke passed`; gates `npx nx run app-platform-api:test` e `npx nx run contract-tests:contract-checks` verdes; proximo passo ativo movido para T5 (APIs CRM enterprise MVP).
 - 2026-03-02: T3 do `crm-krayin-reference-modernization-slice` concluido com contratos JSON para `accounts/contacts/deals/activities/tasks/views`, exemplos validos e gate `npx nx run contract-tests:contract-checks` verde; proximo passo ativo atualizado para T4 (migracoes CRM core).
 - 2026-03-02: `crm-krayin-reference-modernization-slice` teve aprovacao formal de `spec/design/tasks` e fechamento do T2 com matriz de gaps auditavel em `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`; proximo passo ativo movido para T3 (contracts CRM core).
 - 2026-03-02: checklist de saida M5B publicado em `.specs/project/MILESTONE-5-RUNTIME-STABILITY-EXIT-CHECKLIST.md` com decisao `GO`.

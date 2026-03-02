@@ -16,7 +16,7 @@
 
 ## Proximo passo unico (ativo)
 
-**Executar T4 (migracoes de dados CRM core) do `crm-krayin-reference-modernization-slice` a partir da base estabilizada.**
+**Executar T5 (APIs backend CRM enterprise MVP) do `crm-krayin-reference-modernization-slice` a partir da base estabilizada.**
 
 Pre-condicoes (ja cumpridas):
 1. Slice de estabilidade M5B encerrado com `GO`.
@@ -32,11 +32,15 @@ Passos concluidos em 2026-03-02:
    - `libs/mod-02-whatsapp-crm/contracts/{account,contact,deal,activity,task,view}-*.schema.json`
    - `libs/mod-02-whatsapp-crm/contracts/crm-core-contract-examples.json`
    - gate verde: `npx nx run contract-tests:contract-checks`
+5. T4 concluido com migracoes CRM core + smoke CRUD Postgres:
+   - tabelas adicionadas em `apps/platform-api/sql/orchestration-postgres.sql`
+   - smoke validado: `powershell -ExecutionPolicy Bypass -File tools/smoke-postgres-orchestration.ps1`
+   - resultado: `Postgres smoke passed` com `crm_deals=1`, `crm_activities=1`, `crm_tasks=1`
 
 Passo ativo agora:
-1. Executar T4 (migracoes/tabelas CRM core com indices por tenant e timeline).
-2. Garantir smoke Postgres de CRUD basico para deal/activity/task.
-3. Atualizar backlog rastreavel (STATE/STATUS/worklog/costlog) com evidencias do T4.
+1. Executar T5 (endpoints backend para `deals/contacts/activities/tasks/views`).
+2. Integrar APIs com eventos auditaveis (`correlation_id`, `trace_id`, `tenant_id`).
+3. Validar testes de API para fluxo `deal -> activity -> stage update`.
 
 ---
 

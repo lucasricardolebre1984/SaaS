@@ -64,9 +64,23 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
     - `npx nx run contract-tests:contract-checks`
 
 ## T4) Data model migrations
-- Status: pending
+- Status: completed
 - Criar tabelas novas de CRM core com indices por tenant e timeline.
 - Aceite: smoke Postgres para CRUD basico de deal + activity + task.
+- Evidencia:
+  - migracoes adicionadas em `apps/platform-api/sql/orchestration-postgres.sql`:
+    - `crm_accounts`
+    - `crm_contacts`
+    - `crm_deals`
+    - `crm_activities`
+    - `crm_tasks`
+    - `crm_views`
+  - mapa de dados atualizado:
+    - `libs/core/data-model/table-map.json`
+  - smoke Postgres atualizado e validado com CRUD real (`create/read/update/delete`) em `deals/activities/tasks`:
+    - `tools/smoke-postgres-orchestration.ps1`
+    - comando executado: `powershell -ExecutionPolicy Bypass -File tools/smoke-postgres-orchestration.ps1`
+    - resultado: `Postgres smoke passed` com contagem `crm_deals=1`, `crm_activities=1`, `crm_tasks=1`.
 
 ## T5) Backend APIs (MVP enterprise)
 - Status: pending
