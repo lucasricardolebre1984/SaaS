@@ -199,3 +199,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-01,internal,engineering-time,local,0.00,0.00,operations,crm-krayin-reference-modernization-slice deploy dev e validacao health
 2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice v3 visual fidelity with owner chat tone and CRM graphic bars
 2026-03-01,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice v4 enterprise functions views dragdrop tasks
+2026-03-02,internal,engineering-time,local,0.00,0.00,governance,endpoint map audit and traceability plant in docs/PLANTA-ENDPOINTS-SAAS.md
+2026-03-02,internal,engineering-time,local,0.00,0.00,implementation,owner interaction anti-hallucination guard with execution receipts and contract updates validated by tests

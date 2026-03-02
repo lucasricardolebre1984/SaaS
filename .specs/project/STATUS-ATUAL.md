@@ -1,7 +1,7 @@
 # Status Atual — Fabio SaaS (Modelo Universal)
 
 **Documento:** STATUS-ATUAL  
-**Ultima atualizacao:** 2026-03-01 (rastreabilidade e auditoria: data/hora em decisoes e artefatos)  
+**Ultima atualizacao:** 2026-03-02 (rastreabilidade e auditoria: data/hora em decisoes e artefatos)  
 **Objetivo:** Snapshot rastreavel do estado do repositorio, modelo de aprendizado continuo e conformidade com specs.
 
 ---
@@ -147,4 +147,27 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 - Runtime-config estendido com xecution.whatsapp_ai_enabled, xecution.whatsapp_ai_mode, xecution.whatsapp_ai_min_confidence e sincronizado no menu 06.
 - CRM UI atualizado com botoes de IA (sugerir, qualificar, executar) e fluxo de execucao na thread.
 - Gates validados: pp-platform-api:test, pp-crm-console:build, pp-owner-console:build, contract-tests:contract-checks.
+
+## Update 2026-03-02 (Planta de Endpoints)
+- Publicado mapeamento rastreavel completo em `docs/PLANTA-ENDPOINTS-SAAS.md`.
+- Conteudo inclui:
+  - inventario canonico de endpoints backend (publicos + internos);
+  - matriz de botoes Owner/CRM para endpoint alvo;
+  - gaps operacionais que explicam "botao nao funciona" (api base, validacao de payload, fila vs persistencia).
+- Uso recomendado para agentes: validar sempre rota backend em `app.mjs` antes de alterar UI e registrar evidencia em `worklog.csv`/`costlog.csv`.
+
+## Update 2026-03-02 (Guardrails de Execucao IA no Owner)
+- `POST /v1/owner-concierge/interaction` agora aplica bloqueio de claim de conclusao sem prova de persistencia.
+- Quando detectar texto de conclusao sem recibo real, o runtime:
+  - reescreve a resposta para estado operacional correto (nao concluido);
+  - emite evento auditavel `owner.response.claim.blocked`;
+  - retorna `execution_receipts` com trilha de `owner.command.persisted`, `module.task.queued` e `assistant.claim.blocked` (quando aplicavel).
+- Contratos atualizados:
+  - `libs/core/orchestration-contracts/schemas/events.schema.json`
+  - `libs/mod-01-owner-concierge/contracts/multimodal-api.schema.json`
+- Validacao verde:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npx nx run app-owner-console:build`
+  - `npx nx run app-crm-console:build`
 

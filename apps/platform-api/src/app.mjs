@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   campaignCreateValid,
   campaignListValid,
@@ -70,6 +70,7 @@ const ORCHESTRATION_LOG_LIMIT = 200;
 const DEFAULT_CORS_ALLOW_METHODS = 'GET,POST,PATCH,PUT,DELETE,OPTIONS';
 const DEFAULT_CORS_ALLOW_HEADERS = 'content-type,authorization,x-requested-with';
 const DEFAULT_CORS_MAX_AGE = '86400';
+const EXECUTION_COMPLETION_CLAIM_REGEX = /\b(feito|finalizado|concluido|conclu[ií]da|cadastrei|cadastrado|cadastrada|criei|criado|criada|agendei|agendado|agendada|atualizei|atualizado|atualizada|salvei|salvo|enviado)\b/iu;
 
 function json(res, statusCode, payload) {
   res.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8' });
@@ -2196,6 +2197,161 @@ function crmConversationInfo(store) {
     backend: 'file',
     storage_dir: store.storageDir
   };
+}
+
+function appendFallbackReason(existingValue, newReason) {
+  const existing = typeof existingValue === 'string' ? existingValue.trim() : '';
+  if (!existing) return newReason;
+  if (existing.split('|').map((part) => part.trim()).includes(newReason)) {
+    return existing;
+  }
+  return `${existing}|${newReason}`;
+}
+
+function hasExecutionCompletionClaim(text) {
+  const normalized = String(text ?? '').trim();
+  if (!normalized) return false;
+  return EXECUTION_COMPLETION_CLAIM_REGEX.test(normalized);
+}
+
+function applyAssistantExecutionClaimGuard(
+  assistantOutput,
+  { policyDecision, downstreamTasks, confirmationSummary } = {}
+) {
+  if (!assistantOutput || typeof assistantOutput !== 'object') {
+    return { assistant_output: assistantOutput, claim_blocked: null };
+  }
+
+  const text = String(assistantOutput.text ?? '').trim();
+  if (!hasExecutionCompletionClaim(text)) {
+    return { assistant_output: assistantOutput, claim_blocked: null };
+  }
+
+  const hasQueuedTask = Array.isArray(downstreamTasks) && downstreamTasks.length > 0;
+  const hasPendingConfirmation = confirmationSummary?.status === 'pending'
+    || policyDecision?.requires_confirmation === true;
+
+  let reasonCode = 'unverified_execution_claim';
+  let rewrittenText = 'A acao ainda nao foi executada no sistema. Posso registrar agora e te retornar com comprovante de persistencia.';
+
+  if (hasPendingConfirmation) {
+    reasonCode = 'confirmation_required_not_executed';
+    rewrittenText = 'A acao ainda nao foi executada. Ela depende de confirmacao pendente na fila operacional.';
+  } else if (hasQueuedTask) {
+    reasonCode = 'queued_not_completed';
+    rewrittenText = 'Solicitacao registrada e enfileirada. Ainda nao existe comprovante de conclusao da execucao.';
+  }
+
+  return {
+    assistant_output: {
+      ...assistantOutput,
+      text: rewrittenText,
+      fallback_reason: appendFallbackReason(
+        assistantOutput.fallback_reason,
+        `claim_guard:${reasonCode}`
+      )
+    },
+    claim_blocked: {
+      reason_code: reasonCode,
+      original_text: text,
+      execution_decision: policyDecision?.execution_decision ?? 'none',
+      had_downstream_task: hasQueuedTask,
+      had_pending_confirmation: hasPendingConfirmation
+    }
+  };
+}
+
+function createOwnerResponseClaimBlockedEvent(ownerCommand, request, assistantOutput, claimBlocked) {
+  const originalTextHash = createHash('sha256')
+    .update(String(claimBlocked?.original_text ?? ''))
+    .digest('hex');
+  return {
+    schema_version: ORCHESTRATION_SCHEMA_VERSION,
+    kind: 'event',
+    event_id: randomUUID(),
+    name: 'owner.response.claim.blocked',
+    tenant_id: ownerCommand.tenant_id,
+    source_module: 'mod-01-owner-concierge',
+    target_module: 'mod-01-owner-concierge',
+    emitted_at: new Date().toISOString(),
+    correlation_id: ownerCommand.correlation_id,
+    causation_id: ownerCommand.command_id,
+    trace_id: ownerCommand.trace_id,
+    status: 'info',
+    payload: {
+      request_id: request.request_id,
+      session_id: request.session_id,
+      reason_code: claimBlocked.reason_code,
+      original_text_sha256: originalTextHash,
+      provider: String(assistantOutput?.provider ?? 'none'),
+      model: typeof assistantOutput?.model === 'string' ? assistantOutput.model : null,
+      execution_decision: String(claimBlocked.execution_decision ?? 'none'),
+      had_downstream_task: claimBlocked.had_downstream_task === true,
+      had_pending_confirmation: claimBlocked.had_pending_confirmation === true
+    }
+  };
+}
+
+function createExecutionReceipts({ request, ownerCommand, moduleTaskCommand, confirmationSummary, claimBlockedEvent }) {
+  const receipts = [{
+    action: 'owner.command.persisted',
+    status: 'persisted',
+    endpoint: '/v1/owner-concierge/interaction',
+    method: 'POST',
+    reference_id: ownerCommand.command_id,
+    target_module: ownerCommand.target_module,
+    occurred_at: ownerCommand.created_at,
+    tenant_id: request.tenant_id,
+    correlation_id: ownerCommand.correlation_id,
+    trace_id: ownerCommand.trace_id
+  }];
+
+  if (moduleTaskCommand) {
+    receipts.push({
+      action: 'module.task.queued',
+      status: 'queued',
+      endpoint: '/v1/owner-concierge/interaction',
+      method: 'POST',
+      reference_id: moduleTaskCommand.payload.task_id,
+      target_module: moduleTaskCommand.target_module,
+      occurred_at: moduleTaskCommand.created_at,
+      tenant_id: request.tenant_id,
+      correlation_id: ownerCommand.correlation_id,
+      trace_id: ownerCommand.trace_id
+    });
+  }
+
+  if (confirmationSummary?.status === 'pending') {
+    receipts.push({
+      action: 'owner.confirmation.pending',
+      status: 'pending',
+      endpoint: '/v1/owner-concierge/interaction',
+      method: 'POST',
+      reference_id: confirmationSummary.confirmation_id,
+      target_module: confirmationSummary.target_module,
+      occurred_at: confirmationSummary.created_at,
+      tenant_id: request.tenant_id,
+      correlation_id: ownerCommand.correlation_id,
+      trace_id: ownerCommand.trace_id
+    });
+  }
+
+  if (claimBlockedEvent) {
+    receipts.push({
+      action: 'assistant.claim.blocked',
+      status: 'blocked',
+      endpoint: '/v1/owner-concierge/interaction',
+      method: 'POST',
+      reference_id: claimBlockedEvent.event_id,
+      target_module: claimBlockedEvent.target_module,
+      occurred_at: claimBlockedEvent.emitted_at,
+      tenant_id: request.tenant_id,
+      correlation_id: ownerCommand.correlation_id,
+      trace_id: ownerCommand.trace_id
+    });
+  }
+
+  return receipts;
 }
 
 function ownerMemoryInfo(store, embeddingProvider) {
@@ -6300,6 +6456,40 @@ export function createApp(options = {}) {
           };
         }
 
+        let claimBlockedEvent = null;
+        if (request.operation === 'send_message') {
+          const guardResult = applyAssistantExecutionClaimGuard(assistantOutput, {
+            policyDecision,
+            downstreamTasks,
+            confirmationSummary
+          });
+          assistantOutput = guardResult.assistant_output;
+
+          if (guardResult.claim_blocked) {
+            claimBlockedEvent = createOwnerResponseClaimBlockedEvent(
+              ownerCommand,
+              request,
+              assistantOutput,
+              guardResult.claim_blocked
+            );
+            const claimBlockedEventResult = await validateAndPersistEvent(store, claimBlockedEvent);
+            if (!claimBlockedEventResult.ok) {
+              return json(res, 500, {
+                error: claimBlockedEventResult.type,
+                details: claimBlockedEventResult.details
+              });
+            }
+          }
+        }
+
+        const executionReceipts = createExecutionReceipts({
+          request,
+          ownerCommand,
+          moduleTaskCommand,
+          confirmationSummary,
+          claimBlockedEvent
+        });
+
         const response = {
           request_id: request.request_id,
           status: 'accepted',
@@ -6311,7 +6501,8 @@ export function createApp(options = {}) {
           session_state,
           avatar_state,
           assistant_output: assistantOutput,
-          policy_decision: policyDecision
+          policy_decision: policyDecision,
+          execution_receipts: executionReceipts
         };
 
         if (confirmationSummary) {

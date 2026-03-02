@@ -1,6 +1,6 @@
 # STATE
 
-Last update: 2026-03-01
+Last update: 2026-03-02
 Active phase: Implement + Validate (crm-modern-inbox-2026-slice)
 Active feature: crm-modern-inbox-2026-slice
 
@@ -45,6 +45,8 @@ Active feature: crm-modern-inbox-2026-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-02: hotfix anti-alucinacao aplicado no `POST /v1/owner-concierge/interaction`: respostas que afirmam conclusao sem comprovante de persistencia agora sao bloqueadas por guardrails, com evento auditavel `owner.response.claim.blocked` e `execution_receipts` no payload de resposta para rastreio por endpoint/correlation_id/trace_id.
+- 2026-03-02: auditoria completa de endpoint/button mapping solicitada pelo owner; publicada planta rastreavel em `docs/PLANTA-ENDPOINTS-SAAS.md` com inventario backend (publico + interno), matriz Owner/CRM (botao -> endpoint) e gaps operacionais para eliminar erro de rota em novas sessoes de agentes.
 - 2026-03-01: rodada de funcoes enterprise no CRM: views salvas de filtros por tenant, kanban com drag-and-drop para transicao de stage (guardrails de transicao existentes), e tarefas de follow-up por lead no detalhe (persistencia local tenant-scoped). Objetivo: aproximar fidelidade funcional 99% do layout/operacao de CRM de referencia sem clonar codigo.
 - 2026-03-01: refinamento solicitado de fidelidade visual: chat do Owner recebeu fundo tonal dark/green e bolhas com largura natural (sem bloco branco integral), e CRM ganhou command bar/board-tabs + barras graficas dinamicas por stage/canal para aproximacao 99% do layout alvo sem clonar codigo externo.
 - 2026-03-01: deploy dev executado apos v2 visual (`npm run deploy:dev -- -SkipNpmCi`); `/srv/SaaS` atualizado, `saas.service` ativo e health publico `https://dev.automaniaai.com.br/api/health` confirmado `200/ok`.

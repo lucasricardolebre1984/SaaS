@@ -10,6 +10,7 @@
         "owner.confirmation.requested",
         "owner.confirmation.approved",
         "owner.confirmation.rejected",
+        "owner.response.claim.blocked",
         "owner.context.promoted",
         "owner.memory.reembed.started",
         "owner.memory.reembed.completed",
@@ -121,6 +122,52 @@
               "reason_code": { "type": ["string", "null"] }
             },
             "required": ["confirmation_id", "task_type", "target_module", "reason_code"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "name": { "const": "owner.response.claim.blocked" } } },
+      "then": {
+        "properties": {
+          "source_module": { "const": "mod-01-owner-concierge" },
+          "target_module": { "const": "mod-01-owner-concierge" },
+          "status": { "const": "info" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "request_id": { "type": "string", "format": "uuid" },
+              "session_id": { "type": "string", "format": "uuid" },
+              "reason_code": {
+                "type": "string",
+                "enum": [
+                  "unverified_execution_claim",
+                  "confirmation_required_not_executed",
+                  "queued_not_completed"
+                ]
+              },
+              "original_text_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "provider": { "type": "string", "minLength": 1 },
+              "model": { "type": ["string", "null"] },
+              "execution_decision": {
+                "type": "string",
+                "enum": ["allow", "deny", "confirm_required", "none"]
+              },
+              "had_downstream_task": { "type": "boolean" },
+              "had_pending_confirmation": { "type": "boolean" }
+            },
+            "required": [
+              "request_id",
+              "session_id",
+              "reason_code",
+              "original_text_sha256",
+              "provider",
+              "model",
+              "execution_decision",
+              "had_downstream_task",
+              "had_pending_confirmation"
+            ]
           }
         }
       }

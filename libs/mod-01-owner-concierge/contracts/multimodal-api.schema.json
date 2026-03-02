@@ -114,6 +114,52 @@
             "reason_code"
           ]
         },
+        "execution_receipts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": { "type": "string", "minLength": 3 },
+              "status": {
+                "type": "string",
+                "enum": ["persisted", "queued", "pending", "blocked"]
+              },
+              "endpoint": { "type": "string", "minLength": 2 },
+              "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "PATCH", "PUT", "DELETE"]
+              },
+              "reference_id": { "type": "string", "minLength": 1 },
+              "target_module": {
+                "type": "string",
+                "enum": [
+                  "mod-01-owner-concierge",
+                  "mod-02-whatsapp-crm",
+                  "mod-03-clientes",
+                  "mod-04-agenda",
+                  "mod-05-faturamento-cobranca"
+                ]
+              },
+              "occurred_at": { "type": "string", "format": "date-time" },
+              "tenant_id": { "type": "string", "minLength": 1 },
+              "correlation_id": { "type": "string", "format": "uuid" },
+              "trace_id": { "type": "string", "minLength": 8 }
+            },
+            "required": [
+              "action",
+              "status",
+              "endpoint",
+              "method",
+              "reference_id",
+              "target_module",
+              "occurred_at",
+              "tenant_id",
+              "correlation_id",
+              "trace_id"
+            ]
+          }
+        },
         "confirmation": {
           "type": "object",
           "additionalProperties": false,

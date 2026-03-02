@@ -2977,6 +2977,81 @@ test('POST /v1/owner-concierge/interaction uses openai response provider in stri
   }
 });
 
+test('POST /v1/owner-concierge/interaction blocks completion claims without persisted execution proof', async () => {
+  const mockProviderServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST' || req.url !== '/chat/completions') {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+      return;
+    }
+
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({
+      model: 'gpt-5-mini',
+      choices: [{
+        message: {
+          content: 'Feito. Cliente cadastrado e agenda criada com sucesso.'
+        }
+      }]
+    }));
+  });
+  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
+  const providerAddress = mockProviderServer.address();
+  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
+
+  const strictStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-owner-claim-guard-'));
+  const strictServer = http.createServer(
+    createApp({
+      orchestrationStorageDir: strictStorageDir,
+      ownerResponseMode: 'openai',
+      ownerResponseModel: 'gpt-5-mini',
+      openaiApiKey: 'test-key',
+      openaiBaseUrl: providerBaseUrl
+    })
+  );
+  await new Promise((resolve) => strictServer.listen(0, '127.0.0.1', resolve));
+  const strictAddress = strictServer.address();
+  const strictBaseUrl = `http://127.0.0.1:${strictAddress.port}`;
+
+  try {
+    const payload = validOwnerRequest();
+    payload.request.payload.text = 'cadastre cliente Lucas e agenda para amanha';
+
+    const res = await fetch(`${strictBaseUrl}/v1/owner-concierge/interaction`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.response.status, 'accepted');
+    assert.equal(body.response.assistant_output.provider, 'openai');
+    assert.match(body.response.assistant_output.fallback_reason, /claim_guard:queued_not_completed/);
+    assert.match(body.response.assistant_output.text, /ainda nao foi executada|enfileirada/i);
+    assert.doesNotMatch(body.response.assistant_output.text, /\bcadastrado\b/i);
+
+    assert.ok(Array.isArray(body.response.execution_receipts));
+    const actions = body.response.execution_receipts.map((item) => item.action);
+    assert.ok(actions.includes('owner.command.persisted'));
+    assert.ok(actions.includes('module.task.queued'));
+    assert.ok(actions.includes('assistant.claim.blocked'));
+
+    const correlationId = body.response.owner_command.correlation_id;
+    const traceRes = await fetch(
+      `${strictBaseUrl}/internal/orchestration/trace?correlation_id=${correlationId}`
+    );
+    assert.equal(traceRes.status, 200);
+    const traceBody = await traceRes.json();
+    const eventNames = traceBody.events.map((item) => item.name);
+    assert.ok(eventNames.includes('owner.response.claim.blocked'));
+  } finally {
+    await new Promise((resolve, reject) => strictServer.close((err) => (err ? reject(err) : resolve())));
+    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
+    await fs.rm(strictStorageDir, { recursive: true, force: true });
+  }
+});
+
 test('POST /v1/owner-concierge/interaction forwards inline image and file excerpt to OpenAI payload', async () => {
   let providerCalled = false;
   const mockProviderServer = http.createServer(async (req, res) => {
