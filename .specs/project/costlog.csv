@@ -226,3 +226,20 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-04,internal,engineering-time,local,0.00,0.00,governance,T8 blocker documentation after real-thread UAT and deploy parity check
 2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T8 CRM bootstrap theme override for tenant preset parity (stale layout cache fix)
 2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T8 hide CRM top config controls and keep modulo-06 configuration flow
+2026-03-04,internal,engineering-time,local,0.00,0.00,operations,deploy dev completed for commit e1d2118 with CRM topbar config removal and runtime theme bootstrap override
+2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,owner+crm embed shell fix to remove duplicated sidebar/topbar in owner module 02
+2026-03-04,internal,engineering-time,local,0.00,0.00,operations,deploy dev completed for commit c91f42e (embedded crm shell and frame height adjustments)
+2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,owner crm embed fullscreen and pipeline-first fix with postMessage auto-height and cache-busting
+2026-03-04,internal,engineering-time,local,0.00,0.00,operations,deploy dev completed for commit 93b4656 and remote asset verification
+2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,crm embed palette inheritance fix deployed (de4d4b0)
+2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,owner chat cleanup single-column layout with inline continuous button and hidden normal-mode voice panel
+2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,owner response provider persona-1 concise guard + forbidden persona2 mention filter deployed (71867c3)
+2026-03-04,internal,engineering-time,local,0.00,0.00,governance,general SaaS audit with NX+skills focus and evidence report generation
+2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,skills manifest and automated skills audit wiring in start-day and npm scripts
+2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,owner chat persona boundary hardblock (frontend payload + owner-response-provider ignore whatsapp prompt) with regression test
+2026-03-04,internal,engineering-time,local,0.00,0.00,validation,saas endpoint/button action smoke audit executed on dev API with report evidence
+2026-03-04,internal,engineering-time,local,0.00,0.00,operations,commit a40a83f deployed to dev for owner persona boundary isolation
+2026-03-04,internal,engineering-time,local,0.00,0.00,validation,post-deploy saas endpoint smoke audit PASS25 WARN1 FAIL0
+2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,published crm runtime controls and ai stage followup automation parity in dev (commit 11a5243)
+2026-03-04,internal,engineering-time,local,0.00,0.00,validation,uat followup parity proof generated with automation scheduled and followups_for_lead=1
+2026-03-04,internal,engineering-time,local,0.00,0.00,governance,skills audit rerun confirms installed 48 and minimum threshold 37
