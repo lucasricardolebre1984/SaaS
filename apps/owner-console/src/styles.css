@@ -254,7 +254,7 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(210px, 240px);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   padding: var(--space-4);
   flex: 1;
@@ -268,6 +268,10 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.voice-panel {
+  display: none;
 }
 
 .settings-workspace {
@@ -839,6 +843,7 @@ body.continuous-active .shell-bg {
 }
 
 body.continuous-active .voice-panel {
+  display: flex;
   position: fixed;
   inset: 0;
   z-index: 60;
@@ -854,6 +859,11 @@ body.continuous-active .voice-panel {
 
 body.continuous-active .voice-panel .card__header {
   display: none;
+}
+
+.composer-tools .btn.is-active {
+  border-color: color-mix(in srgb, var(--color-primary) 65%, white);
+  background: color-mix(in srgb, var(--color-primary) 22%, var(--color-card));
 }
 
 body.continuous-active .continuous-back-btn {

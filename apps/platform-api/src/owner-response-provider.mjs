@@ -47,6 +47,32 @@ function normalizeAssistantContent(raw) {
   return parts.join('\n');
 }
 
+const OWNER_FORBIDDEN_IDENTITY_REGEX = /\b(vivian|persona\s*2|whatsapp\s+agent|whatsapp\s+concierge|carla\s+goncalves|carla\s+gonçalves)\b/gi;
+const OWNER_DEFAULT_MAX_REPLY_CHARS = 380;
+
+function normalizeOwnerReplyStyle(rawText, maxChars = OWNER_DEFAULT_MAX_REPLY_CHARS) {
+  let text = String(rawText ?? '')
+    .replace(/\r/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  if (!text) {
+    return 'Entendido. Diga a acao que voce quer executar.';
+  }
+
+  text = text.replace(OWNER_FORBIDDEN_IDENTITY_REGEX, 'assistente owner');
+  text = text.replace(/\s{2,}/g, ' ');
+
+  if (text.length <= maxChars) {
+    return text;
+  }
+
+  const clipped = text.slice(0, maxChars);
+  const withoutBrokenTail = clipped.replace(/\s+\S*$/, '').trim();
+  const finalText = withoutBrokenTail.length > 40 ? withoutBrokenTail : clipped.trim();
+  return `${finalText}...`;
+}
+
 function sanitizeAttachments(rawAttachments) {
   if (!Array.isArray(rawAttachments)) return [];
 
@@ -195,7 +221,11 @@ async function requestOpenAiResponsesReply(options, payload) {
   const whatsappPrompt = asNonEmptyString(payload?.persona_overrides?.whatsapp_agent_prompt);
 
   const instructionParts = [
-    'You are the neutral Owner Concierge for a modular SaaS. Keep responses concise and operational.'
+    'You are Persona 1 (Owner Concierge) for a modular SaaS.',
+    'Reply in Brazilian Portuguese only, concise and operational.',
+    'Do not roleplay named characters. Never mention Persona 2, Vivian, Carla, WhatsApp agent, or WhatsApp concierge.',
+    'Never add marketing intros. Go straight to the requested action.',
+    `Default max length: ${OWNER_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
   ];
   if (ownerPrompt) {
     instructionParts.push(`Owner persona override:\n${ownerPrompt}`);
@@ -258,7 +288,7 @@ async function requestOpenAiResponsesReply(options, payload) {
   }
 
   return {
-    text: outputText,
+    text: normalizeOwnerReplyStyle(outputText),
     provider: 'openai',
     model: asNonEmptyString(body?.model) ?? options.model,
     latency_ms: Math.max(0, Date.now() - startedAt),
@@ -270,7 +300,13 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
   const messages = [];
   messages.push({
     role: 'system',
-    content: 'You are the neutral Owner Concierge for a modular SaaS. Keep responses concise and operational.'
+    content: [
+      'You are Persona 1 (Owner Concierge) for a modular SaaS.',
+      'Reply in Brazilian Portuguese only, concise and operational.',
+      'Do not roleplay named characters. Never mention Persona 2, Vivian, Carla, WhatsApp agent, or WhatsApp concierge.',
+      'Never add marketing intros. Go straight to the requested action.',
+      `Default max length: ${OWNER_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
+    ].join(' ')
   });
 
   const ownerPrompt = asNonEmptyString(payload?.persona_overrides?.owner_concierge_prompt);
@@ -350,7 +386,7 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
   }
 
   return {
-    text,
+    text: normalizeOwnerReplyStyle(text),
     provider: 'openai',
     model: asNonEmptyString(body?.model) ?? options.model,
     latency_ms: Math.max(0, Date.now() - startedAt),

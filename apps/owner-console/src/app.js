@@ -160,6 +160,7 @@ const confirmationsLimitEl = document.getElementById('confirmationsLimit');
 const confirmationsRefreshBtn = document.getElementById('confirmationsRefreshBtn');
 
 const continuousBtn = document.getElementById('continuousBtn');
+const continuousInlineBtn = document.getElementById('continuousInlineBtn');
 const continuousStateEl = document.getElementById('continuousState');
 const continuousBackBtn = document.getElementById('continuousBackBtn');
 const avatarEl = document.getElementById('avatar');
@@ -1918,7 +1919,7 @@ function startContinuousVoiceRecognition() {
       stopContinuousSpeechOutput();
       applyContinuousUiState();
       continuousStateEl.textContent = 'one-shot';
-      continuousBtn.textContent = 'Ativar Continuo';
+      syncContinuousButtonsUi();
       return;
     }
 
@@ -1956,6 +1957,17 @@ function startContinuousVoiceRecognition() {
 
 function applyContinuousUiState() {
   bodyEl.classList.toggle('continuous-active', state.continuous === true);
+}
+
+function syncContinuousButtonsUi() {
+  const label = state.continuous ? 'Pausar Continua' : 'Fala Continua';
+  if (continuousBtn) {
+    continuousBtn.textContent = state.continuous ? 'Pausar Continuo' : 'Ativar Continuo';
+  }
+  if (continuousInlineBtn) {
+    continuousInlineBtn.textContent = label;
+    continuousInlineBtn.classList.toggle('is-active', state.continuous === true);
+  }
 }
 
 function isMobileViewport() {
@@ -2014,7 +2026,7 @@ function setActiveModule(moduleId) {
       stopContinuousSpeechOutput();
       applyContinuousUiState();
       continuousStateEl.textContent = 'one-shot';
-      continuousBtn.textContent = 'Ativar Continuo';
+      syncContinuousButtonsUi();
     }
     chatWorkspaceEl.classList.add('hidden');
     moduleWorkspaceEl.classList.add('hidden');
@@ -2031,7 +2043,7 @@ function setActiveModule(moduleId) {
       stopContinuousSpeechOutput();
       applyContinuousUiState();
       continuousStateEl.textContent = 'one-shot';
-      continuousBtn.textContent = 'Ativar Continuo';
+      syncContinuousButtonsUi();
     }
     chatWorkspaceEl.classList.add('hidden');
     moduleWorkspaceEl.classList.remove('hidden');
@@ -2561,7 +2573,7 @@ async function toggleContinuousMode() {
       stopContinuousSpeechOutput();
       continuousStateEl.textContent = 'one-shot';
     }
-    continuousBtn.textContent = state.continuous ? 'Pausar Continuo' : 'Ativar Continuo';
+    syncContinuousButtonsUi();
     updateConfigStatus(state.continuous ? 'Modo continuo ativado.' : 'Modo continuo pausado.');
     trackModuleSpend('mod-01-owner-concierge', 0.001, 1);
   } catch (error) {
@@ -2924,6 +2936,7 @@ function setupEvents() {
 
   healthBtn?.addEventListener('click', callHealth);
   continuousBtn?.addEventListener('click', toggleContinuousMode);
+  continuousInlineBtn?.addEventListener('click', toggleContinuousMode);
   if (recoverSessionBtn) {
     recoverSessionBtn.addEventListener('click', () => {
       recoverLatestSession();
@@ -3063,6 +3076,7 @@ async function bootstrap() {
   applyAvatarVideoSource();
   setupAvatarMobilePlay();
   bootstrapConfig();
+  syncContinuousButtonsUi();
   syncCrmEmbeddedFrame();
   renderModuleNav();
   setActiveModule('mod-01-owner-concierge');

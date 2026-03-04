@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-layout="studio" data-palette="darkgreen">
+<html lang="pt-BR" data-layout="zazi" data-palette="darkgreen">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -99,6 +99,7 @@
 
               <div class="composer-row">
                 <div class="composer-tools composer-tools--compact">
+                  <button id="continuousInlineBtn" class="btn btn--ghost" type="button">Fala Continua</button>
                   <button id="audioRecordBtn" class="btn btn--ghost" type="button">Audio</button>
                   <button id="photoPickBtn" class="btn btn--ghost" type="button">Foto</button>
                   <button id="filePickBtn" class="btn btn--ghost" type="button">Arquivo</button>
@@ -492,6 +493,7 @@
                 <select id="cfgLayout">
                   <option value="fabio2">Fabio2</option>
                   <option value="studio">Studio</option>
+                  <option value="zazi">Zazi</option>
                 </select>
               </label>
               <label>Paleta
@@ -576,6 +578,51 @@
             </div>
             <p class="settings-note">
               `suggest_only` bloqueia execucao em `ai/execute`. `assist_execute` permite executar resposta/stage pelo CRM.
+            </p>
+          </section>
+
+          <section class="card">
+            <header class="card__header">
+              <h3>CRM Pipeline e Automacao (Tenant)</h3>
+            </header>
+            <div class="settings-grid">
+              <label>Stages ativas (CSV)
+                <input
+                  id="cfgCrmPipelineStages"
+                  placeholder="new,contacted,qualified,proposal,negotiation,won,lost,nurturing"
+                />
+              </label>
+              <label>Stage default
+                <select id="cfgCrmDefaultStage">
+                  <option value="new">new</option>
+                  <option value="contacted">contacted</option>
+                  <option value="qualified">qualified</option>
+                  <option value="proposal">proposal</option>
+                  <option value="negotiation">negotiation</option>
+                  <option value="won">won</option>
+                  <option value="lost">lost</option>
+                  <option value="nurturing">nurturing</option>
+                </select>
+              </label>
+              <label class="toggle-label">
+                <input id="cfgCrmAutomationStageFollowupEnabled" type="checkbox" />
+                Follow-up automatico por stage
+              </label>
+              <label>Stages com follow-up (CSV)
+                <input id="cfgCrmAutomationStages" placeholder="qualified,proposal" />
+              </label>
+              <label>Delay follow-up (min)
+                <input id="cfgCrmAutomationDelayMinutes" type="number" min="0" max="10080" step="1" />
+              </label>
+              <label>Template follow-up
+                <input
+                  id="cfgCrmAutomationMessageTemplate"
+                  placeholder="Ola {lead_name}, seguimos na etapa {to_stage}."
+                />
+              </label>
+            </div>
+            <p class="settings-note">
+              Placeholders aceitos: <code>{lead_name}</code>, <code>{from_stage}</code>, <code>{to_stage}</code>, <code>{tenant_id}</code>.
             </p>
           </section>
 
