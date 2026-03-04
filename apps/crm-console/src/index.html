@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-layout="studio" data-palette="darkgreen">
+<html lang="pt-BR" data-layout="zazi" data-palette="darkgreen">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -41,28 +41,36 @@
           </div>
 
           <div class="topbar__right">
-            <label>API<input id="apiBase" value="" placeholder="auto (/api ou 4300)" /></label>
-            <label>Tenant<input id="tenantId" value="tenant_automania" /></label>
-            <label>
-              Layout
-              <select id="layoutSelect">
-                <option value="fabio2">Fabio2</option>
-                <option value="studio">Studio</option>
-              </select>
-            </label>
-            <label>
-              Paleta
-              <select id="paletteSelect">
-                <option value="darkgreen">Dark Green</option>
-                <option value="ocean">Ocean</option>
-                <option value="forest">Forest</option>
-                <option value="sunset">Sunset</option>
-              </select>
-            </label>
-            <button id="applyTenantThemeBtn" class="btn btn--ghost" type="button">Tema Tenant</button>
+            <div class="topbar__status" aria-live="polite">
+              <span class="status-pill">Config no Modulo 06</span>
+              <span class="status-pill">Modo Operacional</span>
+            </div>
             <button id="reloadBtn" class="btn" type="button">Atualizar</button>
           </div>
         </header>
+
+        <section class="runtime-controls-hidden" hidden aria-hidden="true">
+          <label>API<input id="apiBase" value="" placeholder="auto (/api ou 4300)" /></label>
+          <label>Tenant<input id="tenantId" value="tenant_automania" /></label>
+          <label>
+            Layout
+            <select id="layoutSelect">
+              <option value="fabio2">Fabio2</option>
+              <option value="studio">Studio</option>
+              <option value="zazi">Zazi</option>
+            </select>
+          </label>
+          <label>
+            Paleta
+            <select id="paletteSelect">
+              <option value="darkgreen">Dark Green</option>
+              <option value="ocean">Ocean</option>
+              <option value="forest">Forest</option>
+              <option value="sunset">Sunset</option>
+            </select>
+          </label>
+          <button id="applyTenantThemeBtn" class="btn btn--ghost" type="button">Tema Tenant</button>
+        </section>
 
         <main class="workspace">
           <section class="main-grid">

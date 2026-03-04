@@ -233,6 +233,17 @@ body {
   justify-content: flex-end;
 }
 
+.topbar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.runtime-controls-hidden {
+  display: none;
+}
+
 label {
   display: grid;
   gap: 4px;
@@ -1147,6 +1158,81 @@ html[data-layout='studio'] .pipeline-column.is-drop-target {
     0 0 20px color-mix(in srgb, var(--color-primary) 24%, transparent);
 }
 
+/* Layout 3: Zazi Enterprise (clean-room legacy-inspired) */
+html[data-layout='zazi'] {
+  --color-bg: #f4f7fb;
+  --color-bg-soft: #eaf0f7;
+  --color-text: #0f172a;
+  --color-muted: #5e7388;
+  --color-border: #d4e0eb;
+  --color-card: #ffffff;
+  --color-sidebar: #102a43;
+  --color-sidebar-border: #243b53;
+  --color-sidebar-text: #d9e2ec;
+  --color-sidebar-text-soft: #9fb3c8;
+  --color-sidebar-active: #334e68;
+  --color-primary: #627d98;
+  --color-primary-strong: #486581;
+  --color-pill: #edf2f8;
+}
+
+html[data-layout='zazi'] .shell-bg {
+  background:
+    radial-gradient(circle at 10% 12%, rgba(98, 125, 152, 0.22), transparent 35%),
+    radial-gradient(circle at 90% 88%, rgba(72, 101, 129, 0.2), transparent 33%),
+    linear-gradient(150deg, #f7faff, #eaf0f7);
+}
+
+html[data-layout='zazi'] .sidebar {
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+html[data-layout='zazi'] .module-nav__item.is-active {
+  border-color: #627d98;
+  background: linear-gradient(150deg, #486581, #334e68);
+}
+
+html[data-layout='zazi'] .topbar {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom-color: #d4e0eb;
+}
+
+html[data-layout='zazi'] input,
+html[data-layout='zazi'] select,
+html[data-layout='zazi'] .menu-btn,
+html[data-layout='zazi'] .btn--ghost {
+  background: #ffffff;
+}
+
+html[data-layout='zazi'] .card {
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+html[data-layout='zazi'] .thread-message.is-inbound {
+  background: #eef2f7;
+  border-color: #d4e0eb;
+}
+
+html[data-layout='zazi'] .thread-message.is-outbound {
+  background: #eff6ff;
+  border-color: #d9e8ff;
+}
+
+html[data-layout='zazi'] .view-tab.is-active,
+html[data-layout='zazi'] .board-tab.is-active {
+  border-color: #627d98;
+  background: #eaf0f7;
+}
+
+html[data-layout='zazi'] .status-pill,
+html[data-layout='zazi'] .detail-task-item,
+html[data-layout='zazi'] .pipeline-column,
+html[data-layout='zazi'] .pipeline-lead,
+html[data-layout='zazi'] .detail-activities li,
+html[data-layout='zazi'] .metric-bar__track {
+  border-color: #d4e0eb;
+}
+
 @keyframes studio-bg-drift {
   0% {
     filter: saturate(100%);
@@ -1233,6 +1319,10 @@ html[data-layout='studio'] .pipeline-column.is-drop-target {
 
   .topbar__right {
     justify-content: flex-start;
+  }
+
+  .topbar__status {
+    width: 100%;
   }
 
   input,

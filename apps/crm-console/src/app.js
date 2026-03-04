@@ -1,10 +1,10 @@
-const VALID_LAYOUTS = ['fabio2', 'studio'];
+const VALID_LAYOUTS = ['fabio2', 'studio', 'zazi'];
 const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const API_BASE_STORAGE_KEY = 'crm_console_api_base_v1';
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'studio', palette: 'darkgreen' },
+  tenant_automania: { layout: 'zazi', palette: 'darkgreen' },
   tenant_clinica: { layout: 'studio', palette: 'forest' },
   tenant_comercial: { layout: 'studio', palette: 'sunset' }
 };
@@ -27,6 +27,17 @@ const STAGE_TRIGGERS = {
   'nurturing->lost': 'nurture_expired',
   'lost->nurturing': 'reopen_requested'
 };
+const CRM_STAGE_KEYS = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'nurturing'];
+const DEFAULT_TENANT_PIPELINE_STAGES = [
+  { stage: 'new', label: 'New', active: true, order: 10 },
+  { stage: 'contacted', label: 'Contacted', active: true, order: 20 },
+  { stage: 'qualified', label: 'Qualified', active: true, order: 30 },
+  { stage: 'proposal', label: 'Proposal', active: true, order: 40 },
+  { stage: 'negotiation', label: 'Negotiation', active: true, order: 50 },
+  { stage: 'won', label: 'Won', active: true, order: 60 },
+  { stage: 'lost', label: 'Lost', active: true, order: 70 },
+  { stage: 'nurturing', label: 'Nurturing', active: true, order: 80 }
+];
 
 const rootEl = document.documentElement;
 const bodyEl = document.body;
@@ -94,9 +105,13 @@ const kpis = {
 
 let embeddedMode = false;
 let leadsCache = [];
+let dealsCache = [];
 let conversationsCache = [];
+let savedViewsCache = [];
 let selectedConversationId = null;
 let selectedThreadMessages = [];
+let selectedDealActivities = [];
+let selectedDealTasks = [];
 let latestAiDraftReply = '';
 let latestAiQualifySuggestion = null;
 let inboxPollingTimer = null;
@@ -104,26 +119,19 @@ let inboxPollingInFlight = false;
 const INBOX_POLL_INTERVAL_MS = 5000;
 let currentMainView = 'inbox';
 let activeSavedViewId = '';
-let tasksByLead = {};
 const filters = {
   search: '',
   stage: 'all',
   channel: 'all',
   groupBy: 'stage'
 };
-const SAVED_VIEW_KEY_PREFIX = 'crm_console_saved_views_v1';
-const TASKS_KEY_PREFIX = 'crm_console_tasks_v1';
-
-const PIPELINE_COLUMNS = [
-  { id: 'new', label: 'New' },
-  { id: 'contacted', label: 'Contacted' },
-  { id: 'qualified', label: 'Qualified' },
-  { id: 'proposal', label: 'Proposal' },
-  { id: 'negotiation', label: 'Negotiation' },
-  { id: 'won', label: 'Won' },
-  { id: 'lost', label: 'Lost' },
-  { id: 'nurturing', label: 'Nurturing' }
-];
+const DEAL_STAGE_VALUES = new Set(CRM_STAGE_KEYS);
+let tenantCrmRuntime = {
+  pipeline: {
+    stages: DEFAULT_TENANT_PIPELINE_STAGES.map((item) => ({ ...item })),
+    default_stage: 'new'
+  }
+};
 
 function normalizeLayout(layout) {
   return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
@@ -210,53 +218,8 @@ function tenantId() {
   return tenantIdInput.value.trim();
 }
 
-function tenantStorageSuffix() {
-  return tenantId().toLowerCase() || 'default';
-}
-
-function savedViewStorageKey() {
-  return `${SAVED_VIEW_KEY_PREFIX}:${tenantStorageSuffix()}`;
-}
-
-function taskStorageKey() {
-  return `${TASKS_KEY_PREFIX}:${tenantStorageSuffix()}`;
-}
-
 function loadSavedViews() {
-  try {
-    const raw = localStorage.getItem(savedViewStorageKey());
-    const parsed = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item) => item && typeof item === 'object' && item.id && item.name && item.filters);
-  } catch {
-    return [];
-  }
-}
-
-function persistSavedViews(views) {
-  try {
-    localStorage.setItem(savedViewStorageKey(), JSON.stringify(views));
-  } catch {
-    // no-op
-  }
-}
-
-function loadTasks() {
-  try {
-    const raw = localStorage.getItem(taskStorageKey());
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function persistTasks() {
-  try {
-    localStorage.setItem(taskStorageKey(), JSON.stringify(tasksByLead));
-  } catch {
-    // no-op
-  }
+  return savedViewsCache.filter((item) => item && typeof item === 'object' && item.view_id && item.name && item.filters);
 }
 
 function applyBootstrapFromQuery() {
@@ -297,7 +260,6 @@ function applyBootstrapFromQuery() {
       persist: true
     });
   }
-  tasksByLead = loadTasks();
   renderSavedViewOptions();
 }
 
@@ -335,6 +297,149 @@ function getLeadByPhone(phone) {
   return leadsCache.find((item) => item.phone_e164 === phone) ?? null;
 }
 
+function dealTimestampMs(deal) {
+  const updated = new Date(deal?.updated_at ?? 0).getTime();
+  const created = new Date(deal?.created_at ?? 0).getTime();
+  if (Number.isFinite(updated) && Number.isFinite(created)) {
+    return Math.max(updated, created);
+  }
+  if (Number.isFinite(updated)) return updated;
+  if (Number.isFinite(created)) return created;
+  return 0;
+}
+
+function normalizeDealStageForPayload(stage) {
+  const raw = String(stage || '').trim().toLowerCase();
+  if (DEAL_STAGE_VALUES.has(raw)) return raw;
+  if (raw === 'negotiation') return 'proposal';
+  return 'new';
+}
+
+function normalizeCrmStage(value, fallback = 'new') {
+  const raw = String(value ?? '').trim().toLowerCase();
+  return CRM_STAGE_KEYS.includes(raw) ? raw : fallback;
+}
+
+function normalizeTenantPipelineStages(items) {
+  const source = Array.isArray(items) ? items : DEFAULT_TENANT_PIPELINE_STAGES;
+  const dedup = new Map();
+  for (let index = 0; index < source.length; index += 1) {
+    const item = source[index];
+    if (!item || typeof item !== 'object') continue;
+    const stage = normalizeCrmStage(item.stage, '');
+    if (!stage) continue;
+    dedup.set(stage, {
+      stage,
+      label: String(item.label ?? '').trim() || (stage.charAt(0).toUpperCase() + stage.slice(1)),
+      active: item.active !== false,
+      order: Number.isFinite(Number(item.order)) ? Math.floor(Number(item.order)) : (index + 1) * 10
+    });
+  }
+  if (dedup.size === 0) {
+    return DEFAULT_TENANT_PIPELINE_STAGES.map((item) => ({ ...item }));
+  }
+  return [...dedup.values()].sort((left, right) => {
+    if (left.order !== right.order) return left.order - right.order;
+    return left.stage.localeCompare(right.stage);
+  });
+}
+
+function activeTenantPipelineStages() {
+  const stages = normalizeTenantPipelineStages(tenantCrmRuntime?.pipeline?.stages);
+  const active = stages.filter((item) => item.active !== false);
+  return active.length > 0 ? active : stages;
+}
+
+function refreshStageDrivenInputs() {
+  const activeStages = activeTenantPipelineStages();
+  const defaultStage = normalizeCrmStage(
+    tenantCrmRuntime?.pipeline?.default_stage,
+    activeStages[0]?.stage ?? 'new'
+  );
+  const stageOptions = activeStages
+    .map((item) => `<option value="${safeText(item.stage)}">${safeText(item.stage)}</option>`)
+    .join('');
+  if (threadStageSelect) {
+    threadStageSelect.innerHTML = stageOptions;
+    threadStageSelect.value = activeStages.some((item) => item.stage === defaultStage)
+      ? defaultStage
+      : (activeStages[0]?.stage ?? 'new');
+  }
+  const leadStageOptions = activeStages
+    .map((item) => `<option value="${safeText(item.stage)}">${safeText(item.stage)}</option>`)
+    .join('');
+  const createLeadStageSelect = document.getElementById('stage');
+  if (createLeadStageSelect) {
+    createLeadStageSelect.innerHTML = leadStageOptions;
+    createLeadStageSelect.value = activeStages.some((item) => item.stage === defaultStage)
+      ? defaultStage
+      : (activeStages[0]?.stage ?? 'new');
+  }
+
+  const filterOptions = ['<option value="all">Todos</option>']
+    .concat(activeStages.map((item) => `<option value="${safeText(item.stage)}">${safeText(item.stage)}</option>`))
+    .join('');
+  if (leadStageFilter) {
+    leadStageFilter.innerHTML = filterOptions;
+    const normalizedFilter = String(filters.stage || 'all').toLowerCase();
+    leadStageFilter.value = activeStages.some((item) => item.stage === normalizedFilter) ? normalizedFilter : 'all';
+    filters.stage = leadStageFilter.value;
+  }
+}
+
+async function loadTenantRuntimeConfig() {
+  const tid = tenantId();
+  if (!tid) return;
+  try {
+    const response = await fetch(`${apiBase()}/v1/owner-concierge/runtime-config?tenant_id=${encodeURIComponent(tid)}`);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.details || body.error || `HTTP ${response.status}`);
+    }
+    const stages = normalizeTenantPipelineStages(body?.crm?.pipeline?.stages);
+    const defaultStage = normalizeCrmStage(body?.crm?.pipeline?.default_stage, stages[0]?.stage ?? 'new');
+    tenantCrmRuntime = {
+      pipeline: {
+        stages,
+        default_stage: stages.some((item) => item.stage === defaultStage)
+          ? defaultStage
+          : stages[0]?.stage ?? 'new'
+      }
+    };
+  } catch {
+    tenantCrmRuntime = {
+      pipeline: {
+        stages: DEFAULT_TENANT_PIPELINE_STAGES.map((item) => ({ ...item })),
+        default_stage: 'new'
+      }
+    };
+  }
+  refreshStageDrivenInputs();
+}
+
+function getDealByLeadId(leadId) {
+  if (!leadId) return null;
+  const matches = dealsCache.filter((item) => item.lead_id === leadId);
+  if (!matches.length) return null;
+  matches.sort((left, right) => dealTimestampMs(right) - dealTimestampMs(left));
+  return matches[0];
+}
+
+function getEffectiveLeadStage(lead) {
+  const deal = getDealByLeadId(lead?.lead_id);
+  return String(deal?.stage || lead?.stage || 'new').toLowerCase();
+}
+
+function mapLeadForUi(lead) {
+  const deal = getDealByLeadId(lead.lead_id);
+  return {
+    ...lead,
+    stage: deal?.stage ?? lead.stage,
+    deal_id: deal?.deal_id ?? null,
+    deal_title: deal?.title ?? null
+  };
+}
+
 function selectedConversation() {
   return conversationsCache.find((item) => item.conversation_id === selectedConversationId) ?? null;
 }
@@ -346,7 +451,7 @@ function applyThreadMeta(conversation) {
     return;
   }
   const linkedLead = getLeadById(conversation.lead_id) ?? getLeadByPhone(conversation.contact_e164);
-  const stage = linkedLead?.stage ?? conversation.lead_stage ?? 'sem_stage';
+  const stage = linkedLead ? getEffectiveLeadStage(linkedLead) : (conversation.lead_stage ?? 'sem_stage');
   threadContactEl.textContent = conversation.display_name || conversation.contact_e164;
   threadMetaEl.textContent = `${conversation.contact_e164} | stage: ${stage}`;
 }
@@ -356,68 +461,180 @@ function getLinkedLeadForConversation(conversation) {
   return getLeadById(conversation.lead_id) ?? getLeadByPhone(conversation.contact_e164);
 }
 
+function getLinkedDealForConversation(conversation) {
+  const linkedLead = getLinkedLeadForConversation(conversation);
+  if (!linkedLead?.lead_id) return null;
+  return getDealByLeadId(linkedLead.lead_id);
+}
+
+async function createDealForLead(lead) {
+  const response = await fetch(`${apiBase()}/v1/crm/deals`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      request: {
+        request_id: crypto.randomUUID(),
+        tenant_id: tenantId(),
+        source_module: 'mod-02-whatsapp-crm',
+        deal: {
+          lead_id: lead.lead_id,
+          external_key: `lead-${lead.lead_id}`,
+          title: lead.display_name || lead.phone_e164 || `Lead ${lead.lead_id}`,
+          stage: normalizeDealStageForPayload(lead.stage),
+          metadata: {
+            origin: 'crm-console-auto-link'
+          }
+        }
+      }
+    })
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.details || body.error || `HTTP ${response.status}`);
+  }
+  return body.response?.deal ?? null;
+}
+
+async function ensureDealForLead(lead) {
+  if (!lead?.lead_id) return null;
+  const cached = getDealByLeadId(lead.lead_id);
+  if (cached) return cached;
+  const created = await createDealForLead(lead);
+  if (!created?.deal_id) return null;
+  dealsCache = [created, ...dealsCache.filter((item) => item.deal_id !== created.deal_id)];
+  return created;
+}
+
+async function loadSelectedDealDetails() {
+  const conversation = selectedConversation();
+  const linkedDeal = getLinkedDealForConversation(conversation);
+  if (!linkedDeal?.deal_id) {
+    selectedDealActivities = [];
+    selectedDealTasks = [];
+    return;
+  }
+
+  const dealIdQuery = encodeURIComponent(linkedDeal.deal_id);
+  const tenantQuery = encodeURIComponent(tenantId());
+
+  try {
+    const [activitiesRes, tasksRes] = await Promise.all([
+      fetch(`${apiBase()}/v1/crm/activities?tenant_id=${tenantQuery}&deal_id=${dealIdQuery}&limit=200`),
+      fetch(`${apiBase()}/v1/crm/tasks?tenant_id=${tenantQuery}&deal_id=${dealIdQuery}&limit=200`)
+    ]);
+
+    const [activitiesBody, tasksBody] = await Promise.all([
+      activitiesRes.json().catch(() => ({})),
+      tasksRes.json().catch(() => ({}))
+    ]);
+
+    if (!activitiesRes.ok) {
+      throw new Error(activitiesBody.details || activitiesBody.error || `HTTP ${activitiesRes.status}`);
+    }
+    if (!tasksRes.ok) {
+      throw new Error(tasksBody.details || tasksBody.error || `HTTP ${tasksRes.status}`);
+    }
+
+    selectedDealActivities = Array.isArray(activitiesBody.items) ? activitiesBody.items : [];
+    selectedDealTasks = Array.isArray(tasksBody.items) ? tasksBody.items : [];
+  } catch (error) {
+    selectedDealActivities = [];
+    selectedDealTasks = [];
+    formStatus.textContent = `Falha ao carregar painel de deal: ${error.message}`;
+  }
+}
+
 function renderDetailPanel() {
   const conversation = selectedConversation();
   const linkedLead = getLinkedLeadForConversation(conversation);
+  const linkedDeal = getLinkedDealForConversation(conversation);
   const fallbackName = conversation?.display_name || conversation?.contact_e164 || '--';
-  const leadStage = linkedLead?.stage || conversation?.lead_stage || '--';
+  const leadStage = linkedDeal?.stage || getEffectiveLeadStage(linkedLead) || conversation?.lead_stage || '--';
   const leadPhone = linkedLead?.phone_e164 || conversation?.contact_e164 || '--';
   const leadChannel = linkedLead?.source_channel || 'whatsapp';
-  const leadId = linkedLead?.lead_id || '--';
+  const leadId = linkedDeal?.deal_id || linkedLead?.lead_id || '--';
 
   detailLeadNameEl.textContent = fallbackName;
   detailLeadStageEl.textContent = leadStage;
   detailLeadPhoneEl.textContent = leadPhone;
   detailLeadChannelEl.textContent = leadChannel;
   detailLeadIdEl.textContent = leadId;
-  renderDetailTasks(linkedLead);
+  renderDetailTasks(linkedDeal);
 
-  if (!selectedThreadMessages.length) {
-    detailActivityListEl.innerHTML = '<li class="empty">Sem atividades.</li>';
+  if (selectedDealActivities.length) {
+    const activities = [...selectedDealActivities]
+      .sort((a, b) => new Date(b.occurred_at || b.created_at || 0).getTime() - new Date(a.occurred_at || a.created_at || 0).getTime())
+      .slice(0, 8)
+      .map((activity) => {
+        const kind = String(activity.kind || 'note').toLowerCase();
+        const isInbound = kind === 'message' && activity.metadata?.direction !== 'outbound';
+        const badgeClass = isInbound ? 'is-inbound' : 'is-outbound';
+        const bodyText = normalizeBrandText(String(activity.body ?? activity.title ?? '').trim()) || '(sem conteudo)';
+        const titleText = String(activity.title || kind).trim();
+        return `
+          <li>
+            <article class="detail-activity-card">
+              <div class="detail-activity-card__top">
+                <span class="detail-activity-badge ${badgeClass}">${safeText(kind)}</span>
+                <span class="detail-activity-badge">${safeText(titleText)}</span>
+                <span class="detail-activity-time">${safeText(formatTime(activity.occurred_at || activity.created_at))}</span>
+              </div>
+              <div class="detail-activity-text">${safeText(bodyText)}</div>
+            </article>
+          </li>
+        `;
+      })
+      .join('');
+    detailActivityListEl.innerHTML = activities;
     return;
   }
 
-  const activities = [...selectedThreadMessages]
-    .sort((a, b) => new Date(b.created_at || b.occurred_at || 0).getTime() - new Date(a.created_at || a.occurred_at || 0).getTime())
-    .slice(0, 6)
-    .map((message) => {
-      const outbound = message.direction === 'outbound';
-      const direction = outbound ? 'Saida' : 'Entrada';
-      const text = normalizeBrandText(String(message.text ?? '').trim()) || '(sem texto)';
-      const delivery = String(message.delivery_state || 'unknown');
-      return `
-        <li>
-          <article class="detail-activity-card">
-            <div class="detail-activity-card__top">
-              <span class="detail-activity-badge ${outbound ? 'is-outbound' : 'is-inbound'}">${safeText(direction)}</span>
-              <span class="detail-activity-badge">${safeText(delivery)}</span>
-              <span class="detail-activity-time">${safeText(formatTime(message.created_at || message.occurred_at))}</span>
-            </div>
-            <div class="detail-activity-text">${safeText(text)}</div>
-          </article>
-        </li>
-      `;
-    })
-    .join('');
+  if (selectedThreadMessages.length) {
+    const fallbackMessages = [...selectedThreadMessages]
+      .sort((a, b) => new Date(b.created_at || b.occurred_at || 0).getTime() - new Date(a.created_at || a.occurred_at || 0).getTime())
+      .slice(0, 6)
+      .map((message) => {
+        const outbound = message.direction === 'outbound';
+        const direction = outbound ? 'Saida' : 'Entrada';
+        const text = normalizeBrandText(String(message.text ?? '').trim()) || '(sem texto)';
+        const delivery = String(message.delivery_state || 'unknown');
+        return `
+          <li>
+            <article class="detail-activity-card">
+              <div class="detail-activity-card__top">
+                <span class="detail-activity-badge ${outbound ? 'is-outbound' : 'is-inbound'}">${safeText(direction)}</span>
+                <span class="detail-activity-badge">${safeText(delivery)}</span>
+                <span class="detail-activity-time">${safeText(formatTime(message.created_at || message.occurred_at))}</span>
+              </div>
+              <div class="detail-activity-text">${safeText(text)}</div>
+            </article>
+          </li>
+        `;
+      })
+      .join('');
+    detailActivityListEl.innerHTML = fallbackMessages;
+    return;
+  }
 
-  detailActivityListEl.innerHTML = activities;
+  detailActivityListEl.innerHTML = '<li class="empty">Sem atividades.</li>';
 }
 
-function renderDetailTasks(lead) {
-  if (!lead?.lead_id) {
-    detailTaskListEl.innerHTML = '<li class="empty">Sem tarefas.</li>';
+function renderDetailTasks(deal) {
+  if (!deal?.deal_id) {
+    detailTaskListEl.innerHTML = '<li class="empty">Sem deal vinculado para tarefas.</li>';
     return;
   }
-  const leadTasks = Array.isArray(tasksByLead[lead.lead_id]) ? tasksByLead[lead.lead_id] : [];
-  if (!leadTasks.length) {
+  if (!selectedDealTasks.length) {
     detailTaskListEl.innerHTML = '<li class="empty">Sem tarefas.</li>';
     return;
   }
 
-  detailTaskListEl.innerHTML = leadTasks
+  detailTaskListEl.innerHTML = [...selectedDealTasks]
     .sort((a, b) => {
       if (a.status !== b.status) return a.status === 'done' ? 1 : -1;
-      return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      const aDue = new Date(a.due_at || a.created_at || 0).getTime();
+      const bDue = new Date(b.due_at || b.created_at || 0).getTime();
+      return aDue - bDue;
     })
     .map((task) => {
       const done = task.status === 'done';
@@ -425,72 +642,77 @@ function renderDetailTasks(lead) {
         <li class="detail-task-item ${done ? 'is-done' : ''}">
           <div class="detail-task-item__top">
             <span class="detail-task-item__title">${safeText(task.title || '(sem titulo)')}</span>
-            <span class="detail-task-item__meta">${safeText(done ? 'concluida' : 'pendente')}</span>
+            <span class="detail-task-item__meta">${safeText(task.status || (done ? 'done' : 'pending'))}</span>
           </div>
+          <div class="detail-task-item__meta">Prioridade: ${safeText(task.priority || 'medium')}</div>
           <div class="detail-task-item__meta">Criada: ${safeText(formatTime(task.created_at))}</div>
           <div class="detail-task-item__meta">Prazo: ${safeText(formatTime(task.due_at))}</div>
-          <div class="detail-task-actions">
-            <button class="btn btn--ghost" type="button" data-task-toggle="${safeText(task.id)}">${done ? 'Reabrir' : 'Concluir'}</button>
-            <button class="btn btn--ghost" type="button" data-task-remove="${safeText(task.id)}">Remover</button>
-          </div>
         </li>
       `;
     })
     .join('');
 }
 
-function addDetailTask(event) {
+async function addDetailTask(event) {
   event.preventDefault();
   const conversation = selectedConversation();
   const linkedLead = getLinkedLeadForConversation(conversation);
-  if (!linkedLead?.lead_id) {
+  if (!linkedLead) {
     formStatus.textContent = 'Selecione uma conversa com lead para criar tarefa.';
     return;
   }
+
+  let linkedDeal;
+  try {
+    linkedDeal = await ensureDealForLead(linkedLead);
+  } catch (error) {
+    formStatus.textContent = `Falha ao vincular deal para tarefa: ${error.message}`;
+    return;
+  }
+  if (!linkedDeal?.deal_id) {
+    formStatus.textContent = 'Nao foi possivel localizar/criar deal para esta conversa.';
+    return;
+  }
+
   const title = String(detailTaskTitleInput.value || '').trim();
   if (!title) return;
   const dueAt = String(detailTaskDueInput.value || '').trim();
-  const leadId = linkedLead.lead_id;
-  if (!Array.isArray(tasksByLead[leadId])) {
-    tasksByLead[leadId] = [];
+
+  try {
+    const response = await fetch(`${apiBase()}/v1/crm/tasks`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: crypto.randomUUID(),
+          tenant_id: tenantId(),
+          source_module: 'mod-02-whatsapp-crm',
+          task: {
+            deal_id: linkedDeal.deal_id,
+            title,
+            due_at: dueAt ? new Date(dueAt).toISOString() : null,
+            status: 'pending',
+            priority: 'medium',
+            metadata: {
+              origin: 'crm-console-detail-panel'
+            }
+          }
+        }
+      })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.details || body.error || `HTTP ${response.status}`);
+    }
+
+    detailTaskTitleInput.value = '';
+    detailTaskDueInput.value = '';
+    await loadSelectedDealDetails();
+    renderDetailPanel();
+    formStatus.textContent = `Tarefa criada para ${linkedLead.display_name || linkedLead.phone_e164}.`;
+  } catch (error) {
+    formStatus.textContent = `Falha ao criar tarefa: ${error.message}`;
   }
-  tasksByLead[leadId].push({
-    id: `task_${crypto.randomUUID()}`,
-    title,
-    due_at: dueAt ? new Date(dueAt).toISOString() : '',
-    created_at: new Date().toISOString(),
-    status: 'pending'
-  });
-  persistTasks();
-  detailTaskTitleInput.value = '';
-  detailTaskDueInput.value = '';
-  renderDetailTasks(linkedLead);
-  formStatus.textContent = `Tarefa criada para ${linkedLead.display_name || linkedLead.phone_e164}.`;
-}
-
-function handleTaskActionClick(event) {
-  const toggleId = event.target?.getAttribute?.('data-task-toggle');
-  const removeId = event.target?.getAttribute?.('data-task-remove');
-  if (!toggleId && !removeId) return;
-  const conversation = selectedConversation();
-  const linkedLead = getLinkedLeadForConversation(conversation);
-  if (!linkedLead?.lead_id) return;
-  const leadId = linkedLead.lead_id;
-  const leadTasks = Array.isArray(tasksByLead[leadId]) ? tasksByLead[leadId] : [];
-  if (!leadTasks.length) return;
-
-  if (toggleId) {
-    tasksByLead[leadId] = leadTasks.map((task) => (
-      task.id === toggleId
-        ? { ...task, status: task.status === 'done' ? 'pending' : 'done' }
-        : task
-    ));
-  } else if (removeId) {
-    tasksByLead[leadId] = leadTasks.filter((task) => task.id !== removeId);
-  }
-
-  persistTasks();
-  renderDetailTasks(linkedLead);
 }
 
 function switchMainView(nextView) {
@@ -516,10 +738,10 @@ function applyFiltersToInputs() {
 function renderSavedViewOptions() {
   const views = loadSavedViews();
   const options = ['<option value="">Padrao</option>']
-    .concat(views.map((view) => `<option value="${safeText(view.id)}">${safeText(view.name)}</option>`))
+    .concat(views.map((view) => `<option value="${safeText(view.view_id)}">${safeText(view.name)}</option>`))
     .join('');
   savedViewSelect.innerHTML = options;
-  savedViewSelect.value = views.some((view) => view.id === activeSavedViewId) ? activeSavedViewId : '';
+  savedViewSelect.value = views.some((view) => view.view_id === activeSavedViewId) ? activeSavedViewId : '';
 }
 
 function resetFiltersToDefault() {
@@ -532,7 +754,7 @@ function resetFiltersToDefault() {
 
 function applySavedViewById(viewId) {
   const views = loadSavedViews();
-  const selected = views.find((view) => view.id === viewId);
+  const selected = views.find((view) => view.view_id === viewId);
   if (!selected) {
     resetFiltersToDefault();
     applyFiltersToInputs();
@@ -544,32 +766,76 @@ function applySavedViewById(viewId) {
   filters.stage = String(selected.filters.stage ?? 'all');
   filters.channel = String(selected.filters.channel ?? 'all');
   filters.groupBy = String(selected.filters.groupBy ?? 'stage');
-  activeSavedViewId = selected.id;
+  activeSavedViewId = selected.view_id;
   applyFiltersToInputs();
   refreshLeadViews();
   renderSavedViewOptions();
 }
 
-function saveCurrentView() {
+function resolveSavedViewModule() {
+  if (currentMainView === 'inbox') return 'crm.inbox';
+  if (currentMainView === 'leads') return 'crm.deals';
+  return 'crm.pipeline';
+}
+
+async function loadSavedViewsFromApi() {
+  try {
+    const moduleName = resolveSavedViewModule();
+    const response = await fetch(`${apiBase()}/v1/crm/views?tenant_id=${encodeURIComponent(tenantId())}&module=${encodeURIComponent(moduleName)}&limit=200`);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.details || body.error || `HTTP ${response.status}`);
+    }
+    savedViewsCache = Array.isArray(body.items) ? body.items : [];
+  } catch (error) {
+    savedViewsCache = [];
+    formStatus.textContent = `Falha ao carregar views salvas: ${error.message}`;
+  }
+}
+
+async function saveCurrentView() {
   const name = window.prompt('Nome da view:');
   if (!name || !name.trim()) return;
   const trimmed = name.trim();
-  const views = loadSavedViews();
-  const id = `view_${crypto.randomUUID()}`;
-  views.push({
-    id,
-    name: trimmed,
-    filters: {
-      search: filters.search,
-      stage: filters.stage,
-      channel: filters.channel,
-      groupBy: filters.groupBy
+
+  try {
+    const response = await fetch(`${apiBase()}/v1/crm/views`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          request_id: crypto.randomUUID(),
+          tenant_id: tenantId(),
+          source_module: 'mod-02-whatsapp-crm',
+          view: {
+            name: trimmed,
+            module: resolveSavedViewModule(),
+            scope: 'private',
+            filters: {
+              search: filters.search,
+              stage: filters.stage,
+              channel: filters.channel,
+              groupBy: filters.groupBy
+            },
+            sort: {
+              field: 'updated_at',
+              direction: 'desc'
+            }
+          }
+        }
+      })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.details || body.error || `HTTP ${response.status}`);
     }
-  });
-  persistSavedViews(views);
-  activeSavedViewId = id;
-  renderSavedViewOptions();
-  formStatus.textContent = `View "${trimmed}" salva.`;
+    await loadSavedViewsFromApi();
+    activeSavedViewId = body.response?.view?.view_id ?? '';
+    renderSavedViewOptions();
+    formStatus.textContent = `View "${trimmed}" salva.`;
+  } catch (error) {
+    formStatus.textContent = `Falha ao salvar view: ${error.message}`;
+  }
 }
 
 function deleteActiveView() {
@@ -577,14 +843,7 @@ function deleteActiveView() {
     formStatus.textContent = 'Selecione uma view salva para excluir.';
     return;
   }
-  const views = loadSavedViews();
-  const selected = views.find((view) => view.id === activeSavedViewId);
-  const next = views.filter((view) => view.id !== activeSavedViewId);
-  persistSavedViews(next);
-  const removedName = selected?.name || activeSavedViewId;
-  activeSavedViewId = '';
-  renderSavedViewOptions();
-  formStatus.textContent = `View "${removedName}" removida.`;
+  formStatus.textContent = 'Exclusao de view ainda nao esta disponivel nesta fase (endpoint PATCH/DELETE pendente).';
 }
 
 function getFilteredLeads(sourceLeads = []) {
@@ -628,7 +887,7 @@ function getPipelineColumnsForCurrentGroup(leads = []) {
       ? dynamic.map((channel) => ({ id: channel, label: channel }))
       : [{ id: 'whatsapp', label: 'whatsapp' }];
   }
-  return PIPELINE_COLUMNS;
+  return activeTenantPipelineStages().map((item) => ({ id: item.stage, label: item.label || item.stage }));
 }
 
 function getLeadBucketValue(lead) {
@@ -657,6 +916,7 @@ function renderPipeline(leads = []) {
     const cards = columnLeads.length
       ? columnLeads.map((lead) => {
         const leadId = String(lead.lead_id || '');
+        const dealId = String(lead.deal_id || '');
         const currentStage = String(lead.stage || '');
         const draggable = filters.groupBy === 'stage' && leadId.length > 0 ? 'true' : 'false';
         return `
@@ -664,6 +924,7 @@ function renderPipeline(leads = []) {
             class="pipeline-lead"
             data-open-phone="${safeText(lead.phone_e164)}"
             data-lead-id="${safeText(leadId)}"
+            data-deal-id="${safeText(dealId)}"
             data-current-stage="${safeText(currentStage)}"
             draggable="${draggable}"
           >
@@ -700,15 +961,16 @@ function renderPipeline(leads = []) {
     });
   });
 
-  const stageSet = new Set(PIPELINE_COLUMNS.map((item) => item.id));
+  const stageSet = new Set(activeTenantPipelineStages().map((item) => item.stage));
   if (filters.groupBy !== 'stage') return;
 
   pipelineBoardEl.querySelectorAll('.pipeline-lead[draggable="true"]').forEach((node) => {
     node.addEventListener('dragstart', (event) => {
       const leadId = node.getAttribute('data-lead-id') || '';
+      const dealId = node.getAttribute('data-deal-id') || '';
       const fromStage = node.getAttribute('data-current-stage') || '';
-      event.dataTransfer?.setData('application/json', JSON.stringify({ leadId, fromStage }));
-      event.dataTransfer?.setData('text/plain', `${leadId}|${fromStage}`);
+      event.dataTransfer?.setData('application/json', JSON.stringify({ leadId, dealId, fromStage }));
+      event.dataTransfer?.setData('text/plain', `${leadId}|${dealId}|${fromStage}`);
       node.classList.add('is-dragging');
     });
     node.addEventListener('dragend', () => {
@@ -743,14 +1005,16 @@ function renderPipeline(leads = []) {
         payload = null;
       }
       const fallback = String(event.dataTransfer?.getData('text/plain') || '');
-      const [fallbackLeadId = '', fallbackFromStage = ''] = fallback.split('|');
+      const [fallbackLeadId = '', fallbackDealId = '', fallbackFromStage = ''] = fallback.split('|');
       const leadId = String(payload?.leadId || fallbackLeadId || '');
+      const dealId = String(payload?.dealId || fallbackDealId || '');
       const fromStage = String(payload?.fromStage || fallbackFromStage || '');
       if (!leadId || !fromStage || fromStage === targetStage) return;
 
       try {
         formStatus.textContent = `Movendo lead para ${targetStage}...`;
         await updateLeadStage(leadId, fromStage, targetStage);
+        await syncDealStageFromLead({ leadId, dealId, targetStage });
         await loadAllData();
         if (selectedConversationId) {
           await openConversation(selectedConversationId, { markRead: false });
@@ -810,7 +1074,8 @@ function renderAnalytics(sourceLeads = []) {
 }
 
 function refreshLeadViews() {
-  const filtered = getFilteredLeads(leadsCache);
+  const leadModel = leadsCache.map(mapLeadForUi);
+  const filtered = getFilteredLeads(leadModel);
   renderLeads(filtered);
   renderPipeline(filtered);
   renderAnalytics(filtered);
@@ -895,6 +1160,8 @@ function renderConversations(items) {
       const title = conversation.display_name || conversation.contact_e164;
       const unread = Number(conversation.unread_count ?? 0);
       const preview = normalizeBrandText(conversation.last_message_preview || 'Sem mensagens');
+      const linkedLead = getLeadById(conversation.lead_id) ?? getLeadByPhone(conversation.contact_e164);
+      const currentStage = linkedLead ? getEffectiveLeadStage(linkedLead) : (conversation.lead_stage || 'sem stage');
       return `
       <button class="conversation-item ${isActive ? 'is-active' : ''}" type="button" data-conversation-id="${safeText(conversation.conversation_id)}">
         <div class="conversation-item__top">
@@ -903,7 +1170,7 @@ function renderConversations(items) {
         </div>
         <p class="conversation-item__preview">${safeText(preview)}</p>
         <div class="conversation-item__meta">
-          <span>${safeText(conversation.lead_stage || 'sem stage')}</span>
+          <span>${safeText(currentStage)}</span>
           <span>${safeText(formatTime(conversation.last_message_at))}</span>
         </div>
       </button>
@@ -997,6 +1264,8 @@ async function openConversation(conversationId, options = { markRead: false }) {
   applyThreadMeta(conversation);
   if (!conversation) {
     selectedThreadMessages = [];
+    selectedDealActivities = [];
+    selectedDealTasks = [];
     renderThreadMessages();
     return;
   }
@@ -1008,6 +1277,11 @@ async function openConversation(conversationId, options = { markRead: false }) {
       throw new Error(body.error ?? `HTTP ${response.status}`);
     }
     selectedThreadMessages = body.items ?? [];
+    await loadSelectedDealDetails();
+    const linkedLead = getLinkedLeadForConversation(conversation);
+    if (linkedLead) {
+      threadStageSelect.value = getEffectiveLeadStage(linkedLead);
+    }
     renderThreadMessages();
     if (options.markRead && Number(conversation.unread_count ?? 0) > 0) {
       await fetch(`${apiBase()}/v1/crm/conversations/${encodeURIComponent(conversationId)}/read?tenant_id=${encodeURIComponent(tenantId())}`, {
@@ -1043,6 +1317,7 @@ async function loadLeads() {
 }
 
 async function loadAllData() {
+  await loadTenantRuntimeConfig();
   await loadConversations();
   await loadLeads();
   renderSavedViewOptions();
@@ -1124,16 +1399,20 @@ async function createLead(event) {
 }
 
 function applyTenantTheme() {
-  const tenant = tenantId().toLowerCase();
-  const preset = TENANT_THEME_PRESETS[tenant];
-
-  if (!preset) {
-    formStatus.textContent = `Sem preset visual para tenant "${tenant}".`;
+  const applied = applyTenantThemePresetForTenant(tenantId(), { persist: true });
+  if (!applied) {
+    formStatus.textContent = `Sem preset visual para tenant "${tenantId().toLowerCase()}".`;
     return;
   }
+  formStatus.textContent = `Tema aplicado: layout=${applied.layout}, palette=${applied.palette}.`;
+}
 
-  applyVisualMode({ layout: preset.layout, palette: preset.palette, persist: true });
-  formStatus.textContent = `Tema aplicado: layout=${preset.layout}, palette=${preset.palette}.`;
+function applyTenantThemePresetForTenant(tenantValue, { persist = true } = {}) {
+  const tenant = String(tenantValue || '').trim().toLowerCase();
+  const preset = TENANT_THEME_PRESETS[tenant];
+  if (!preset) return null;
+  applyVisualMode({ layout: preset.layout, palette: preset.palette, persist });
+  return preset;
 }
 
 async function sendThreadMessage(event) {
@@ -1644,6 +1923,7 @@ window.addEventListener('beforeunload', () => {
 restoreVisualMode();
 apiBaseInput.value = loadApiBasePreference();
 applyBootstrapFromQuery();
+applyTenantThemePresetForTenant(tenantId(), { persist: true });
 switchMainView(currentMainView);
 loadAllData();
 startInboxPolling();
