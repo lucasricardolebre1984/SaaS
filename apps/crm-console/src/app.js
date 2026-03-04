@@ -1998,7 +1998,9 @@ window.addEventListener('beforeunload', () => {
 restoreVisualMode();
 apiBaseInput.value = loadApiBasePreference();
 applyBootstrapFromQuery();
-applyTenantThemePresetForTenant(tenantId(), { persist: true });
+if (!embeddedMode) {
+  applyTenantThemePresetForTenant(tenantId(), { persist: true });
+}
 applyEmbeddedShellMode(detectEmbeddedMode());
 switchMainView(currentMainView);
 bindEmbeddedHeightSync();
