@@ -218,7 +218,6 @@ function buildLocalReply(payload, fallbackReason = null) {
 
 async function requestOpenAiResponsesReply(options, payload) {
   const ownerPrompt = asNonEmptyString(payload?.persona_overrides?.owner_concierge_prompt);
-  const whatsappPrompt = asNonEmptyString(payload?.persona_overrides?.whatsapp_agent_prompt);
 
   const instructionParts = [
     'You are Persona 1 (Owner Concierge) for a modular SaaS.',
@@ -229,9 +228,6 @@ async function requestOpenAiResponsesReply(options, payload) {
   ];
   if (ownerPrompt) {
     instructionParts.push(`Owner persona override:\n${ownerPrompt}`);
-  }
-  if (whatsappPrompt) {
-    instructionParts.push(`WhatsApp agent guidance:\n${whatsappPrompt}`);
   }
   const operationalContext = typeof payload?.operational_context === 'string' && payload.operational_context.trim().length > 0
     ? payload.operational_context.trim()
@@ -310,12 +306,8 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
   });
 
   const ownerPrompt = asNonEmptyString(payload?.persona_overrides?.owner_concierge_prompt);
-  const whatsappPrompt = asNonEmptyString(payload?.persona_overrides?.whatsapp_agent_prompt);
   if (ownerPrompt) {
     messages.push({ role: 'system', content: `Owner persona override:\n${ownerPrompt}` });
-  }
-  if (whatsappPrompt) {
-    messages.push({ role: 'system', content: `WhatsApp agent guidance:\n${whatsappPrompt}` });
   }
   const operationalContext = typeof payload?.operational_context === 'string' && payload.operational_context.trim().length > 0
     ? payload.operational_context.trim()

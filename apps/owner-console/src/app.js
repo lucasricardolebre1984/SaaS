@@ -2454,13 +2454,9 @@ function estimateMessageCostUSD(attachments) {
 
 function buildPersonaOverridesFromConfig() {
   const ownerPrompt = state.config.personas.owner_concierge_prompt.trim();
-  const whatsappPrompt = state.config.personas.whatsapp_agent_prompt.trim();
   const overrides = {};
   if (ownerPrompt.length > 0) {
     overrides.owner_concierge_prompt = ownerPrompt;
-  }
-  if (whatsappPrompt.length > 0) {
-    overrides.whatsapp_agent_prompt = whatsappPrompt;
   }
   return Object.keys(overrides).length > 0 ? overrides : null;
 }
