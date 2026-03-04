@@ -699,15 +699,42 @@ const MODULE_VIEW_BY_ID = {
   'mod-05-faturamento-cobranca': moduleBillingViewEl
 };
 
-function crmEmbeddedUrl() {
+const CRM_EMBED_POSTMESSAGE_TYPE = 'saas.crm.embed.height';
+const CRM_EMBED_URL_REV = '20260304e';
+
+function crmEmbeddedUrl(forceReload = false) {
   const params = new URLSearchParams({
     tenant: tenantId(),
     api: apiBase(),
     layout: state.config.runtime.layout,
     palette: state.config.runtime.palette,
-    embedded: '1'
+    embedded: '1',
+    view: 'pipeline',
+    rev: CRM_EMBED_URL_REV
   });
+  if (forceReload) {
+    params.set('nonce', String(Date.now()));
+  }
   return `/crm/?${params.toString()}`;
+}
+
+function applyCrmEmbeddedHeight(rawHeight) {
+  if (!crmEmbeddedFrameEl) return;
+  const parsed = Number(rawHeight);
+  if (!Number.isFinite(parsed) || parsed <= 0) return;
+  const clamped = Math.max(920, Math.min(Math.ceil(parsed) + 20, 6400));
+  crmEmbeddedFrameEl.style.height = `${clamped}px`;
+}
+
+function bindCrmEmbeddedMessageListener() {
+  if (window.__ownerCrmEmbedMessageBound) return;
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    const payload = event.data;
+    if (!payload || payload.type !== CRM_EMBED_POSTMESSAGE_TYPE) return;
+    applyCrmEmbeddedHeight(payload.height);
+  });
+  window.__ownerCrmEmbedMessageBound = true;
 }
 
 function enforceCrmEmbeddedChrome() {
@@ -721,6 +748,12 @@ function enforceCrmEmbeddedChrome() {
     }
     doc.getElementById('sidebar')?.style.setProperty('display', 'none', 'important');
     doc.querySelector('.topbar')?.style.setProperty('display', 'none', 'important');
+    const inferredHeight = Math.max(
+      Number(doc.documentElement?.scrollHeight ?? 0),
+      Number(doc.body?.scrollHeight ?? 0)
+    );
+    applyCrmEmbeddedHeight(inferredHeight);
+    crmEmbeddedFrameEl.contentWindow?.scrollTo?.(0, 0);
   } catch {
     // Keep owner resilient if iframe is not ready/cross-origin.
   }
@@ -728,13 +761,14 @@ function enforceCrmEmbeddedChrome() {
 
 function syncCrmEmbeddedFrame(forceReload = false) {
   if (!crmEmbeddedFrameEl) return;
+  bindCrmEmbeddedMessageListener();
   if (!crmEmbeddedFrameEl.dataset.embedListenerBound) {
     crmEmbeddedFrameEl.addEventListener('load', () => {
       enforceCrmEmbeddedChrome();
     });
     crmEmbeddedFrameEl.dataset.embedListenerBound = '1';
   }
-  const nextUrl = crmEmbeddedUrl();
+  const nextUrl = crmEmbeddedUrl(forceReload);
   const currentUrl = crmEmbeddedFrameEl.dataset.currentSrc || crmEmbeddedFrameEl.getAttribute('src') || '';
   if (!forceReload && currentUrl === nextUrl) {
     enforceCrmEmbeddedChrome();
@@ -1656,7 +1690,7 @@ async function loadModuleWorkspace(moduleId) {
   renderModuleWorkspace(moduleId);
 
   if (moduleId === 'mod-02-whatsapp-crm') {
-    syncCrmEmbeddedFrame();
+    syncCrmEmbeddedFrame(true);
     return;
   }
 
@@ -1960,6 +1994,7 @@ function setActiveModule(moduleId) {
   }
 
   state.activeModuleId = moduleId;
+  bodyEl.classList.toggle('crm-embed-focus', moduleId === 'mod-02-whatsapp-crm');
   renderModuleNav();
   setTopbarLabels();
 

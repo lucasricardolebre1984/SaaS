@@ -288,9 +288,19 @@ body {
   overflow: auto;
 }
 
+body.crm-embed-focus .module-workspace {
+  padding: 0;
+  overflow: hidden;
+}
+
 .module-view {
   display: grid;
   gap: var(--space-4);
+}
+
+body.crm-embed-focus #moduleCrmView {
+  height: 100%;
+  gap: 0;
 }
 
 .module-form {
@@ -353,6 +363,13 @@ body {
   min-height: calc(100vh - 170px);
 }
 
+body.crm-embed-focus .module-embed-card {
+  min-height: calc(100vh - 124px);
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+}
+
 .module-embed-card > .card__header {
   display: none;
 }
@@ -367,6 +384,11 @@ body {
   border: 0;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   background: var(--color-bg-soft);
+}
+
+body.crm-embed-focus .module-embed-frame {
+  min-height: calc(100vh - 124px);
+  border-radius: 0;
 }
 
 .card {

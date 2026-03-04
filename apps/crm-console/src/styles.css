@@ -959,6 +959,18 @@ html[data-embedded='1'] .workspace {
   grid-template-columns: 1fr;
 }
 
+html[data-embedded='1'] .inbox-layout {
+  min-height: 280px;
+}
+
+html[data-embedded='1'] .thread-panel {
+  min-height: 280px;
+}
+
+html[data-embedded='1'] .conversation-list {
+  max-height: none;
+}
+
 /* Layout 2: Studio Neural */
 html[data-layout='studio'] .shell-bg {
   background:

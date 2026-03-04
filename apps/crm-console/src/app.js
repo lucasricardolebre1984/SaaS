@@ -121,6 +121,9 @@ let inboxPollingInFlight = false;
 const INBOX_POLL_INTERVAL_MS = 5000;
 let currentMainView = 'inbox';
 let activeSavedViewId = '';
+const EMBED_HEIGHT_POSTMESSAGE_TYPE = 'saas.crm.embed.height';
+let embeddedHeightSyncBound = false;
+let embeddedHeightRaf = null;
 const filters = {
   search: '',
   stage: 'all',
@@ -253,14 +256,67 @@ function applyEmbeddedShellMode(enabled) {
   topbarEl?.style.removeProperty('display');
 }
 
+function postEmbeddedHeightToParent() {
+  if (!embeddedMode) return;
+  const doc = document.documentElement;
+  const body = document.body;
+  const height = Math.max(
+    Number(doc?.scrollHeight ?? 0),
+    Number(doc?.offsetHeight ?? 0),
+    Number(body?.scrollHeight ?? 0),
+    Number(body?.offsetHeight ?? 0)
+  );
+  try {
+    window.parent?.postMessage?.({ type: EMBED_HEIGHT_POSTMESSAGE_TYPE, height }, window.location.origin);
+  } catch {
+    // no-op
+  }
+}
+
+function scheduleEmbeddedHeightPost() {
+  if (!embeddedMode) return;
+  if (embeddedHeightRaf != null) return;
+  embeddedHeightRaf = window.requestAnimationFrame(() => {
+    embeddedHeightRaf = null;
+    postEmbeddedHeightToParent();
+  });
+}
+
+function bindEmbeddedHeightSync() {
+  if (!embeddedMode || embeddedHeightSyncBound) return;
+  embeddedHeightSyncBound = true;
+
+  const maybeObserver = typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(() => scheduleEmbeddedHeightPost())
+    : null;
+
+  if (maybeObserver) {
+    maybeObserver.observe(document.documentElement);
+    if (document.body) {
+      maybeObserver.observe(document.body);
+    }
+  }
+
+  window.addEventListener('resize', () => scheduleEmbeddedHeightPost());
+  window.setTimeout(() => scheduleEmbeddedHeightPost(), 0);
+  window.setTimeout(() => scheduleEmbeddedHeightPost(), 120);
+  window.setTimeout(() => scheduleEmbeddedHeightPost(), 500);
+}
+
 function applyBootstrapFromQuery() {
   const params = new URLSearchParams(window.location.search || '');
   const tenant = params.get('tenant');
   const api = params.get('api');
   const layout = params.get('layout');
   const palette = params.get('palette');
+  const view = String(params.get('view') || '').trim().toLowerCase();
   embeddedMode = detectEmbeddedMode(params);
   applyEmbeddedShellMode(embeddedMode);
+  if (view === 'pipeline' || view === 'leads' || view === 'inbox') {
+    currentMainView = view;
+  } else if (embeddedMode) {
+    currentMainView = 'pipeline';
+  }
 
   if (tenant && tenant.trim().length > 0) {
     tenantIdInput.value = tenant.trim();
@@ -742,6 +798,7 @@ function switchMainView(nextView) {
   viewInboxBtn.classList.toggle('is-active', currentMainView === 'inbox');
   viewPipelineBtn.classList.toggle('is-active', currentMainView === 'pipeline');
   viewLeadsBtn.classList.toggle('is-active', currentMainView === 'leads');
+  scheduleEmbeddedHeightPost();
 }
 
 function applyFiltersToInputs() {
@@ -1095,6 +1152,7 @@ function refreshLeadViews() {
   renderLeads(filtered);
   renderPipeline(filtered);
   renderAnalytics(filtered);
+  scheduleEmbeddedHeightPost();
 }
 
 function renderLeads(items) {
@@ -1344,6 +1402,7 @@ async function loadAllData() {
     selectedThreadMessages = [];
     renderThreadMessages();
   }
+  scheduleEmbeddedHeightPost();
 }
 
 function stopInboxPolling() {
@@ -1942,5 +2001,6 @@ applyBootstrapFromQuery();
 applyTenantThemePresetForTenant(tenantId(), { persist: true });
 applyEmbeddedShellMode(detectEmbeddedMode());
 switchMainView(currentMainView);
+bindEmbeddedHeightSync();
 loadAllData();
 startInboxPolling();
