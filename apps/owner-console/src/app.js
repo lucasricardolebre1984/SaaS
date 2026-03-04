@@ -20,15 +20,16 @@ const MODULE_COST_LABELS = {
   'mod-05-faturamento-cobranca': 'Modulo 05 - Faturamento/Cobranca'
 };
 
-const VALID_LAYOUTS = ['fabio2', 'studio'];
+const VALID_LAYOUTS = ['fabio2', 'studio', 'zazi'];
 const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
+const CRM_STAGE_KEYS = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'nurturing'];
 const CONFIG_STORAGE_KEY = 'owner_console_config_v1';
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const SETTINGS_ADMIN_PASSWORD = '191530';
 const SETTINGS_UNLOCK_SESSION_KEY = 'owner_console_settings_admin_unlock_v1';
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'studio', palette: 'darkgreen' },
+  tenant_automania: { layout: 'zazi', palette: 'darkgreen' },
   tenant_clinica: { layout: 'studio', palette: 'forest' },
   tenant_comercial: { layout: 'studio', palette: 'sunset' }
 };
@@ -195,6 +196,12 @@ const cfgPersona2PromptInput = document.getElementById('cfgPersona2Prompt');
 const cfgWhatsappAiEnabledInput = document.getElementById('cfgWhatsappAiEnabled');
 const cfgWhatsappAiModeInput = document.getElementById('cfgWhatsappAiMode');
 const cfgWhatsappAiMinConfidenceInput = document.getElementById('cfgWhatsappAiMinConfidence');
+const cfgCrmPipelineStagesInput = document.getElementById('cfgCrmPipelineStages');
+const cfgCrmDefaultStageInput = document.getElementById('cfgCrmDefaultStage');
+const cfgCrmAutomationStageFollowupEnabledInput = document.getElementById('cfgCrmAutomationStageFollowupEnabled');
+const cfgCrmAutomationStagesInput = document.getElementById('cfgCrmAutomationStages');
+const cfgCrmAutomationDelayMinutesInput = document.getElementById('cfgCrmAutomationDelayMinutes');
+const cfgCrmAutomationMessageTemplateInput = document.getElementById('cfgCrmAutomationMessageTemplate');
 
 const cfgGoogleClientIdInput = document.getElementById('cfgGoogleClientId');
 const cfgGoogleClientSecretInput = document.getElementById('cfgGoogleClientSecret');
@@ -354,7 +361,7 @@ function createDefaultConfig() {
       api_base_url: deriveDefaultApiBase(),
       tenant_id: 'tenant_automania',
       session_id: crypto.randomUUID(),
-      layout: 'studio',
+      layout: 'zazi',
       palette: 'darkgreen'
     },
     openai: {
@@ -374,6 +381,18 @@ function createDefaultConfig() {
       whatsapp_ai_enabled: true,
       whatsapp_ai_mode: 'assist_execute',
       whatsapp_ai_min_confidence: 0.7
+    },
+    crm: {
+      pipeline: {
+        stages: normalizeCrmPipelineStages(CRM_STAGE_KEYS),
+        default_stage: 'new'
+      },
+      automation: {
+        stage_followup_enabled: false,
+        stage_followup_stages: ['qualified', 'proposal'],
+        stage_followup_delay_minutes: 45,
+        stage_followup_message_template: 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
+      }
     },
     integrations: {
       agenda_google: {
@@ -424,6 +443,56 @@ function normalizeWhatsappAiMinConfidence(value, fallback = 0.7) {
   return parsed;
 }
 
+function normalizeCrmStage(value, fallback = 'new') {
+  const raw = String(value ?? '').trim().toLowerCase();
+  return CRM_STAGE_KEYS.includes(raw) ? raw : fallback;
+}
+
+function normalizeCrmStageList(value, fallback = ['qualified', 'proposal']) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value ?? '')
+      .split(',')
+      .map((item) => item.trim());
+  const dedup = [];
+  for (const item of source) {
+    const stage = normalizeCrmStage(item, '');
+    if (!stage) continue;
+    if (!dedup.includes(stage)) dedup.push(stage);
+  }
+  return dedup.length > 0 ? dedup : [...fallback];
+}
+
+function normalizeCrmPipelineStages(value) {
+  const stageKeys = normalizeCrmStageList(value, CRM_STAGE_KEYS);
+  return stageKeys.map((stage, index) => ({
+    stage,
+    label: stage.charAt(0).toUpperCase() + stage.slice(1),
+    active: true,
+    order: (index + 1) * 10
+  }));
+}
+
+function normalizeCrmDefaultStage(value, stages = []) {
+  const active = Array.isArray(stages)
+    ? stages
+      .filter((item) => item && item.active !== false)
+      .map((item) => normalizeCrmStage(item.stage, ''))
+      .filter(Boolean)
+    : [];
+  const target = normalizeCrmStage(value, active[0] ?? 'new');
+  if (active.length === 0) return target;
+  return active.includes(target) ? target : active[0];
+}
+
+function normalizeCrmAutomationDelayMinutes(value, fallback = 45) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < 0) return 0;
+  if (parsed > 10080) return 10080;
+  return Math.floor(parsed);
+}
+
 function mergeConfig(raw) {
   const defaults = createDefaultConfig();
   const configuredApiBase = normalizeApiBase(raw?.runtime?.api_base_url ?? defaults.runtime.api_base_url);
@@ -463,6 +532,35 @@ function mergeConfig(raw) {
         defaults.execution.whatsapp_ai_min_confidence
       )
     },
+    crm: (() => {
+      const rawStages = Array.isArray(raw?.crm?.pipeline?.stages)
+        ? raw.crm.pipeline.stages.map((item) => normalizeCrmStage(item?.stage, '')).filter(Boolean)
+        : defaults.crm.pipeline.stages.map((item) => item.stage);
+      const stages = normalizeCrmPipelineStages(rawStages);
+      return {
+        pipeline: {
+          stages,
+          default_stage: normalizeCrmDefaultStage(raw?.crm?.pipeline?.default_stage, stages)
+        },
+        automation: {
+          stage_followup_enabled: raw?.crm?.automation?.stage_followup_enabled == null
+            ? defaults.crm.automation.stage_followup_enabled
+            : Boolean(raw.crm.automation.stage_followup_enabled),
+          stage_followup_stages: normalizeCrmStageList(
+            raw?.crm?.automation?.stage_followup_stages,
+            defaults.crm.automation.stage_followup_stages
+          ),
+          stage_followup_delay_minutes: normalizeCrmAutomationDelayMinutes(
+            raw?.crm?.automation?.stage_followup_delay_minutes,
+            defaults.crm.automation.stage_followup_delay_minutes
+          ),
+          stage_followup_message_template: String(
+            raw?.crm?.automation?.stage_followup_message_template
+              ?? defaults.crm.automation.stage_followup_message_template
+          ).trim() || defaults.crm.automation.stage_followup_message_template
+        }
+      };
+    })(),
     integrations: {
       agenda_google: {
         ...defaults.integrations.agenda_google,
@@ -612,11 +710,34 @@ function crmEmbeddedUrl() {
   return `/crm/?${params.toString()}`;
 }
 
+function enforceCrmEmbeddedChrome() {
+  if (!crmEmbeddedFrameEl) return;
+  try {
+    const doc = crmEmbeddedFrameEl.contentDocument;
+    if (!doc) return;
+    doc.documentElement.dataset.embedded = '1';
+    if (doc.body) {
+      doc.body.classList.add('embedded-mode');
+    }
+    doc.getElementById('sidebar')?.style.setProperty('display', 'none', 'important');
+    doc.querySelector('.topbar')?.style.setProperty('display', 'none', 'important');
+  } catch {
+    // Keep owner resilient if iframe is not ready/cross-origin.
+  }
+}
+
 function syncCrmEmbeddedFrame(forceReload = false) {
   if (!crmEmbeddedFrameEl) return;
+  if (!crmEmbeddedFrameEl.dataset.embedListenerBound) {
+    crmEmbeddedFrameEl.addEventListener('load', () => {
+      enforceCrmEmbeddedChrome();
+    });
+    crmEmbeddedFrameEl.dataset.embedListenerBound = '1';
+  }
   const nextUrl = crmEmbeddedUrl();
   const currentUrl = crmEmbeddedFrameEl.dataset.currentSrc || crmEmbeddedFrameEl.getAttribute('src') || '';
   if (!forceReload && currentUrl === nextUrl) {
+    enforceCrmEmbeddedChrome();
     return;
   }
   crmEmbeddedFrameEl.src = nextUrl;
@@ -916,6 +1037,23 @@ function buildRuntimeConfigSyncPayload() {
             0.7
           )
         },
+        crm: {
+          pipeline: {
+            stages: state.config.crm.pipeline.stages,
+            default_stage: state.config.crm.pipeline.default_stage
+          },
+          automation: {
+            stage_followup_enabled: Boolean(state.config.crm.automation.stage_followup_enabled),
+            stage_followup_stages: state.config.crm.automation.stage_followup_stages,
+            stage_followup_delay_minutes: normalizeCrmAutomationDelayMinutes(
+              state.config.crm.automation.stage_followup_delay_minutes,
+              45
+            ),
+            stage_followup_message_template: String(
+              state.config.crm.automation.stage_followup_message_template || ''
+            ).trim()
+          }
+        },
         integrations: {
           crm_evolution: {
             base_url: state.config.integrations.crm_evolution.base_url || '',
@@ -977,6 +1115,32 @@ async function pullRuntimeConfigFromBackend() {
       body.execution.whatsapp_ai_min_confidence,
       0.7
     );
+  }
+  if (body?.crm?.pipeline) {
+    const stageKeys = Array.isArray(body.crm.pipeline.stages)
+      ? body.crm.pipeline.stages.map((item) => normalizeCrmStage(item?.stage, '')).filter(Boolean)
+      : [];
+    const stages = normalizeCrmPipelineStages(stageKeys.length > 0 ? stageKeys : CRM_STAGE_KEYS);
+    state.config.crm.pipeline.stages = stages;
+    state.config.crm.pipeline.default_stage = normalizeCrmDefaultStage(
+      body.crm.pipeline.default_stage,
+      stages
+    );
+  }
+  if (body?.crm?.automation) {
+    state.config.crm.automation.stage_followup_enabled = Boolean(body.crm.automation.stage_followup_enabled);
+    state.config.crm.automation.stage_followup_stages = normalizeCrmStageList(
+      body.crm.automation.stage_followup_stages,
+      ['qualified', 'proposal']
+    );
+    state.config.crm.automation.stage_followup_delay_minutes = normalizeCrmAutomationDelayMinutes(
+      body.crm.automation.stage_followup_delay_minutes,
+      45
+    );
+    state.config.crm.automation.stage_followup_message_template = String(
+      body.crm.automation.stage_followup_message_template
+        ?? 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
+    ).trim() || 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.';
   }
   if (body?.integrations?.crm_evolution && typeof body.integrations.crm_evolution === 'object') {
     const ce = body.integrations.crm_evolution;
@@ -1997,6 +2161,44 @@ function populateConfigForm() {
       normalizeWhatsappAiMinConfidence(state.config.execution.whatsapp_ai_min_confidence, 0.7)
     );
   }
+  if (cfgCrmPipelineStagesInput) {
+    const stageCsv = (state.config.crm?.pipeline?.stages ?? [])
+      .map((item) => normalizeCrmStage(item?.stage, ''))
+      .filter(Boolean)
+      .join(',');
+    cfgCrmPipelineStagesInput.value = stageCsv;
+  }
+  if (cfgCrmDefaultStageInput) {
+    cfgCrmDefaultStageInput.value = normalizeCrmDefaultStage(
+      state.config.crm?.pipeline?.default_stage,
+      state.config.crm?.pipeline?.stages
+    );
+  }
+  if (cfgCrmAutomationStageFollowupEnabledInput) {
+    cfgCrmAutomationStageFollowupEnabledInput.checked = Boolean(
+      state.config.crm?.automation?.stage_followup_enabled
+    );
+  }
+  if (cfgCrmAutomationStagesInput) {
+    cfgCrmAutomationStagesInput.value = normalizeCrmStageList(
+      state.config.crm?.automation?.stage_followup_stages,
+      ['qualified', 'proposal']
+    ).join(',');
+  }
+  if (cfgCrmAutomationDelayMinutesInput) {
+    cfgCrmAutomationDelayMinutesInput.value = String(
+      normalizeCrmAutomationDelayMinutes(
+        state.config.crm?.automation?.stage_followup_delay_minutes,
+        45
+      )
+    );
+  }
+  if (cfgCrmAutomationMessageTemplateInput) {
+    cfgCrmAutomationMessageTemplateInput.value = String(
+      state.config.crm?.automation?.stage_followup_message_template
+        ?? 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
+    );
+  }
 
   cfgGoogleClientIdInput.value = state.config.integrations.agenda_google.client_id;
   cfgGoogleClientSecretInput.value = state.config.integrations.agenda_google.client_secret;
@@ -2041,6 +2243,25 @@ function collectConfigForm() {
     cfgWhatsappAiMinConfidenceInput?.value,
     0.7
   );
+  const pipelineStages = normalizeCrmPipelineStages(cfgCrmPipelineStagesInput?.value ?? CRM_STAGE_KEYS.join(','));
+  state.config.crm.pipeline.stages = pipelineStages;
+  state.config.crm.pipeline.default_stage = normalizeCrmDefaultStage(
+    cfgCrmDefaultStageInput?.value,
+    pipelineStages
+  );
+  state.config.crm.automation.stage_followup_enabled = cfgCrmAutomationStageFollowupEnabledInput?.checked ?? false;
+  state.config.crm.automation.stage_followup_stages = normalizeCrmStageList(
+    cfgCrmAutomationStagesInput?.value,
+    ['qualified', 'proposal']
+  );
+  state.config.crm.automation.stage_followup_delay_minutes = normalizeCrmAutomationDelayMinutes(
+    cfgCrmAutomationDelayMinutesInput?.value,
+    45
+  );
+  state.config.crm.automation.stage_followup_message_template = String(
+    cfgCrmAutomationMessageTemplateInput?.value
+      ?? 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
+  ).trim() || 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.';
 
   state.config.integrations.agenda_google.client_id = cfgGoogleClientIdInput.value.trim();
   state.config.integrations.agenda_google.client_secret = cfgGoogleClientSecretInput.value.trim();
@@ -2631,6 +2852,13 @@ function resetMetrics() {
 
 function bootstrapConfig() {
   state.config = mergeConfig(loadConfig());
+  const tenant = String(state.config?.runtime?.tenant_id ?? '').trim().toLowerCase();
+  const preset = TENANT_THEME_PRESETS[tenant];
+  if (preset) {
+    state.config.runtime.layout = preset.layout;
+    state.config.runtime.palette = preset.palette;
+    persistConfig();
+  }
   state.settingsUnlocked = loadSettingsUnlockState();
   applyVisualMode(state.config.runtime.layout, state.config.runtime.palette, false);
   populateConfigForm();

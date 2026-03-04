@@ -350,7 +350,7 @@ body {
 }
 
 .module-embed-card {
-  min-height: 72vh;
+  min-height: calc(100vh - 170px);
 }
 
 .module-embed-card > .card__header {
@@ -363,7 +363,7 @@ body {
 
 .module-embed-frame {
   width: 100%;
-  min-height: 72vh;
+  min-height: calc(100vh - 176px);
   border: 0;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   background: var(--color-bg-soft);
@@ -1045,6 +1045,80 @@ html[data-layout='studio'] .avatar {
 
 html[data-layout='studio'] .avatar[data-state='speaking'] {
   animation: studio-avatar-speak 1.2s ease-in-out infinite;
+}
+
+/* Layout 3: Zazi Enterprise (clean-room legacy-inspired) */
+html[data-layout='zazi'] {
+  --color-bg: #f4f7fb;
+  --color-bg-soft: #eaf0f7;
+  --color-text: #0f172a;
+  --color-muted: #5e7388;
+  --color-border: #d4e0eb;
+  --color-card: #ffffff;
+  --color-sidebar: #102a43;
+  --color-sidebar-border: #243b53;
+  --color-sidebar-text: #d9e2ec;
+  --color-sidebar-text-soft: #9fb3c8;
+  --color-sidebar-active: #334e68;
+  --color-primary: #627d98;
+  --color-primary-strong: #486581;
+  --color-pill: #edf2f8;
+  --color-assistant: #eff6ff;
+  --color-owner: #eef2f7;
+}
+
+html[data-layout='zazi'] .shell-bg {
+  background:
+    radial-gradient(circle at 8% 10%, rgba(98, 125, 152, 0.22), transparent 36%),
+    radial-gradient(circle at 90% 88%, rgba(72, 101, 129, 0.2), transparent 32%),
+    linear-gradient(150deg, #f7faff, #eaf0f7);
+}
+
+html[data-layout='zazi'] .sidebar {
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+html[data-layout='zazi'] .module-nav__item.is-active {
+  border-color: #627d98;
+  background: linear-gradient(150deg, #486581, #334e68);
+}
+
+html[data-layout='zazi'] .topbar {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom-color: #d4e0eb;
+}
+
+html[data-layout='zazi'] input,
+html[data-layout='zazi'] select,
+html[data-layout='zazi'] .menu-btn,
+html[data-layout='zazi'] .btn--ghost {
+  background: #ffffff;
+}
+
+html[data-layout='zazi'] .card {
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+html[data-layout='zazi'] .msg--assistant {
+  background: #eff6ff;
+  border-color: #d9e8ff;
+}
+
+html[data-layout='zazi'] .msg--owner {
+  background: #eef2f7;
+  border-color: #d4e0eb;
+}
+
+html[data-layout='zazi'] .status-pill,
+html[data-layout='zazi'] .pending-item {
+  background: #f8fafc;
+  color: #334e68;
+}
+
+html[data-layout='zazi'] .avatar {
+  box-shadow:
+    0 0 0 1px rgba(98, 125, 152, 0.26),
+    0 16px 30px rgba(15, 23, 42, 0.2);
 }
 
 @keyframes studio-bg-drift {

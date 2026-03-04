@@ -43,6 +43,8 @@ const rootEl = document.documentElement;
 const bodyEl = document.body;
 
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const sidebarEl = document.getElementById('sidebar');
+const topbarEl = document.querySelector('.topbar');
 const apiBaseInput = document.getElementById('apiBase');
 const tenantIdInput = document.getElementById('tenantId');
 const reloadBtn = document.getElementById('reloadBtn');
@@ -222,14 +224,9 @@ function loadSavedViews() {
   return savedViewsCache.filter((item) => item && typeof item === 'object' && item.view_id && item.name && item.filters);
 }
 
-function applyBootstrapFromQuery() {
-  const params = new URLSearchParams(window.location.search || '');
-  const tenant = params.get('tenant');
-  const api = params.get('api');
-  const layout = params.get('layout');
-  const palette = params.get('palette');
-  const embedded = params.get('embedded');
-
+function detectEmbeddedMode(params = null) {
+  const sourceParams = params ?? new URLSearchParams(window.location.search || '');
+  const embedded = String(sourceParams.get('embedded') ?? '').trim().toLowerCase();
   const inIframe = (() => {
     try {
       return window.self !== window.top;
@@ -237,14 +234,33 @@ function applyBootstrapFromQuery() {
       return false;
     }
   })();
-  embeddedMode = embedded === '1' || embedded === 'true' || inIframe;
-  if (embeddedMode) {
+  const referrer = String(document.referrer ?? '').toLowerCase();
+  const ownerReferrer = referrer.includes('/owner/');
+  return embedded === '1' || embedded === 'true' || inIframe || ownerReferrer;
+}
+
+function applyEmbeddedShellMode(enabled) {
+  if (enabled) {
     rootEl.dataset.embedded = '1';
     bodyEl.classList.add('embedded-mode');
-  } else {
-    delete rootEl.dataset.embedded;
-    bodyEl.classList.remove('embedded-mode');
+    sidebarEl?.style.setProperty('display', 'none', 'important');
+    topbarEl?.style.setProperty('display', 'none', 'important');
+    return;
   }
+  delete rootEl.dataset.embedded;
+  bodyEl.classList.remove('embedded-mode');
+  sidebarEl?.style.removeProperty('display');
+  topbarEl?.style.removeProperty('display');
+}
+
+function applyBootstrapFromQuery() {
+  const params = new URLSearchParams(window.location.search || '');
+  const tenant = params.get('tenant');
+  const api = params.get('api');
+  const layout = params.get('layout');
+  const palette = params.get('palette');
+  embeddedMode = detectEmbeddedMode(params);
+  applyEmbeddedShellMode(embeddedMode);
 
   if (tenant && tenant.trim().length > 0) {
     tenantIdInput.value = tenant.trim();
@@ -1924,6 +1940,7 @@ restoreVisualMode();
 apiBaseInput.value = loadApiBasePreference();
 applyBootstrapFromQuery();
 applyTenantThemePresetForTenant(tenantId(), { persist: true });
+applyEmbeddedShellMode(detectEmbeddedMode());
 switchMainView(currentMainView);
 loadAllData();
 startInboxPolling();
