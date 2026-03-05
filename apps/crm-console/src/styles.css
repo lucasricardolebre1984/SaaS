@@ -104,6 +104,8 @@ body {
   font-family: var(--font-body);
   color: var(--color-text);
   background: var(--color-bg);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .hidden {
@@ -182,6 +184,7 @@ body {
 
 .content {
   min-width: 0;
+  min-height: 100vh;
 }
 
 .topbar {
@@ -267,6 +270,7 @@ select {
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: var(--space-4);
   padding: var(--space-4);
+  align-content: start;
 }
 
 .main-grid,
@@ -452,6 +456,7 @@ th {
 .conversation-list {
   border-right: 1px solid var(--color-border);
   overflow: auto;
+  min-height: 0;
   max-height: 520px;
 }
 
@@ -514,6 +519,7 @@ th {
 .thread-panel {
   display: grid;
   grid-template-rows: auto 1fr auto;
+  min-width: 0;
   min-height: 420px;
 }
 
@@ -597,6 +603,8 @@ th {
   display: grid;
   align-content: start;
   gap: 14px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .detail-panel__header h4 {
@@ -939,6 +947,16 @@ html[data-embedded='1'] .shell-bg {
 html[data-embedded='1'] .app-shell {
   grid-template-columns: 1fr;
   min-height: auto;
+}
+
+html[data-embedded='1'] body {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+html[data-embedded='1'] .content {
+  min-height: 0;
 }
 
 html[data-embedded='1'] .sidebar,

@@ -243,3 +243,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,published crm runtime controls and ai stage followup automation parity in dev (commit 11a5243)
 2026-03-04,internal,engineering-time,local,0.00,0.00,validation,uat followup parity proof generated with automation scheduled and followups_for_lead=1
 2026-03-04,internal,engineering-time,local,0.00,0.00,governance,skills audit rerun confirms installed 48 and minimum threshold 37
+2026-03-05,internal,engineering-time,local,0.00,0.00,review,full SaaS audit covering local git AWS dev Nx gates smoke evidence and formal remediation plan publication
+2026-03-05,internal,engineering-time,local,0.00,0.00,implementation,crm embed scroll hardening in owner module 02 plus panel overflow fixes in crm console with local build validation
