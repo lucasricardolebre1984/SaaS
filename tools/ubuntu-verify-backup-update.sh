@@ -1,7 +1,7 @@
 #!/bin/bash
 # Ubuntu AWS dev: verificar, backup, atualizar e deixar CRM configurado.
 # Executar NO SERVIDOR apos SSH. Uso: bash ubuntu-verify-backup-update.sh [--skip-backup] [--skip-pull]
-# No servidor o path do repo e /srv/SaaS. Local: c:\projetos\fabio (clone).
+# No servidor o path do repo e /srv/SaaS. Local: c:\projetos\SaaS (clone).
 # Repo: https://github.com/lucasricardolebre1984/SaaS
 set -e
 SAAS_ROOT="${SAAS_ROOT:-/srv/SaaS}"

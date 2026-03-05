@@ -1,0 +1,43 @@
+{
+  "run_at": "2026-03-04T05:32:30",
+  "tenant_id": "tenant_automania",
+  "conversation": {
+    "contact_e164": "+5515996561629",
+    "conversation_id": "b191c19f-3fb7-45e9-b942-82f22c7b0850",
+    "display_name": "Tatá Gonçalves",
+    "lead_id": "f2df47c1-70d3-4560-991e-9b45736ad3cd"
+  },
+  "evidence": {
+    "provider_response_history_present": true,
+    "outbound_message_count": 6,
+    "inbound_message_count": 5,
+    "outbound_delivery_states": [
+      {
+        "count": 6,
+        "state": "sent"
+      }
+    ]
+  },
+  "runtime_config_update": {
+    "followup_delay_minutes": 5,
+    "followup_stages": [
+      "qualified",
+      "proposal"
+    ],
+    "status": "accepted",
+    "crm_followup_enabled": true
+  },
+  "stage_transition": {
+    "after": "proposal",
+    "execute_automation": null,
+    "changed": true,
+    "before": "qualified",
+    "execute_status": "ok",
+    "requested_to": "proposal",
+    "execute_action": "update_stage"
+  },
+  "followup_for_lead": {
+    "count": 0,
+    "latest": null
+  }
+}
