@@ -5,7 +5,8 @@ param(
   [string]$CustomPath,
   [switch]$ForceSkills,
   [switch]$SkipInstall,
-  [switch]$ShowFullContext
+  [switch]$ShowFullContext,
+  [switch]$FailOnMissingProjectSkills
 )
 
 $ErrorActionPreference = 'Stop'
@@ -62,6 +63,21 @@ if (-not $SkipInstall) {
   Write-Step "Skipping skills install (-SkipInstall)"
 }
 
+Write-Step "Skills audit snapshot"
+$skillsAuditScript = Join-Path $repoRoot 'tools/skills-audit.ps1'
+if (Test-Path $skillsAuditScript) {
+  $skillsAuditParams = @{ Agent = $Agent }
+  if ($Agent -eq 'custom' -and -not [string]::IsNullOrWhiteSpace($CustomPath)) {
+    $skillsAuditParams['CustomPath'] = $CustomPath
+  }
+  if ($FailOnMissingProjectSkills) {
+    $skillsAuditParams['FailOnMissingProject'] = $true
+  }
+  & $skillsAuditScript @skillsAuditParams
+} else {
+  Write-Host "WARN: skills audit script not found: $skillsAuditScript" -ForegroundColor Yellow
+}
+
 Write-Step "Git status"
 git status --short
 
@@ -88,7 +104,9 @@ $mandatoryFiles = @(
   '.specs/project/CONTEXT.md',
   '.specs/project/PROJECT.md',
   '.specs/project/ROADMAP.md',
-  '.specs/project/STATE.md'
+  '.specs/project/STATE.md',
+  '.specs/project/PROXIMO-PASSO.md',
+  '.specs/project/STATUS-ATUAL.md'
 )
 foreach ($file in $mandatoryFiles) {
   Show-ContextFile -RelativePath $file

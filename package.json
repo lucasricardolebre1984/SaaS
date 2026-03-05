@@ -18,6 +18,7 @@
     "deploy:dev": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/deploy-dev.ps1",
     "generate:saas-starter": "node ./tools/generate-saas-starter.mjs",
     "skills:install": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/install-project-skills.ps1 -Agent codex -Force",
+    "skills:audit": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/skills-audit.ps1 -Agent codex",
     "init:day": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -ForceSkills",
     "resume:day": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/start-day.ps1 -Agent codex -SkipInstall",
     "start:day": "npm run init:day",

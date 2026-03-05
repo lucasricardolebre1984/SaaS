@@ -3,7 +3,7 @@
 This repository follows strict spec-driven execution to prevent scope drift and legacy contamination.
 
 ## Daily Commands (Mandatory)
-Run from `C:\projetos\fabio`.
+Run from `C:\projetos\SaaS`.
 
 1. New day / clean bootstrap:
    - `npm run init:day`
@@ -18,7 +18,7 @@ Raw PowerShell equivalents:
 - `.\tools\end-day.ps1 -ShowPending`
 
 ## Runtime Commands (SaaS Local)
-Run from `C:\projetos\fabio`.
+Run from `C:\projetos\SaaS`.
 
 Recommended unified runtime (single endpoint):
 - `npm run serve:saas`
@@ -79,13 +79,19 @@ Install command:
 Trigger matrix and installation runbook:
 - `.specs/features/agent-skills-cli-mvp/TRIGGERS.md`
 - `.specs/features/agent-skills-cli-mvp/RUNBOOK.md`
+- `tools/skills.json` (manifesto machine-readable de skills)
+- `npm run skills:audit` (prova de carga/coverage no agente local)
+
+Observacao operacional:
+- `tools/start-day.ps1` executa snapshot de auditoria de skills antes de carregar contexto.
+- Use `-FailOnMissingProjectSkills` para hard-fail quando faltar qualquer skill de projeto.
 
 ## Repository and Environments (Single Source of Truth)
 - **GitHub (deploy / código oficial):** https://github.com/lucasricardolebre1984/SaaS — clone, push e CI referenciam este repo. Sem branches sandbox no GitHub; fluxo enxuto (ex.: `main`).
 - **Ubuntu (AWS dev):** caminhos no servidor:
   - App SaaS: `/srv/SaaS` (mesmo código do repo SaaS; `git pull` a partir daqui).
   - Evolution API: `/srv/evolution` (WhatsApp provider; o app em `/srv/SaaS` chama via `EVOLUTION_HTTP_BASE_URL` no `.env`).
-- **Local:** workspace padrão é `C:\projetos\fabio`. No GitHub e no Ubuntu o repo/app é **SaaS** (path no servidor: `/srv/SaaS`). Comandos diários e runtime (`init:day`, `resume:day`, `serve:saas`, `deploy:dev`) rodam a partir da raiz do repo local (`C:\projetos\fabio`). Para arrumar Evolution no AWS, acessar o Ubuntu via SSH (runbook: `apps/platform-api/RUNBOOK-aws-deploy-dev.md`; script de diagnóstico: `tools/evolution-aws-check.sh`).
+- **Local:** workspace padrão é `C:\projetos\SaaS`. No GitHub e no Ubuntu o repo/app é **SaaS** (path no servidor: `/srv/SaaS`). Comandos diários e runtime (`init:day`, `resume:day`, `serve:saas`, `deploy:dev`) rodam a partir da raiz do repo local (`C:\projetos\SaaS`). Para arrumar Evolution no AWS, acessar o Ubuntu via SSH (runbook: `apps/platform-api/RUNBOOK-aws-deploy-dev.md`; script de diagnóstico: `tools/evolution-aws-check.sh`).
 
 ## Legacy Quarantine Rule (Critical)
 - Source system: `C:\projetos\fabio2`
@@ -102,11 +108,11 @@ See formulas and targets in `.specs/project/METRICS.md`.
 
 ## Current Priority
 - Active feature: `crm-krayin-reference-modernization-slice`
-- Active phase: Implement + Validate (T6 UI CRM enterprise com endpoints T5)
+- Active phase: Implement + Validate (T8 Validation + UAT com T7 runtime controls concluidos)
 
 Gate de regressao de botoes/endpoints (owner+crm+modulos 03..05) permanece obrigatorio:
 - integrado em `npm run preprod:validate` via `tools/smoke-saas-endpoints.ps1`
 - skip de contingencia: `-SkipSaasEndpointSmoke`
 
 ### Produto: memoria/contexto/aprendizado
-- **Fonte:** `.specs/project/PROXIMO-PASSO.md` — memoria, contexto e aprendizado estao **fechados**. Eixo ativo agora: deploy dev AWS do SaaS matriz com Postgres, Evolution server-side e gates de producao.
+- **Fonte:** `.specs/project/PROXIMO-PASSO.md` — memoria, contexto e aprendizado estao **fechados**. Eixo ativo agora: T8 (Validation + UAT) do CRM enterprise + gate de producao (`preprod:validate` com smoke de endpoints).

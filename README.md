@@ -4,9 +4,10 @@ SaaS base institucional da Automania AI (Nx monorepo). **Modelo universal** para
 
 ## Status Atual
 - **Fonte de verdade:** `.specs/project/STATE.md` e `.specs/project/STATUS-ATUAL.md` (atualizados com data para auditoria).
-- Milestone atual: **Milestone 5** (AWS deployment bootstrap do SaaS matriz).
-- Slice em foco: `milestone-5-runtime-stability-hotfix-slice`.
-- Eixo memoria/contexto/aprendizado: **fechado** no produto; foco atual em deploy dev com Postgres e gates de producao.
+- Milestone de base: **Milestone 5** (AWS bootstrap + estabilidade) concluido.
+- Slice em foco: `crm-krayin-reference-modernization-slice`.
+- Fase atual: **Implement + Validate**, com T7 concluido e T8 (Validation + UAT) ativo.
+- Eixo memoria/contexto/aprendizado: **fechado** no produto.
 
 ## Arquitetura Padrão (fixa)
 1. `mod-01-owner-concierge` (chat IA + avatar + memória/contexto)
@@ -27,7 +28,7 @@ Observacao modulo 02:
 
 ## Fluxo Diário (obrigatório)
 ```powershell
-cd C:\projetos\fabio
+cd C:\projetos\SaaS
 npm run init:day
 ```
 

@@ -22,6 +22,7 @@ O agente deve **citar explicitamente o skill que esta usando** antes de aplica-l
 | metrics-discipline | `skills/(project)/metrics-discipline/SKILL.md` | Idem (checkpoints de fase/task) |
 
 **Instalacao:** Codex: `npm run skills:install` | Cursor: `npm run skills:install:cursor`
+**Auditoria automatizada:** `npm run skills:audit` (usa `tools/skills.json` + path do agente)
 
 Referencia: `.specs/features/agent-skills-cli-mvp/TRIGGERS.md`, RUNBOOK.md.
 
