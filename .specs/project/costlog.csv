@@ -257,3 +257,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit a8807ab to dev and confirmed remote smoke PASS26 WARN0 FAIL0 with integrated preprod validation green
 2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,advanced G7 owner UX with module hero and KPI summary cards for Clientes Agenda and Cobranca backed by live owner module data
 2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,hotfixed owner layout by migrating tenant_automania from zazi to studio and cleared invalid tenant OpenAI override so owner runtime returns to global fallback on dev
+2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,hardened owner runtime-config sync before chat interactions and clarified queued-task status in UI while strengthening owner persona priority in the OpenAI response provider

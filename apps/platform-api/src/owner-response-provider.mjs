@@ -227,7 +227,9 @@ async function requestOpenAiResponsesReply(options, payload) {
     `Default max length: ${OWNER_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
   ];
   if (ownerPrompt) {
-    instructionParts.push(`Owner persona override:\n${ownerPrompt}`);
+    instructionParts.push(
+      `Tenant owner persona. Treat this as the authoritative business voice and operating behavior for the reply unless it conflicts with higher-priority safety rules:\n${ownerPrompt}`
+    );
   }
   const operationalContext = typeof payload?.operational_context === 'string' && payload.operational_context.trim().length > 0
     ? payload.operational_context.trim()
@@ -307,7 +309,10 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
 
   const ownerPrompt = asNonEmptyString(payload?.persona_overrides?.owner_concierge_prompt);
   if (ownerPrompt) {
-    messages.push({ role: 'system', content: `Owner persona override:\n${ownerPrompt}` });
+    messages.push({
+      role: 'system',
+      content: `Tenant owner persona. Treat this as the authoritative business voice and operating behavior for the reply unless it conflicts with higher-priority safety rules:\n${ownerPrompt}`
+    });
   }
   const operationalContext = typeof payload?.operational_context === 'string' && payload.operational_context.trim().length > 0
     ? payload.operational_context.trim()

@@ -47,6 +47,8 @@ const state = {
   mediaRecorder: null,
   mediaStream: null,
   config: null,
+  runtimeConfigLoadedTenantId: null,
+  runtimeConfigLoadPromise: null,
   settingsUnlocked: false,
   moduleData: {
     customers: [],
@@ -1163,6 +1165,32 @@ async function pushRuntimeConfigToBackend() {
     openAiConfigured: runtime.openai_configured === true,
     model: runtime.model ?? state.config.openai.model
   };
+}
+
+async function ensureRuntimeConfigLoaded(forceReload = false) {
+  const tenant = tenantId();
+  if (!tenant) return;
+
+  if (!forceReload && state.runtimeConfigLoadedTenantId === tenant) {
+    return;
+  }
+
+  if (state.runtimeConfigLoadPromise) {
+    await state.runtimeConfigLoadPromise;
+    if (!forceReload && state.runtimeConfigLoadedTenantId === tenant) {
+      return;
+    }
+  }
+
+  state.runtimeConfigLoadPromise = pullRuntimeConfigFromBackend()
+    .then(() => {
+      state.runtimeConfigLoadedTenantId = tenant;
+    })
+    .finally(() => {
+      state.runtimeConfigLoadPromise = null;
+    });
+
+  await state.runtimeConfigLoadPromise;
 }
 
 async function pullRuntimeConfigFromBackend() {
@@ -2311,6 +2339,7 @@ function populateConfigForm() {
 }
 
 function collectConfigForm() {
+  const previousTenantId = String(state.config?.runtime?.tenant_id ?? '').trim();
   state.config.runtime.api_base_url = normalizeApiBase(cfgApiBaseInput.value);
   state.config.runtime.tenant_id = cfgTenantIdInput.value.trim();
   state.config.runtime.session_id = cfgSessionIdInput.value.trim() || crypto.randomUUID();
@@ -2366,6 +2395,10 @@ function collectConfigForm() {
     || 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.';
   state.config.integrations.billing.provider = cfgBillingProviderInput.value.trim();
   state.config.integrations.billing.api_key = cfgBillingApiKeyInput.value.trim();
+
+  if (previousTenantId !== state.config.runtime.tenant_id) {
+    state.runtimeConfigLoadedTenantId = null;
+  }
 }
 
 function ensureModuleMetric(moduleId) {
@@ -2657,12 +2690,14 @@ async function sendInteraction(text, attachments = []) {
         : {})
     }));
   }
-  const personaOverrides = buildPersonaOverridesFromConfig();
-  if (personaOverrides) {
-    payload.persona_overrides = personaOverrides;
-  }
-
   try {
+    await ensureRuntimeConfigLoaded();
+
+    const personaOverrides = buildPersonaOverridesFromConfig();
+    if (personaOverrides) {
+      payload.persona_overrides = personaOverrides;
+    }
+
     const submitInteraction = () => fetch(`${apiBase()}/v1/owner-concierge/interaction`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -2707,6 +2742,18 @@ async function sendInteraction(text, attachments = []) {
       ? assistantOutput.fallback_reason
       : null;
     appendMessage(output);
+    const queuedTasks = Array.isArray(body.response?.downstream_tasks)
+      ? body.response.downstream_tasks
+      : [];
+    if (queuedTasks.length > 0) {
+      const summary = queuedTasks
+        .map((item) => `${item.target_module} ${item.task_type} [${item.status}]`)
+        .join(' | ');
+      appendMessage(
+        `[runtime] ${summary}. Isso ainda nao gera registro ou KPI ate haver comprovante de execucao.`,
+        'assistant'
+      );
+    }
     setAssistantProviderStatus(provider, {
       model,
       fallbackReason
@@ -2920,6 +2967,7 @@ async function saveConfig() {
   renderMetricsTable();
   try {
     const syncResult = await pushRuntimeConfigToBackend();
+    state.runtimeConfigLoadedTenantId = tenantId();
     updateConfigStatus(
       `Configuracoes salvas e aplicadas no backend (mode=${syncResult.ownerResponseMode}, model=${syncResult.model}).`
     );
@@ -3122,13 +3170,13 @@ async function bootstrap() {
   syncCrmEmbeddedFrame();
   renderModuleNav();
   setActiveModule('mod-01-owner-concierge');
-  setupEvents();
   await callHealth();
   try {
-    await pullRuntimeConfigFromBackend();
+    await ensureRuntimeConfigLoaded();
   } catch {
     // backend runtime config may not be available yet during cold start
   }
+  setupEvents();
   refreshInteractionConfirmations();
 }
 
