@@ -162,6 +162,8 @@ Checkpoint 2026-03-06:
 - validacao local concluida com:
   - `npx nx run app-platform-api:test`
   - `npm run preprod:validate -- -SkipOperationalDrills`
+- publicacao concluida em `163f04f` com deploy dev realizado;
+- smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`.
 Arquivos:
 - `apps/platform-api/src/app.mjs`
 - `apps/platform-api/src/app.test.mjs`

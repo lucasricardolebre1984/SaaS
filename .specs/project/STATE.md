@@ -45,6 +45,10 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-06: G4/P1 publicado no AWS dev:
+  - commit `163f04f` deployado via `npm run deploy:dev -- -SkipNpmCi`;
+  - `/health` publico passou a retornar apenas resumo minimo sem paths internos;
+  - smoke remoto pos-deploy evoluiu para `PASS=26`, `WARN=0`, `FAIL=0`.
 - 2026-03-06: G4/P1 endurecido localmente:
   - `/health` passou a responder apenas resumo publico minimo;
   - `/internal/health` foi criado para diagnostico detalhado em loopback;

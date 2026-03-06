@@ -172,6 +172,8 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 - Validacao:
   - `npx nx run app-platform-api:test`
   - `npm run preprod:validate -- -SkipOperationalDrills`
+  - deploy dev do commit `163f04f`
+  - smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`
 
 ---
 
