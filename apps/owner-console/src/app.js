@@ -20,18 +20,36 @@ const MODULE_COST_LABELS = {
   'mod-05-faturamento-cobranca': 'Modulo 05 - Faturamento/Cobranca'
 };
 
-const VALID_LAYOUTS = ['fabio2', 'studio', 'zazi'];
-const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
+const VALID_LAYOUTS = ['layout1', 'layout2', 'layout3'];
+const VALID_PALETTES = ['palette1', 'palette2', 'palette3', 'palette4'];
 const CRM_STAGE_KEYS = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'nurturing'];
 const CONFIG_STORAGE_KEY = 'owner_console_config_v1';
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const SETTINGS_ADMIN_PASSWORD = '191530';
 const SETTINGS_UNLOCK_SESSION_KEY = 'owner_console_settings_admin_unlock_v1';
+const LAYOUT_ALIASES = {
+  fabio2: 'layout1',
+  studio: 'layout2',
+  zazi: 'layout3',
+  layout1: 'layout1',
+  layout2: 'layout2',
+  layout3: 'layout3'
+};
+const PALETTE_ALIASES = {
+  darkgreen: 'palette1',
+  ocean: 'palette2',
+  forest: 'palette3',
+  sunset: 'palette4',
+  palette1: 'palette1',
+  palette2: 'palette2',
+  palette3: 'palette3',
+  palette4: 'palette4'
+};
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'zazi', palette: 'darkgreen' },
-  tenant_clinica: { layout: 'studio', palette: 'forest' },
-  tenant_comercial: { layout: 'studio', palette: 'sunset' }
+  tenant_automania: { layout: 'layout1', palette: 'palette2' },
+  tenant_clinica: { layout: 'layout3', palette: 'palette3' },
+  tenant_comercial: { layout: 'layout1', palette: 'palette4' }
 };
 
 const state = {
@@ -47,6 +65,8 @@ const state = {
   mediaRecorder: null,
   mediaStream: null,
   config: null,
+  runtimeConfigLoadedTenantId: null,
+  runtimeConfigLoadPromise: null,
   settingsUnlocked: false,
   moduleData: {
     customers: [],
@@ -66,6 +86,10 @@ const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const sidebarBackdropEl = document.getElementById('sidebarBackdrop');
 const topModuleTitleEl = document.getElementById('topModuleTitle');
 const topTenantLabelEl = document.getElementById('topTenantLabel');
+const ownerHeroTenantEl = document.getElementById('ownerHeroTenant');
+const ownerHeroSessionEl = document.getElementById('ownerHeroSession');
+const ownerHeroProviderEl = document.getElementById('ownerHeroProvider');
+const ownerHeroHealthEl = document.getElementById('ownerHeroHealth');
 const openSettingsBtn = document.getElementById('openSettingsBtn');
 const settingsLockStatusEl = document.getElementById('settingsLockStatus');
 
@@ -95,6 +119,9 @@ const customerDetailIdInput = document.getElementById('customerDetailId');
 const customerDetailBtn = document.getElementById('customerDetailBtn');
 const customerDetailOutputEl = document.getElementById('customerDetailOutput');
 const customerIdOptionsEl = document.getElementById('customerIdOptions');
+const customersCountKpiEl = document.getElementById('customersCountKpi');
+const customersPhoneKpiEl = document.getElementById('customersPhoneKpi');
+const customersEmailKpiEl = document.getElementById('customersEmailKpi');
 
 const appointmentCreateForm = document.getElementById('appointmentCreateForm');
 const appointmentTitleInput = document.getElementById('appointmentTitle');
@@ -120,6 +147,9 @@ const reminderRecipientInput = document.getElementById('reminderRecipient');
 const remindersRefreshBtn = document.getElementById('remindersRefreshBtn');
 const remindersRowsEl = document.getElementById('remindersRows');
 const agendaStatusEl = document.getElementById('agendaStatus');
+const agendaAppointmentsKpiEl = document.getElementById('agendaAppointmentsKpi');
+const agendaRemindersKpiEl = document.getElementById('agendaRemindersKpi');
+const agendaWhatsappKpiEl = document.getElementById('agendaWhatsappKpi');
 
 const chargeCreateForm = document.getElementById('chargeCreateForm');
 const chargeCustomerIdInput = document.getElementById('chargeCustomerId');
@@ -145,6 +175,9 @@ const chargesRefreshBtn = document.getElementById('chargesRefreshBtn');
 const chargesRowsEl = document.getElementById('chargesRows');
 const chargeIdOptionsEl = document.getElementById('chargeIdOptions');
 const billingStatusEl = document.getElementById('billingStatus');
+const billingChargesKpiEl = document.getElementById('billingChargesKpi');
+const billingOpenKpiEl = document.getElementById('billingOpenKpi');
+const billingPaidKpiEl = document.getElementById('billingPaidKpi');
 
 const healthStatusEl = document.getElementById('healthStatus');
 const assistantProviderStatusEl = document.getElementById('assistantProviderStatus');
@@ -162,6 +195,7 @@ const confirmationsRefreshBtn = document.getElementById('confirmationsRefreshBtn
 const continuousBtn = document.getElementById('continuousBtn');
 const continuousInlineBtn = document.getElementById('continuousInlineBtn');
 const continuousStateEl = document.getElementById('continuousState');
+const ownerContinuousModeEl = document.getElementById('ownerContinuousMode');
 const continuousBackBtn = document.getElementById('continuousBackBtn');
 const avatarEl = document.getElementById('avatar');
 const simulateVoiceBtn = document.getElementById('simulateVoiceBtn');
@@ -362,8 +396,8 @@ function createDefaultConfig() {
       api_base_url: deriveDefaultApiBase(),
       tenant_id: 'tenant_automania',
       session_id: crypto.randomUUID(),
-      layout: 'zazi',
-      palette: 'darkgreen'
+      layout: 'layout1',
+      palette: 'palette2'
     },
     openai: {
       api_key: '',
@@ -419,11 +453,13 @@ function createDefaultConfig() {
 }
 
 function normalizeLayout(layout) {
-  return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
+  const canonical = LAYOUT_ALIASES[String(layout ?? '').trim().toLowerCase()];
+  return VALID_LAYOUTS.includes(canonical) ? canonical : 'layout1';
 }
 
 function normalizePalette(palette) {
-  return VALID_PALETTES.includes(palette) ? palette : 'darkgreen';
+  const canonical = PALETTE_ALIASES[String(palette ?? '').trim().toLowerCase()];
+  return VALID_PALETTES.includes(canonical) ? canonical : 'palette1';
 }
 
 function safeNumber(value, fallback = 0) {
@@ -634,6 +670,25 @@ function renderSettingsLockStatus() {
   settingsLockStatusEl.classList.toggle('is-locked', !state.settingsUnlocked);
 }
 
+function updateOwnerHeroRuntime() {
+  if (ownerHeroTenantEl) {
+    ownerHeroTenantEl.textContent = state.config?.runtime?.tenant_id || '-';
+  }
+  if (ownerHeroSessionEl) {
+    ownerHeroSessionEl.textContent = sessionId();
+  }
+}
+
+function updateOwnerHeroProvider(value) {
+  if (!ownerHeroProviderEl) return;
+  ownerHeroProviderEl.textContent = String(value || 'idle').replace(/^provider:\s*/i, '');
+}
+
+function updateOwnerHeroHealth(value) {
+  if (!ownerHeroHealthEl) return;
+  ownerHeroHealthEl.textContent = String(value || 'idle');
+}
+
 function setAssistantProviderStatus(provider, options = {}) {
   if (!assistantProviderStatusEl) return;
 
@@ -676,6 +731,7 @@ function setAssistantProviderStatus(provider, options = {}) {
 
   assistantProviderStatusEl.textContent = text;
   assistantProviderStatusEl.title = title;
+  updateOwnerHeroProvider(text);
 }
 
 function getNavModules() {
@@ -701,7 +757,7 @@ const MODULE_VIEW_BY_ID = {
 };
 
 const CRM_EMBED_POSTMESSAGE_TYPE = 'saas.crm.embed.height';
-const CRM_EMBED_URL_REV = '20260304e';
+const CRM_EMBED_URL_REV = '20260306f';
 
 function crmEmbeddedUrl(forceReload = false) {
   const params = new URLSearchParams({
@@ -793,6 +849,7 @@ function setTopbarLabels() {
   const meta = moduleMeta(state.activeModuleId);
   topModuleTitleEl.textContent = meta.title;
   topTenantLabelEl.textContent = state.config.runtime.tenant_id;
+  updateOwnerHeroRuntime();
 }
 
 function setModuleStatus(element, text, isError = false) {
@@ -858,6 +915,7 @@ function renderCustomersTable() {
   if (state.moduleData.customers.length === 0) {
     customersRowsEl.innerHTML = '<tr><td colspan="5">Sem clientes para este tenant.</td></tr>';
     updateDatalist(customerIdOptionsEl, []);
+    renderCustomerOverview();
     return;
   }
 
@@ -879,6 +937,16 @@ function renderCustomersTable() {
     customerIdOptionsEl,
     state.moduleData.customers.map((item) => item.customer_id)
   );
+  renderCustomerOverview();
+}
+
+function renderCustomerOverview() {
+  const items = Array.isArray(state.moduleData.customers) ? state.moduleData.customers : [];
+  const withPhone = items.filter((item) => String(item?.primary_phone ?? '').trim().length > 0).length;
+  const withEmail = items.filter((item) => String(item?.primary_email ?? '').trim().length > 0).length;
+  if (customersCountKpiEl) customersCountKpiEl.textContent = String(items.length);
+  if (customersPhoneKpiEl) customersPhoneKpiEl.textContent = String(withPhone);
+  if (customersEmailKpiEl) customersEmailKpiEl.textContent = String(withEmail);
 }
 
 function renderAppointmentsTable() {
@@ -886,6 +954,7 @@ function renderAppointmentsTable() {
   if (state.moduleData.appointments.length === 0) {
     appointmentsRowsEl.innerHTML = '<tr><td colspan="5">Sem appointments nesta sessao.</td></tr>';
     updateDatalist(appointmentIdOptionsEl, []);
+    renderAgendaOverview();
     return;
   }
 
@@ -907,12 +976,14 @@ function renderAppointmentsTable() {
     appointmentIdOptionsEl,
     state.moduleData.appointments.map((item) => item.appointment_id)
   );
+  renderAgendaOverview();
 }
 
 function renderRemindersTable() {
   if (!remindersRowsEl) return;
   if (state.moduleData.reminders.length === 0) {
     remindersRowsEl.innerHTML = '<tr><td colspan="6">Sem reminders para este tenant.</td></tr>';
+    renderAgendaOverview();
     return;
   }
 
@@ -930,6 +1001,16 @@ function renderRemindersTable() {
     `
     )
     .join('');
+  renderAgendaOverview();
+}
+
+function renderAgendaOverview() {
+  const appointments = Array.isArray(state.moduleData.appointments) ? state.moduleData.appointments : [];
+  const reminders = Array.isArray(state.moduleData.reminders) ? state.moduleData.reminders : [];
+  const whatsappCount = reminders.filter((item) => String(item?.channel ?? '').trim().toLowerCase() === 'whatsapp').length;
+  if (agendaAppointmentsKpiEl) agendaAppointmentsKpiEl.textContent = String(appointments.length);
+  if (agendaRemindersKpiEl) agendaRemindersKpiEl.textContent = String(reminders.length);
+  if (agendaWhatsappKpiEl) agendaWhatsappKpiEl.textContent = String(whatsappCount);
 }
 
 function renderChargesTable() {
@@ -937,6 +1018,7 @@ function renderChargesTable() {
   if (state.moduleData.charges.length === 0) {
     chargesRowsEl.innerHTML = '<tr><td colspan="6">Sem cobrancas para este tenant.</td></tr>';
     updateDatalist(chargeIdOptionsEl, []);
+    renderBillingOverview();
     return;
   }
 
@@ -959,6 +1041,16 @@ function renderChargesTable() {
     chargeIdOptionsEl,
     state.moduleData.charges.map((item) => item.charge_id)
   );
+  renderBillingOverview();
+}
+
+function renderBillingOverview() {
+  const charges = Array.isArray(state.moduleData.charges) ? state.moduleData.charges : [];
+  const openCount = charges.filter((item) => String(item?.status ?? '').trim().toLowerCase() === 'open').length;
+  const paidCount = charges.filter((item) => String(item?.status ?? '').trim().toLowerCase() === 'paid').length;
+  if (billingChargesKpiEl) billingChargesKpiEl.textContent = String(charges.length);
+  if (billingOpenKpiEl) billingOpenKpiEl.textContent = String(openCount);
+  if (billingPaidKpiEl) billingPaidKpiEl.textContent = String(paidCount);
 }
 
 function confirmationFilterValue() {
@@ -1119,6 +1211,32 @@ async function pushRuntimeConfigToBackend() {
     openAiConfigured: runtime.openai_configured === true,
     model: runtime.model ?? state.config.openai.model
   };
+}
+
+async function ensureRuntimeConfigLoaded(forceReload = false) {
+  const tenant = tenantId();
+  if (!tenant) return;
+
+  if (!forceReload && state.runtimeConfigLoadedTenantId === tenant) {
+    return;
+  }
+
+  if (state.runtimeConfigLoadPromise) {
+    await state.runtimeConfigLoadPromise;
+    if (!forceReload && state.runtimeConfigLoadedTenantId === tenant) {
+      return;
+    }
+  }
+
+  state.runtimeConfigLoadPromise = pullRuntimeConfigFromBackend()
+    .then(() => {
+      state.runtimeConfigLoadedTenantId = tenant;
+    })
+    .finally(() => {
+      state.runtimeConfigLoadPromise = null;
+    });
+
+  await state.runtimeConfigLoadPromise;
 }
 
 async function pullRuntimeConfigFromBackend() {
@@ -1968,6 +2086,9 @@ function syncContinuousButtonsUi() {
     continuousInlineBtn.textContent = label;
     continuousInlineBtn.classList.toggle('is-active', state.continuous === true);
   }
+  if (ownerContinuousModeEl) {
+    ownerContinuousModeEl.textContent = state.continuous ? 'continuous' : 'one-shot';
+  }
 }
 
 function isMobileViewport() {
@@ -1991,7 +2112,7 @@ function applyVisualMode(layout, palette, persist = true) {
     persistConfig();
   }
 
-  if (safeLayout === 'studio') {
+  if (safeLayout === 'layout2') {
     bodyEl.classList.remove('menu-open');
   }
 
@@ -2267,6 +2388,7 @@ function populateConfigForm() {
 }
 
 function collectConfigForm() {
+  const previousTenantId = String(state.config?.runtime?.tenant_id ?? '').trim();
   state.config.runtime.api_base_url = normalizeApiBase(cfgApiBaseInput.value);
   state.config.runtime.tenant_id = cfgTenantIdInput.value.trim();
   state.config.runtime.session_id = cfgSessionIdInput.value.trim() || crypto.randomUUID();
@@ -2322,6 +2444,10 @@ function collectConfigForm() {
     || 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.';
   state.config.integrations.billing.provider = cfgBillingProviderInput.value.trim();
   state.config.integrations.billing.api_key = cfgBillingApiKeyInput.value.trim();
+
+  if (previousTenantId !== state.config.runtime.tenant_id) {
+    state.runtimeConfigLoadedTenantId = null;
+  }
 }
 
 function ensureModuleMetric(moduleId) {
@@ -2474,13 +2600,16 @@ function normalizeAssistantOutputText(rawText) {
 
 async function callHealth() {
   healthStatusEl.textContent = 'checking...';
+  updateOwnerHeroHealth('checking...');
   try {
     const response = await fetch(`${apiBase()}/health`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.json();
     healthStatusEl.textContent = body.status === 'ok' ? 'online' : 'degraded';
+    updateOwnerHeroHealth(healthStatusEl.textContent);
   } catch {
     healthStatusEl.textContent = 'offline';
+    updateOwnerHeroHealth('offline');
   }
 }
 
@@ -2613,12 +2742,14 @@ async function sendInteraction(text, attachments = []) {
         : {})
     }));
   }
-  const personaOverrides = buildPersonaOverridesFromConfig();
-  if (personaOverrides) {
-    payload.persona_overrides = personaOverrides;
-  }
-
   try {
+    await ensureRuntimeConfigLoaded();
+
+    const personaOverrides = buildPersonaOverridesFromConfig();
+    if (personaOverrides) {
+      payload.persona_overrides = personaOverrides;
+    }
+
     const submitInteraction = () => fetch(`${apiBase()}/v1/owner-concierge/interaction`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -2663,6 +2794,18 @@ async function sendInteraction(text, attachments = []) {
       ? assistantOutput.fallback_reason
       : null;
     appendMessage(output);
+    const queuedTasks = Array.isArray(body.response?.downstream_tasks)
+      ? body.response.downstream_tasks
+      : [];
+    if (queuedTasks.length > 0) {
+      const summary = queuedTasks
+        .map((item) => `${item.target_module} ${item.task_type} [${item.status}]`)
+        .join(' | ');
+      appendMessage(
+        `[runtime] ${summary}. Isso ainda nao gera registro ou KPI ate haver comprovante de execucao.`,
+        'assistant'
+      );
+    }
     setAssistantProviderStatus(provider, {
       model,
       fallbackReason
@@ -2876,6 +3019,7 @@ async function saveConfig() {
   renderMetricsTable();
   try {
     const syncResult = await pushRuntimeConfigToBackend();
+    state.runtimeConfigLoadedTenantId = tenantId();
     updateConfigStatus(
       `Configuracoes salvas e aplicadas no backend (mode=${syncResult.ownerResponseMode}, model=${syncResult.model}).`
     );
@@ -2897,7 +3041,13 @@ function bootstrapConfig() {
   state.config = mergeConfig(loadConfig());
   const tenant = String(state.config?.runtime?.tenant_id ?? '').trim().toLowerCase();
   const preset = TENANT_THEME_PRESETS[tenant];
-  if (preset) {
+  const shouldMigrateLegacyLayout =
+    tenant === 'tenant_automania' && normalizeLayout(state.config?.runtime?.layout) === 'layout3';
+  const shouldPromoteLegacyDefault =
+    tenant === 'tenant_automania' &&
+    normalizeLayout(state.config?.runtime?.layout) === 'layout2' &&
+    normalizePalette(state.config?.runtime?.palette) === 'palette1';
+  if (preset && (!state.config.runtime.layout || shouldMigrateLegacyLayout || shouldPromoteLegacyDefault)) {
     state.config.runtime.layout = preset.layout;
     state.config.runtime.palette = preset.palette;
     persistConfig();
@@ -2914,7 +3064,7 @@ function bootstrapConfig() {
 
 function setupEvents() {
   mobileMenuBtn.addEventListener('click', () => {
-    if (rootEl.dataset.layout === 'studio') return;
+    if (rootEl.dataset.layout === 'layout2') return;
     if (!isMobileViewport()) return;
     bodyEl.classList.toggle('menu-open');
   });
@@ -3076,13 +3226,13 @@ async function bootstrap() {
   syncCrmEmbeddedFrame();
   renderModuleNav();
   setActiveModule('mod-01-owner-concierge');
-  setupEvents();
   await callHealth();
   try {
-    await pullRuntimeConfigFromBackend();
+    await ensureRuntimeConfigLoaded();
   } catch {
     // backend runtime config may not be available yet during cold start
   }
+  setupEvents();
   refreshInteractionConfirmations();
 }
 

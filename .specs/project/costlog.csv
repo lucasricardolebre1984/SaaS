@@ -227,3 +227,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T8 CRM bootstrap theme override for tenant preset parity (stale layout cache fix)
 2026-03-04,internal,engineering-time,local,0.00,0.00,implementation,crm-krayin-reference-modernization-slice T8 hide CRM top config controls and keep modulo-06 configuration flow
 2026-03-06,internal,engineering-time,local,0.00,0.00,operations,Deep rollback to repository baseline 11a5243 with owner/crm build validation and publish/deploy alignment prep
+2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,Targeted restore from d644e2d for owner module-01 side rail and CRM embed layout stability with validation builds
