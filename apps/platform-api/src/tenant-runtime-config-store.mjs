@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import pg from 'pg';
 
 function ensureDirectory(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -20,6 +21,16 @@ function readJsonFile(filePath, fallbackValue) {
 
 function writeJsonFile(filePath, value) {
   fs.writeFileSync(filePath, JSON.stringify(value, null, 2), 'utf8');
+}
+
+function assertValidIdentifier(value, fieldName) {
+  if (typeof value !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
+    throw new Error(`Invalid SQL identifier for ${fieldName}`);
+  }
+}
+
+function tableName(schema, table) {
+  return `"${schema}"."${table}"`;
 }
 
 function asBool(value, fallback = false) {
@@ -267,7 +278,7 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
   };
 }
 
-export function createTenantRuntimeConfigStore(options = {}) {
+function createFileTenantRuntimeConfigStore(options = {}) {
   const storageDir = path.resolve(
     options.storageDir ?? path.join(process.cwd(), '.runtime-data', 'tenant-runtime-config')
   );
@@ -335,5 +346,162 @@ export function createTenantRuntimeConfigStore(options = {}) {
     },
     async close() {}
   };
+}
+
+function asIsoTimestamp(value, fallbackIso) {
+  const parsed = new Date(String(value ?? '').trim());
+  if (Number.isNaN(parsed.getTime())) return fallbackIso;
+  return parsed.toISOString();
+}
+
+function asTenantRuntimeConfigRecord(row) {
+  const config = row.config_json ?? {};
+  return {
+    tenant_id: row.tenant_id,
+    openai: config.openai ?? {},
+    personas: config.personas ?? {},
+    execution: config.execution ?? {},
+    integrations: config.integrations ?? {},
+    crm: config.crm ?? normalizeCrmConfig(),
+    created_at: row.created_at?.toISOString?.() ?? row.created_at,
+    updated_at: row.updated_at?.toISOString?.() ?? row.updated_at
+  };
+}
+
+function createPostgresTenantRuntimeConfigStore(options = {}) {
+  const schema = options.pgSchema ?? process.env.ORCHESTRATION_PG_SCHEMA ?? 'public';
+  const connectionString =
+    options.pgConnectionString ??
+    process.env.ORCHESTRATION_PG_DSN ??
+    process.env.DATABASE_URL;
+  const autoMigrate = options.pgAutoMigrate !== false;
+  const legacyStorageDir = path.resolve(
+    options.storageDir ?? path.join(process.cwd(), '.runtime-data', 'tenant-runtime-config')
+  );
+  const legacyConfigFilePath = path.join(legacyStorageDir, 'tenant-runtime-config.json');
+
+  assertValidIdentifier(schema, 'pgSchema');
+
+  if (!connectionString) {
+    throw new Error('Missing Postgres DSN. Set ORCHESTRATION_PG_DSN or pass pgConnectionString.');
+  }
+
+  const client = new pg.Client({ connectionString });
+  const runtimeConfigTable = tableName(schema, 'tenant_runtime_configs');
+
+  async function ensureSchema() {
+    if (!autoMigrate) return;
+    await client.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${runtimeConfigTable} (
+        tenant_id TEXT PRIMARY KEY,
+        config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS tenant_runtime_configs_updated_idx
+      ON ${runtimeConfigTable} (updated_at DESC)
+    `);
+  }
+
+  async function backfillFromLegacyFile() {
+    const state = readJsonFile(legacyConfigFilePath, { items: [] });
+    if (!Array.isArray(state.items) || state.items.length === 0) return;
+
+    for (const item of state.items) {
+      const tenantId = asString(item?.tenant_id);
+      if (!tenantId) continue;
+      const normalized = normalizeTenantRuntimeConfig(item, item);
+      const fallbackCreatedAt = new Date().toISOString();
+      const createdAt = asIsoTimestamp(item?.created_at, fallbackCreatedAt);
+      const updatedAt = asIsoTimestamp(item?.updated_at, createdAt);
+      await client.query(
+        `
+          INSERT INTO ${runtimeConfigTable} (tenant_id, config_json, created_at, updated_at)
+          VALUES ($1, $2::jsonb, $3, $4)
+          ON CONFLICT (tenant_id) DO NOTHING
+        `,
+        [tenantId, JSON.stringify(normalized), createdAt, updatedAt]
+      );
+    }
+  }
+
+  const ready = (async () => {
+    await client.connect();
+    await ensureSchema();
+    await backfillFromLegacyFile();
+  })();
+
+  async function query(sql, params = []) {
+    await ready;
+    return client.query(sql, params);
+  }
+
+  return {
+    backend: 'postgres',
+    storageDir: null,
+    configFilePath: null,
+    async getTenantRuntimeConfig(tenantId) {
+      const normalizedTenantId = asString(tenantId);
+      if (!normalizedTenantId) return null;
+      const result = await query(
+        `SELECT tenant_id, config_json, created_at, updated_at FROM ${runtimeConfigTable} WHERE tenant_id = $1 LIMIT 1`,
+        [normalizedTenantId]
+      );
+      if (result.rowCount === 0) return null;
+      return asTenantRuntimeConfigRecord(result.rows[0]);
+    },
+    async upsertTenantRuntimeConfig(tenantId, configInput = {}) {
+      const normalizedTenantId = asString(tenantId);
+      if (!normalizedTenantId) {
+        throw new Error('tenant_id_required');
+      }
+
+      const existing = await this.getTenantRuntimeConfig(normalizedTenantId);
+      const normalized = normalizeTenantRuntimeConfig(configInput, existing ?? {});
+      const nowIso = new Date().toISOString();
+      const createdAt = existing?.created_at ?? nowIso;
+
+      const result = await query(
+        `
+          INSERT INTO ${runtimeConfigTable} (tenant_id, config_json, created_at, updated_at)
+          VALUES ($1, $2::jsonb, $3, $4)
+          ON CONFLICT (tenant_id) DO UPDATE
+          SET config_json = EXCLUDED.config_json,
+              updated_at = EXCLUDED.updated_at
+          RETURNING tenant_id, config_json, created_at, updated_at
+        `,
+        [normalizedTenantId, JSON.stringify(normalized), createdAt, nowIso]
+      );
+
+      return asTenantRuntimeConfigRecord(result.rows[0]);
+    },
+    async close() {
+      await ready.catch(() => {});
+      await client.end();
+    }
+  };
+}
+
+export function createTenantRuntimeConfigStore(options = {}) {
+  const backend = (
+    options.backend ??
+    process.env.ORCHESTRATION_STORE_BACKEND ??
+    'file'
+  ).toLowerCase();
+
+  if (backend === 'postgres') {
+    return createPostgresTenantRuntimeConfigStore(options);
+  }
+
+  if (backend === 'file') {
+    return createFileTenantRuntimeConfigStore(options);
+  }
+
+  throw new Error(
+    `Unsupported tenant runtime config store backend: ${backend}. Use "file" or "postgres".`
+  );
 }
 

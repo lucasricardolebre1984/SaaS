@@ -201,6 +201,15 @@ Evidencias:
 - `apps/platform-api/src/tenant-runtime-config-store.mjs`
 Achado:
 - o SaaS remoto usa Postgres para quase tudo, mas `tenant_runtime_config` continua em arquivo local.
+Checkpoint 2026-03-06:
+- implementado store Postgres para `tenant_runtime_config` com auto-migrate e backfill do arquivo legado;
+- `apps/platform-api/sql/orchestration-postgres.sql` agora cria `tenant_runtime_configs`;
+- validacao local concluida com:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
+  - `npm run preprod:validate -- -SkipOperationalDrills`
+- status do gate permanece `WARN` ate publicar/deployar no AWS e confirmar `tenant_runtime_config.backend = postgres` no health remoto.
 Risco:
 - consistencia fraca em multi-instancia
 - backup/restore parcial

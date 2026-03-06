@@ -20,7 +20,7 @@ $apiProcess = $null
 function Wait-ForPostgres {
   param([int]$MaxAttempts = 40)
   for ($i = 1; $i -le $MaxAttempts; $i++) {
-    & docker compose -p $composeProject -f $composeFile exec -T postgres pg_isready -U fabio -d fabio_dev *> $null
+    & docker compose -p $composeProject -f $composeFile exec -T postgres psql -U fabio -d fabio_dev -tAc "SELECT 1" *> $null
     if ($LASTEXITCODE -eq 0) {
       Write-Host "Postgres ready after $i attempt(s)."
       return
@@ -113,6 +113,62 @@ try {
     -RedirectStandardOutput $apiStdout -RedirectStandardError $apiStderr
 
   Wait-ForApi
+
+  $runtimePayload = @{
+    request = @{
+      request_id = [guid]::NewGuid().ToString()
+      tenant_id = 'tenant_automania'
+      config = @{
+        openai = @{
+          api_key = ''
+          model = 'gpt-5-mini'
+          vision_enabled = $true
+          voice_enabled = $true
+          image_generation_enabled = $true
+          image_read_enabled = $true
+        }
+        personas = @{
+          owner_concierge_prompt = 'Prompt smoke owner'
+          whatsapp_agent_prompt = 'Prompt smoke whatsapp'
+        }
+        execution = @{
+          confirmations_enabled = $false
+          whatsapp_ai_enabled = $true
+          whatsapp_ai_mode = 'assist_execute'
+          whatsapp_ai_min_confidence = 0.7
+        }
+        integrations = @{
+          crm_evolution = @{
+            base_url = 'http://127.0.0.1:8080'
+            api_key = 'smoke-evolution-key'
+            instance_id = 'tenant_automania'
+          }
+        }
+      }
+    }
+  }
+
+  Write-Host 'Persisting tenant runtime config on postgres backend...'
+  $runtimeUpsert = Invoke-RestMethod -Uri "$apiBaseUrl/v1/owner-concierge/runtime-config" `
+    -Method Post -ContentType 'application/json' -Body ($runtimePayload | ConvertTo-Json -Depth 10)
+  if ($runtimeUpsert.response.status -ne 'accepted') {
+    throw 'Tenant runtime config upsert was not accepted.'
+  }
+
+  $runtimeGet = Invoke-RestMethod -Uri "$apiBaseUrl/v1/owner-concierge/runtime-config?tenant_id=tenant_automania" `
+    -Method Get
+  if ($runtimeGet.runtime.model -ne 'gpt-5-mini') {
+    throw "Expected runtime-config model gpt-5-mini, got $($runtimeGet.runtime.model)."
+  }
+
+  $runtimeModel = Invoke-PostgresSql -Scalar -Sql @"
+SELECT config_json->'openai'->>'model'
+FROM public.tenant_runtime_configs
+WHERE tenant_id = 'tenant_automania'
+"@
+  if ($runtimeModel -ne 'gpt-5-mini') {
+    throw "Expected tenant_runtime_configs model gpt-5-mini, got $runtimeModel."
+  }
 
   $requestId = [guid]::NewGuid().ToString()
   $sessionId = [guid]::NewGuid().ToString()
@@ -348,9 +404,9 @@ VALUES (
   'tenant',
   'crm.pipeline',
   false,
-  '{\"stage\":\"proposal\"}'::jsonb,
-  '[\"title\",\"stage\",\"amount\"]'::jsonb,
-  '{\"field\":\"updated_at\",\"direction\":\"desc\"}'::jsonb,
+  '{"stage":"proposal"}'::jsonb,
+  '["title","stage","amount"]'::jsonb,
+  '{"field":"updated_at","direction":"desc"}'::jsonb,
   '$nowIso',
   '$nowIso'
 )
@@ -558,6 +614,7 @@ VALUES (
   $crmActivitiesCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_activities;")
   $crmTasksCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_tasks;")
   $crmViewsCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.crm_views;")
+  $tenantRuntimeConfigCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.tenant_runtime_configs;")
   $ownerMemoryCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.owner_memory_entries;")
   $ownerPromotionCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.owner_context_promotions;")
   $ownerReembedScheduleCount = [int](Invoke-PostgresSql -Scalar -Sql "select count(*) from public.owner_memory_reembed_schedules;")
@@ -577,6 +634,7 @@ VALUES (
   if ($crmActivitiesCount -lt 1) { throw "Expected >=1 crm activity row, got $crmActivitiesCount." }
   if ($crmTasksCount -lt 1) { throw "Expected >=1 crm task row, got $crmTasksCount." }
   if ($crmViewsCount -lt 1) { throw "Expected >=1 crm view row, got $crmViewsCount." }
+  if ($tenantRuntimeConfigCount -lt 1) { throw "Expected >=1 tenant runtime config row, got $tenantRuntimeConfigCount." }
   if ($ownerMemoryCount -lt 1) { throw "Expected >=1 owner memory row, got $ownerMemoryCount." }
   if ($ownerPromotionCount -lt 1) { throw "Expected >=1 owner promotion row, got $ownerPromotionCount." }
   if ($ownerReembedScheduleCount -lt 1) { throw "Expected >=1 owner memory reembed schedule row, got $ownerReembedScheduleCount." }
@@ -588,7 +646,7 @@ VALUES (
   Write-Host "billing_correlation_id=$billingCorrelation"
   Write-Host "memory_correlation_id=$memoryCorrelation"
   Write-Host "followup_correlation_id=$followupCorrelation"
-  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount crm_campaigns=$crmCampaignCount crm_followups=$crmFollowupCount crm_accounts=$crmAccountsCount crm_contacts=$crmContactsCount crm_deals=$crmDealsCount crm_activities=$crmActivitiesCount crm_tasks=$crmTasksCount crm_views=$crmViewsCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount owner_reembed_schedules=$ownerReembedScheduleCount owner_reembed_runs=$ownerReembedRunsCount"
+  Write-Host "rows: commands=$commandCount events=$eventCount queue=$queueCount billing_charges=$billingChargeCount billing_payments=$billingPaymentCount crm_leads=$crmLeadCount crm_campaigns=$crmCampaignCount crm_followups=$crmFollowupCount crm_accounts=$crmAccountsCount crm_contacts=$crmContactsCount crm_deals=$crmDealsCount crm_activities=$crmActivitiesCount crm_tasks=$crmTasksCount crm_views=$crmViewsCount tenant_runtime_configs=$tenantRuntimeConfigCount owner_memory=$ownerMemoryCount owner_promotions=$ownerPromotionCount owner_reembed_schedules=$ownerReembedScheduleCount owner_reembed_runs=$ownerReembedRunsCount"
 }
 finally {
   if ($apiProcess -and -not $apiProcess.HasExited) {

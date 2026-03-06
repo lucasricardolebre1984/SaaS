@@ -1,7 +1,7 @@
 # Status Atual — Fabio SaaS (Modelo Universal)
 
 **Documento:** STATUS-ATUAL  
-**Ultima atualizacao:** 2026-03-03 (T7 runtime controls concluido; proximo foco movido para T8 validation + UAT)  
+**Ultima atualizacao:** 2026-03-06 (T8 fechado em dev AWS; repo e ambiente alinhados em `b11bbe1`; proximo foco movido para T6/T1 UX enterprise)  
 **Objetivo:** Snapshot rastreavel do estado do repositorio, modelo de aprendizado continuo e conformidade com specs.
 
 ---
@@ -127,9 +127,37 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 ## 6. Proximo passo natural
 
 - **Slice ativo:** `crm-krayin-reference-modernization-slice`.
-- **Objetivo imediato:** executar T8 (validation + UAT) para validar T7 em fluxo real (inbound -> qualify -> stage move -> follow-up) sem regressao de inbox/thread.
+- **Objetivo imediato:** fechar T6/T1, evoluindo a UX enterprise do CRM e consolidando shell visual consistente dos modulos 01..06 sem regressao da baseline T8.
 - **Gate principal:** `app-crm-console:build` + `app-owner-console:build` + `preprod:validate` mantendo fluxo `deal -> activity -> stage update` e smoke de botoes/endpoints.
 - **Referencia:** `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`.
+
+## Update 2026-03-05 (T8 fechado + alinhamento local/git/aws)
+- T8 efetivamente fechado em dev AWS:
+  - smoke remoto final em `https://dev.automaniaai.com.br/api` com `PASS=25`, `WARN=1`, `FAIL=0`;
+  - fluxo `owner interaction -> inbound webhook -> conversation -> ai suggest -> ai qualify -> ai execute update stage` validado ponta-a-ponta.
+- Repositorio e ambientes alinhados:
+  - local `main` limpo;
+  - GitHub `origin/main` em `b11bbe1`;
+  - Ubuntu `/srv/SaaS` em `b11bbe1`, `saas.service active`.
+- Hotfix funcional publicado:
+  - Owner embed do CRM com scroll restaurado;
+  - paineis internos do CRM com overflow corrigido no modulo 02.
+- Pendencia operacional residual:
+  - `crm:conversations:send` continua `WARN` no smoke sintetico quando o provider outbound responde `502`; nao bloqueia o gate geral do SaaS.
+
+## Update 2026-03-06 (G6 local fechado)
+- `tenant_runtime_config` passou a suportar backend Postgres no runtime:
+  - selecao por `ORCHESTRATION_STORE_BACKEND`;
+  - tabela `tenant_runtime_configs` adicionada ao baseline SQL;
+  - backfill do arquivo legado para banco no bootstrap Postgres.
+- Evidencia executada localmente:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run contract-tests:contract-checks`
+  - `npm run smoke:postgres`
+  - `npm run preprod:validate -- -SkipOperationalDrills`
+- Resultado:
+  - smoke Postgres passou com `tenant_runtime_configs=1`;
+  - gate integrado permaneceu verde e o smoke remoto AWS seguiu `PASS=25`, `WARN=1`, `FAIL=0`.
 
 ---
 

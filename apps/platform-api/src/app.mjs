@@ -2823,7 +2823,11 @@ export function createApp(options = {}) {
     pgAutoMigrate
   });
   const tenantRuntimeConfigStore = createTenantRuntimeConfigStore({
-    storageDir: options.tenantRuntimeConfigStorageDir ?? options.orchestrationStorageDir
+    backend,
+    storageDir: options.tenantRuntimeConfigStorageDir ?? options.orchestrationStorageDir,
+    pgConnectionString,
+    pgSchema,
+    pgAutoMigrate
   });
   const shortMemoryStore = createOwnerShortMemoryStore({
     storageDir: options.ownerShortMemoryStorageDir ?? options.orchestrationStorageDir,

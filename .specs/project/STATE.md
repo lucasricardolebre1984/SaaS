@@ -1,6 +1,6 @@
 # STATE
 
-Last update: 2026-03-04
+Last update: 2026-03-06
 Active phase: Implement + Validate (crm-krayin-reference-modernization-slice)
 Active feature: crm-krayin-reference-modernization-slice
 
@@ -45,6 +45,23 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-06: G6/P0 avancou de forma concreta no ambiente local:
+  - `tenant_runtime_config` ganhou store Postgres com auto-migrate, selecao por `ORCHESTRATION_STORE_BACKEND` e backfill do arquivo legado;
+  - baseline SQL passou a criar `public.tenant_runtime_configs`;
+  - `npm run smoke:postgres` passou com `tenant_runtime_configs=1`;
+  - `npm run preprod:validate -- -SkipOperationalDrills` passou com smoke Postgres e smoke remoto AWS verdes.
+- 2026-03-05: alinhamento operacional fechado ponta-a-ponta:
+  - local, GitHub e AWS dev sincronizados no commit `b11bbe1`;
+  - `npm run deploy:dev -- -SkipNpmCi` executado com pull/restart no Ubuntu;
+  - `saas.service` permaneceu `active` e health publico `https://dev.automaniaai.com.br/api/health` retornou `ok`.
+- 2026-03-05: T8 efetivamente fechado em dev AWS:
+  - smoke remoto final executado em `https://dev.automaniaai.com.br/api` com `PASS=25`, `WARN=1`, `FAIL=0`;
+  - fluxo `owner interaction -> inbound webhook -> conversation -> ai suggest -> ai qualify -> ai execute update stage` validado;
+  - warning remanescente permanece restrito a `crm:conversations:send` em numero/provider sintetico.
+- 2026-03-05: hotfix de UX do modulo 02 publicado:
+  - Owner embed do CRM voltou a permitir scroll;
+  - paineis internos do CRM (`conversation-list`, `thread`, `detail-panel`) passaram a respeitar overflow esperado.
+- 2026-03-05: auditoria formal de gates publicada em `.specs/project/PLANO-GATES-AUDITORIA-SAAS-2026-03-05.md` com decisao `GO CONTROLADO`.
 - 2026-03-04: paridade de `crm.automation` fechada em dev:
   - commit publicado/deployado: `11a5243`;
   - UAT focado confirmou `automation.status=scheduled` no `ai/execute update_stage` e `followups_for_lead=1`;

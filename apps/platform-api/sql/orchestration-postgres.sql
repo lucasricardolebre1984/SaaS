@@ -240,6 +240,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS crm_followups_tenant_external_key_ux
 CREATE INDEX IF NOT EXISTS crm_followups_tenant_schedule_idx
   ON public.crm_followups (tenant_id, status, schedule_at);
 
+CREATE TABLE IF NOT EXISTS public.tenant_runtime_configs (
+  tenant_id TEXT PRIMARY KEY,
+  config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS tenant_runtime_configs_updated_idx
+  ON public.tenant_runtime_configs (updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS public.crm_accounts (
   account_id UUID PRIMARY KEY,
   tenant_id TEXT NOT NULL,
