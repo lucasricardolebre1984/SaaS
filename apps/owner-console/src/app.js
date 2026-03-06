@@ -29,7 +29,7 @@ const SETTINGS_ADMIN_PASSWORD = '191530';
 const SETTINGS_UNLOCK_SESSION_KEY = 'owner_console_settings_admin_unlock_v1';
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'zazi', palette: 'darkgreen' },
+  tenant_automania: { layout: 'studio', palette: 'darkgreen' },
   tenant_clinica: { layout: 'studio', palette: 'forest' },
   tenant_comercial: { layout: 'studio', palette: 'sunset' }
 };
@@ -371,7 +371,7 @@ function createDefaultConfig() {
       api_base_url: deriveDefaultApiBase(),
       tenant_id: 'tenant_automania',
       session_id: crypto.randomUUID(),
-      layout: 'zazi',
+      layout: 'studio',
       palette: 'darkgreen'
     },
     openai: {
@@ -2941,7 +2941,9 @@ function bootstrapConfig() {
   state.config = mergeConfig(loadConfig());
   const tenant = String(state.config?.runtime?.tenant_id ?? '').trim().toLowerCase();
   const preset = TENANT_THEME_PRESETS[tenant];
-  if (preset) {
+  const shouldMigrateLegacyLayout =
+    tenant === 'tenant_automania' && String(state.config?.runtime?.layout ?? '').trim().toLowerCase() === 'zazi';
+  if (preset && (!state.config.runtime.layout || shouldMigrateLegacyLayout)) {
     state.config.runtime.layout = preset.layout;
     state.config.runtime.palette = preset.palette;
     persistConfig();
