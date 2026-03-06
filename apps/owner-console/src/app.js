@@ -757,7 +757,7 @@ const MODULE_VIEW_BY_ID = {
 };
 
 const CRM_EMBED_POSTMESSAGE_TYPE = 'saas.crm.embed.height';
-const CRM_EMBED_URL_REV = '20260306e';
+const CRM_EMBED_URL_REV = '20260306f';
 
 function crmEmbeddedUrl(forceReload = false) {
   const params = new URLSearchParams({
