@@ -2,7 +2,7 @@
 
 **Foco:** estabilidade operacional com rastreabilidade 100% (botao -> endpoint -> evidencia).
 
-**Ultima atualizacao:** 2026-03-04
+**Ultima atualizacao:** 2026-03-02
 
 ---
 
@@ -16,7 +16,7 @@
 
 ## Proximo passo unico (ativo)
 
-**Executar T8 (Validation + UAT) do `crm-krayin-reference-modernization-slice`, validando o T7 em ambiente dev com fluxo real e sem regressao de inbox/pipeline.**
+**Executar T6 (CRM UI enterprise: Inbox + Pipeline + Detail panel) do `crm-krayin-reference-modernization-slice`, acoplando os novos endpoints T5 sem regressao do inbox.**
 
 Pre-condicoes (ja cumpridas):
 1. Slice de estabilidade M5B encerrado com `GO`.
@@ -45,48 +45,10 @@ Passos concluidos em 2026-03-02:
      - `npx nx run contract-tests:contract-checks`
      - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
 
-Passos concluidos em 2026-03-03:
-1. T7 concluido com runtime controls tenant-scoped no modulo 06:
-   - `crm.pipeline.stages`, `crm.pipeline.default_stage`
-   - `crm.automation.stage_followup_*`
-2. Backend passou a aplicar regras de pipeline por tenant em leads/deals:
-   - stage default no create de lead
-   - bloqueio de stage desabilitado
-   - follow-up automatico por stage (manual e IA)
-3. CRM console passou a consumir runtime-config por tenant para renderizar stages/filtros/kanban dinamicos.
-4. Gates de T7 validados:
-   - `npx nx run app-platform-api:test`
-   - `npx nx run app-owner-console:build`
-    - `npx nx run app-crm-console:build`
-    - `npx nx run contract-tests:contract-checks`
-
-Passos concluidos em 2026-03-04:
-1. Validacao tecnica de T8 executada localmente:
-   - `npx nx run app-platform-api:test` (`64/64` pass)
-   - `npx nx run contract-tests:contract-checks`
-   - `npx nx run app-owner-console:build`
-   - `npx nx run app-crm-console:build`
-2. Gate integrado executado com sucesso:
-   - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
-   - reports:
-     - `tools/reports/preprod-validate-20260304-042452.log`
-     - `tools/reports/preprod-validate-20260304-045933.log`
-3. Smoke endpoint-a-endpoint executado em dev AWS:
-   - report: `tools/reports/saas-endpoint-smoke-20260304-042537.json`
-   - resultado: `PASS=25`, `WARN=1`, `FAIL=0`
-4. Fluxo de UAT sintetico validado via smoke:
-   - inbound webhook -> conversa -> AI qualify -> AI execute update stage.
-5. UAT em thread real executado no tenant dev:
-   - report: `tools/reports/t8-uat-real-20260304-053230.json`
-   - evidencia: inbound real + historico outbound provider + transicao de stage `qualified -> proposal`.
-
 Passo ativo agora:
-1. T8 (paridade de `crm.automation`) validado em dev AWS apos deploy do commit `11a5243`:
-   - `POST /v1/crm/conversations/:id/ai/execute` (`update_stage`) retorna `automation.status=scheduled`;
-   - evidencia de follow-up criada: `followups_for_lead=1`;
-   - report: `tools/reports/t8-uat-followup-20260304-083425.json`.
-2. Consolidar evidencias finais em `STATE`, `STATUS-ATUAL`, `worklog.csv` e `costlog.csv`.
-3. Preparar decisao de transicao para T9 (deploy/rollback plan) apos aceite do owner.
+1. Conectar o `app-crm-console` aos endpoints T5 (`accounts/contacts/deals/activities/tasks/views`) no layout 3 paineis.
+2. Exibir timeline real de atividades/tarefas por deal sem placeholders locais.
+3. Preservar `Inbox` atual e validar transicoes de stage (kanban + thread) sem reload manual.
 
 ---
 
@@ -96,4 +58,4 @@ O ciclo de estabilidade foi fechado. Agora o trabalho passa para evolucao de CRM
 
 ---
 
-*Feature ativa: `crm-krayin-reference-modernization-slice` (fase: Implement + Validate, foco ativo em T8 Validation + UAT).*
+*Feature ativa: `crm-krayin-reference-modernization-slice` (fase: Implement + Validate, foco ativo em T6 UI enterprise).*

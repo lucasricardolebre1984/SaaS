@@ -1,13 +1,13 @@
 # STATE
 
-Last update: 2026-03-04
+Last update: 2026-03-02
 Active phase: Implement + Validate (crm-krayin-reference-modernization-slice)
 Active feature: crm-krayin-reference-modernization-slice
 
 ## Repo e ambientes (fonte: AGENTS.md)
 - GitHub deploy: https://github.com/lucasricardolebre1984/SaaS (sem branches sandbox).
 - Ubuntu AWS dev: app em `/srv/SaaS`, Evolution API em `/srv/evolution`.
-- Local: workspace `C:\projetos\SaaS`; Evolution no AWS via SSH + `tools/evolution-aws-check.sh`.
+- Local: workspace `C:\projetos\fabio` ou `C:\projetos\SaaS`; Evolution no AWS via SSH + `tools/evolution-aws-check.sh`.
 
 ## Current Decisions
 1. Use creation-with-controlled-migration strategy (not direct replacement of fabio2).
@@ -45,24 +45,6 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
-- 2026-03-04: paridade de `crm.automation` fechada em dev:
-  - commit publicado/deployado: `11a5243`;
-  - UAT focado confirmou `automation.status=scheduled` no `ai/execute update_stage` e `followups_for_lead=1`;
-  - evidencias: `tools/reports/t8-uat-followup-20260304-083425.json` e `tools/reports/saas-endpoint-smoke-20260304-083431.json`.
-- 2026-03-04: deploy dev executado via `npm run deploy:dev -- -SkipNpmCi` com `main` em `4a6c3af`; health publico `https://dev.automaniaai.com.br/api/health` retornou `ok`.
-  - validacao pos-deploy mostrou que o runtime remoto ainda nao refletiu comportamento esperado de `crm.automation` no UAT real (`execute_automation=null`, `followups_for_lead=0`), mantendo T8 aberto por paridade de publicacao/deploy das alteracoes locais pendentes.
-- 2026-03-04: UAT em thread real executado (tenant dev):
-  - report: `tools/reports/t8-uat-real-20260304-053230.json`;
-  - evidencias: inbound real + historico outbound provider (`delivery_state=sent`) + transicao de stage `qualified -> proposal` via `/ai/execute update_stage`;
-  - runtime-config de CRM automacao aplicado via `POST /v1/owner-concierge/runtime-config` para `stage_followup_enabled=true` (stages `qualified,proposal`, delay `5min`);
-  - pendencia tecnica: API dev respondeu `execute_automation=null` e `followups_for_lead=0`, mantendo aberto o fechamento de T8 ate confirmar paridade de deploy/runtime para bloco `crm.automation`.
-- 2026-03-04: T8 em progresso com validacao/gates executados:
-  - `npx nx run app-platform-api:test` (`64/64` pass), `npx nx run contract-tests:contract-checks`, `npx nx run app-owner-console:build`, `npx nx run app-crm-console:build`;
-  - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills` aprovado com report `tools/reports/preprod-validate-20260304-042452.log`;
-  - smoke endpoint dev AWS aprovado com report `tools/reports/saas-endpoint-smoke-20260304-042537.json` (`PASS=25`, `WARN=1`, `FAIL=0`), cobrindo trilha `inbound webhook -> conversation -> ai qualify -> ai execute update stage`;
-  - observacao de estabilidade: primeira tentativa do gate `saas-endpoint-smoke` no mesmo horario retornou `504` transiente em `provider:evolution/webhook` (report `tools/reports/saas-endpoint-smoke-20260304-042142.json`), resolvida em rerun sem alteracao de codigo.
-- 2026-03-04: T6 recebeu incremento visual com layout adicional `zazi` (clean-room legacy-inspired) em Owner+CRM, incluindo selectors/config defaults/presets e overrides CSS; suporte de gerador/docs atualizado para `layout-default zazi`; builds verdes: `npx nx run app-owner-console:build` e `npx nx run app-crm-console:build`.
-- 2026-03-03: T7 do `crm-krayin-reference-modernization-slice` concluido com runtime controls no modulo 06 (pipeline/stages + automacao stage-followup + toggles IA Persona 2) persistidos por tenant em `runtime-config`; backend passou a aplicar stage default por tenant, bloqueio de stage desabilitado em leads/deals e agendamento automatico de follow-up por stage em fluxos manual/IA; CRM console passou a consumir `runtime-config` e renderizar pipeline/filtros/selects dinamicos por stages ativas; gates verdes: `npx nx run app-platform-api:test`, `npx nx run app-owner-console:build`, `npx nx run app-crm-console:build`, `npx nx run contract-tests:contract-checks`.
 - 2026-03-02: T5 do `crm-krayin-reference-modernization-slice` concluido com APIs backend CRM enterprise (`/v1/crm/accounts|contacts|deals|activities|tasks|views`), store core `file+postgres` (`crm-core-store-*`), eventos auditaveis novos (`crm.account/contact/deal/activity/task/view.*`, incluindo `crm.deal.stage.changed`) e teste de fluxo `deal -> activity -> stage update` em `app.test.mjs`; gates verdes: `npx nx run app-platform-api:test` (`63/63`), `npx nx run contract-tests:contract-checks`, `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`; proximo passo ativo movido para T6 (UI CRM enterprise).
 - 2026-03-02: T4 do `crm-krayin-reference-modernization-slice` concluido com migracoes SQL de `crm_accounts`, `crm_contacts`, `crm_deals`, `crm_activities`, `crm_tasks`, `crm_views`; smoke Postgres atualizado para aplicar baseline SQL e validar CRUD basico de `deal/activity/task` com resultado `Postgres smoke passed`; gates `npx nx run app-platform-api:test` e `npx nx run contract-tests:contract-checks` verdes; proximo passo ativo movido para T5 (APIs CRM enterprise MVP).
 - 2026-03-02: T3 do `crm-krayin-reference-modernization-slice` concluido com contratos JSON para `accounts/contacts/deals/activities/tasks/views`, exemplos validos e gate `npx nx run contract-tests:contract-checks` verde; proximo passo ativo atualizado para T4 (migracoes CRM core).
@@ -99,7 +81,7 @@ Active feature: crm-krayin-reference-modernization-slice
 - 2026-02-27: `init:day` executado e contexto obrigatorio recarregado via `project-context-loader`.
 - 2026-02-27: auditoria de docs identificou divergencia de slice no `README.md` e higiene remota no `STATUS-ATUAL.md`; ambos alinhados.
 - 2026-02-27: higiene remota consolidada; estado atual somente `origin/main`.
-- 2026-02-27: repo e ambientes documentados em AGENTS.md — GitHub (lucasricardolebre1984/SaaS), Ubuntu (/srv/SaaS, /srv/evolution), local c:\projetos\SaaS (clone SaaS); RUNBOOK-aws-deploy-dev e tools/evolution-aws-check.sh alinhados aos caminhos.
+- 2026-02-27: repo e ambientes documentados em AGENTS.md — GitHub (lucasricardolebre1984/SaaS), Ubuntu (/srv/SaaS, /srv/evolution), local c:\projetos\fabio (clone SaaS); RUNBOOK-aws-deploy-dev e tools/evolution-aws-check.sh alinhados aos caminhos.
 - 2026-02-27 12:45-12:55 BRT: hotfix runtime aplicado no `main` (`8474a4e`) com:
   - fallback global OpenAI key em `audio/transcribe` e `audio/speech`.
   - QR Evolution com status operacional (`ready|connected|pending_qr`) e retry de create/connect.
@@ -641,8 +623,6 @@ Active feature: crm-krayin-reference-modernization-slice
   - PROXIMO-PASSO updated: memoria, contexto e aprendizado fechados no produto.
 
 ## Next Checkpoint
-- `crm-krayin-reference-modernization-slice`: T7 concluido; executar T8 (validation + UAT) com fluxo real (`inbound -> qualify -> stage move -> follow-up`) e registrar evidencias em STATE/STATUS/worklog/costlog.
-- Rodar gate integrado: `npm run preprod:validate` (sem `-SkipSaasEndpointSmoke`) para manter regressao de botoes/endpoints ativa.
 - Slice `milestone-4-long-memory-promotion-slice` implementado: promocao episodio -> memoria longa (createEntry source episode_promotion, evento memory.promoted.from_episode); PROXIMO-PASSO atualizado: memoria, contexto e aprendizado fechados no produto.
 - **Produto:** memoria/contexto/aprendizado fechados (ver `.specs/project/PROXIMO-PASSO.md`). Nenhum passo pendente neste eixo.
 - Opened `milestone-5-aws-production-bootstrap-slice`:

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const ALLOWED_LAYOUTS = new Set(['fabio2', 'studio', 'zazi']);
+const ALLOWED_LAYOUTS = new Set(['fabio2', 'studio']);
 const ALLOWED_PALETTES = new Set(['ocean', 'forest', 'sunset']);
 
 function parseArgs(argv) {
@@ -69,7 +69,7 @@ async function main() {
     throw new Error('Missing required arg --tenant-id');
   }
   if (!ALLOWED_LAYOUTS.has(layoutDefault)) {
-    throw new Error(`Invalid layout '${layoutDefault}'. Allowed: fabio2, studio, zazi`);
+    throw new Error(`Invalid layout '${layoutDefault}'. Allowed: fabio2, studio`);
   }
   if (!ALLOWED_PALETTES.has(paletteDefault)) {
     throw new Error(`Invalid palette '${paletteDefault}'. Allowed: ocean, forest, sunset`);

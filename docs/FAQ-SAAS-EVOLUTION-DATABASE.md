@@ -52,7 +52,7 @@ npm run generate:saas-starter -- --saas-name "Meu SaaS" --tenant-id "tenant_meu_
 
 - **Nao usa Redis.**
 - **Padrao (backend `file`):**  
-  Dados ficam em **arquivos** na pasta **`.runtime-data/`** na raiz do projeto (ex.: `c:\projetos\SaaS\.runtime-data\`):
+  Dados ficam em **arquivos** na pasta **`.runtime-data/`** na raiz do projeto (ex.: `c:\projetos\fabio\.runtime-data\`):
   - `orchestration/` — comandos, eventos, fila de tarefas, confirmacoes
   - `customers/` — clientes
   - `agenda/` — agendamentos e lembretes

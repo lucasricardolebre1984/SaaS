@@ -19,7 +19,7 @@ $env:EVOLUTION_API_KEY="429683C4C977415CAAFCCE10F7D57E11"
 $env:EVOLUTION_INSTANCE_ID="fabio"
 ```
 
-Ou crie um arquivo **`.env`** na raiz do repo (ex.: `c:\projetos\SaaS\.env`):
+Ou crie um arquivo **`.env`** na raiz do repo (ex.: `c:\projetos\fabio\.env`):
 
 ```env
 EVOLUTION_HTTP_BASE_URL=http://localhost:8080
@@ -32,7 +32,7 @@ O `serve:saas` carrega esse `.env` automaticamente. Se a sua Evolution expoe out
 Se preferir nao usar `.env`, exporte no terminal antes de rodar:
 
 ```powershell
-cd c:\projetos\SaaS
+cd c:\projetos\fabio
 $env:EVOLUTION_HTTP_BASE_URL="http://localhost:8080"
 $env:EVOLUTION_API_KEY="429683C4C977415CAAFCCE10F7D57E11"
 $env:EVOLUTION_INSTANCE_ID="fabio"
@@ -58,7 +58,7 @@ npm run serve:saas
 
 - Suba o fabio:
   ```powershell
-  cd c:\projetos\SaaS
+  cd c:\projetos\fabio
   npm run serve:saas
   ```
 - Abra no navegador: **http://127.0.0.1:4001/crm/**  

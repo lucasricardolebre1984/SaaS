@@ -131,48 +131,17 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
   - builds verdes apos v2:
     - `npx nx run app-crm-console:build`
     - `npx nx run app-owner-console:build`.
-  - layout adicional `zazi` (clean-room legacy-inspired) habilitado em Owner+CRM:
-    - `VALID_LAYOUTS` + selectors UI + presets tenant + default visual em `index.html`
-    - overrides CSS para `html[data-layout='zazi']` em ambos consoles
-    - gerador/docs atualizados para suportar `layout-default zazi`
-    - builds verdes:
-      - `npx nx run app-owner-console:build`
-      - `npx nx run app-crm-console:build`
 
 ## T7) Module 06 runtime controls
-- Status: completed
+- Status: pending
 - Configuracoes por tenant:
   - stages/pipeline,
   - regras de automacao,
   - toggles IA persona 2.
 - Aceite: alteracao em menu 06 reflete no comportamento do CRM.
-- Evidencia:
-  - runtime-config estendido com bloco `crm` (pipeline + automacao) em:
-    - `apps/platform-api/src/app.mjs`
-    - `apps/platform-api/src/tenant-runtime-config-store.mjs`
-  - modulo 06 (Owner) atualizado com controles de CRM:
-    - stages ativas + stage default
-    - automacao de follow-up por stage (enable, stages, delay, template)
-    - arquivos:
-      - `apps/owner-console/src/index.html`
-      - `apps/owner-console/src/app.js`
-  - CRM console passa a consumir runtime-config por tenant e aplicar pipeline dinamico:
-    - filtros/selects/stage options/colunas kanban por stages ativas
-    - arquivo:
-      - `apps/crm-console/src/app.js`
-  - backend aplica regras no comportamento:
-    - stage default por tenant em `POST /v1/crm/leads`
-    - bloqueio de stage desabilitado por tenant em `PATCH /v1/crm/leads/:lead_id/stage`,
-      `POST /v1/crm/deals` e `PATCH /v1/crm/deals/:deal_id`
-    - automacao stage->followup tenant-scoped em transicao de stage (manual e IA)
-  - testes e gates verdes:
-    - `npx nx run app-platform-api:test` (inclui teste novo de runtime controls T7)
-    - `npx nx run app-owner-console:build`
-    - `npx nx run app-crm-console:build`
-    - `npx nx run contract-tests:contract-checks`
 
 ## T8) Validation and UAT
-- Status: in_progress
+- Status: pending
 - Gates:
   - `npx nx run app-platform-api:test`
   - `npx nx run app-crm-console:build`
@@ -180,27 +149,6 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
   - `npx nx run contract-tests:contract-checks`
 - UAT com WhatsApp real:
   - inbound -> deal update -> resposta -> qualificacao.
-- Evidencia parcial (2026-03-04):
-  - gates verdes:
-    - `npx nx run app-platform-api:test` (`64/64` pass)
-    - `npx nx run contract-tests:contract-checks`
-    - `npx nx run app-owner-console:build`
-    - `npx nx run app-crm-console:build`
-  - gate integrado verde:
-    - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
-    - reports:
-      - `tools/reports/preprod-validate-20260304-042452.log`
-      - `tools/reports/preprod-validate-20260304-045933.log`
-  - smoke endpoint-a-endpoint em dev AWS verde:
-    - report: `tools/reports/saas-endpoint-smoke-20260304-042537.json`
-    - resultado: `PASS=25`, `WARN=1`, `FAIL=0`
-  - fluxo validado no smoke:
-    - inbound webhook -> conversa -> ai qualify -> ai execute update stage
-  - UAT em thread real executado:
-    - report: `tools/reports/t8-uat-real-20260304-053230.json`
-    - evidencias: inbound real + historico outbound provider (`delivery_state=sent`) + transicao de stage `qualified -> proposal` via `ai/execute update_stage`.
-  - pendencia para fechar T8 como `completed`:
-    - validar agendamento automatico de follow-up no ambiente dev AWS (report acima mostrou `execute_automation=null` e `followups_for_lead=0`), exigindo confirmacao de paridade de deploy/runtime para o bloco `crm.automation`.
 
 ## T9) Deploy and rollback plan
 - Status: pending

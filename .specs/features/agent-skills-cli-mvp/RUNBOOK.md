@@ -78,20 +78,6 @@ Examples:
 .\tools\end-day.ps1 -LogWork -TaskId TEST-001 -DurationHours 0.25 -DryRun
 ```
 
-## Option F - Skills audit (manifest + coverage)
-Use:
-- `tools/skills-audit.ps1`
-- `tools/skills.json`
-
-Examples:
-```powershell
-# audit codex skills against manifest
-.\tools\skills-audit.ps1 -Agent codex
-
-# fail build/session if a project skill is missing
-.\tools\skills-audit.ps1 -Agent codex -FailOnMissingProject
-```
-
 ## Validation checklist
 1. Start a new session.
 2. Ask to "load context" and verify `project-context-loader` behavior.
@@ -106,7 +92,7 @@ Examples:
 
 ## Validation evidence (MVP)
 - Script tested in safe custom target:
-  - `C:\projetos\SaaS\.tmp\codex-skills`
+  - `C:\projetos\fabio\.tmp\codex-skills`
 - Installed skills validated:
   - project-context-loader
   - saas-standard-architect

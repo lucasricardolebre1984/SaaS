@@ -14,10 +14,9 @@ Module 01 visual shell for owner orchestration.
 
 - `avatar/VoiceReactiveAvatar`: reusable React component (optional integration path)
 - `index.html`, `styles.css`, `app.js`: static shell baseline for Milestone 2
-- Triple layout engine:
+- Dual layout engine:
   - `fabio2`: canonical dashboard shell
   - `studio`: premium AI-first shell
-  - `zazi`: legacy-inspired enterprise shell
 - Palette presets:
   - `ocean`, `forest`, `sunset`
 - Tenant theme map:

@@ -1,7 +1,7 @@
 # PLANTA ENDPOINTS SAAS (RASTREAVEL)
 
 Data: 2026-03-02  
-Repo: `C:\projetos\SaaS`  
+Repo: `C:\projetos\fabio`  
 Branch: `main`  
 Fonte de verdade de runtime: `apps/platform-api/src/app.mjs`
 

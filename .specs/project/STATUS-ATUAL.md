@@ -1,7 +1,7 @@
 # Status Atual — Fabio SaaS (Modelo Universal)
 
 **Documento:** STATUS-ATUAL  
-**Ultima atualizacao:** 2026-03-03 (T7 runtime controls concluido; proximo foco movido para T8 validation + UAT)  
+**Ultima atualizacao:** 2026-03-02 (rastreabilidade e auditoria: data/hora em decisoes e artefatos; T2 gap matrix concluido)  
 **Objetivo:** Snapshot rastreavel do estado do repositorio, modelo de aprendizado continuo e conformidade com specs.
 
 ---
@@ -127,7 +127,7 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 ## 6. Proximo passo natural
 
 - **Slice ativo:** `crm-krayin-reference-modernization-slice`.
-- **Objetivo imediato:** executar T8 (validation + UAT) para validar T7 em fluxo real (inbound -> qualify -> stage move -> follow-up) sem regressao de inbox/thread.
+- **Objetivo imediato:** executar T6 (UI CRM enterprise) acoplando os endpoints backend T5 sem regressao de inbox/thread.
 - **Gate principal:** `app-crm-console:build` + `app-owner-console:build` + `preprod:validate` mantendo fluxo `deal -> activity -> stage update` e smoke de botoes/endpoints.
 - **Referencia:** `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`.
 
@@ -218,28 +218,6 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - `activities`: create/list
   - `tasks`: create/list
   - `views`: create/list
-
-## Update 2026-03-03 (T7 runtime controls modulo 06)
-- T7 concluido no slice `crm-krayin-reference-modernization-slice`:
-  - runtime-config tenant-scoped estendido com bloco `crm.pipeline` e `crm.automation`;
-  - menu 06 no Owner recebeu controles de pipeline/stages e automacao stage-followup;
-  - CRM console passou a consumir runtime-config por tenant para renderizar stages/filtros/kanban dinamicos;
-  - backend aplica:
-    - stage default por tenant no create de lead;
-    - bloqueio de stage desabilitado por tenant em leads/deals;
-    - automacao de follow-up por stage em transicoes manual/IA.
-- Evidencia tecnica:
-  - `apps/platform-api/src/app.mjs`
-  - `apps/platform-api/src/tenant-runtime-config-store.mjs`
-  - `apps/owner-console/src/index.html`
-  - `apps/owner-console/src/app.js`
-  - `apps/crm-console/src/app.js`
-  - `apps/platform-api/src/app.test.mjs` (teste novo de runtime controls T7).
-- Gates verdes:
-  - `npx nx run app-platform-api:test`
-  - `npx nx run app-owner-console:build`
-  - `npx nx run app-crm-console:build`
-  - `npx nx run contract-tests:contract-checks`
 - Arquivo de exemplos validos publicado:
   - `libs/mod-02-whatsapp-crm/contracts/crm-core-contract-examples.json`
 - Gate executado e aprovado:
@@ -288,56 +266,3 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
 - Proximo passo ativo formalizado: T6 UI CRM enterprise (inbox + pipeline + detail panel) consumindo endpoints T5.
 
-## Update 2026-03-04 (T8 validation + UAT sintetico)
-- T8 movido para `in_progress` em `.specs/features/crm-krayin-reference-modernization-slice/tasks.md`.
-- Gates de validacao executados e verdes:
-  - `npx nx run app-platform-api:test` (`64/64` pass)
-  - `npx nx run contract-tests:contract-checks`
-  - `npx nx run app-owner-console:build`
-  - `npx nx run app-crm-console:build`
-- Gate integrado executado com sucesso:
-  - `npm run preprod:validate -- -SkipSmokePostgres -SkipOperationalDrills`
-  - report: `tools/reports/preprod-validate-20260304-042452.log`
-- Smoke endpoint-a-endpoint em dev AWS:
-  - report: `tools/reports/saas-endpoint-smoke-20260304-042537.json`
-  - resultado: `PASS=25`, `WARN=1`, `FAIL=0`
-  - fluxo coberto: inbound webhook -> conversation -> AI qualify -> AI execute update stage.
-- Nota operacional:
-  - ocorreu uma falha transiente anterior (`504` em `provider:evolution/webhook`) no report `tools/reports/saas-endpoint-smoke-20260304-042142.json`; rerun subsequente aprovou sem alteracao de codigo.
-- Pendencia para fechar T8 como `completed`:
-  - UAT manual com WhatsApp real (numero humano) para evidenciar inbound autentico + entrega de resposta pelo provider.
-
-## Update 2026-03-04 (T8 UAT em thread real)
-- UAT executado em conversa real do tenant dev com evidencias auditaveis:
-  - report: `tools/reports/t8-uat-real-20260304-053230.json`
-  - inbound real detectado + historico outbound provider (`delivery_state=sent`)
-  - transicao de stage em thread real: `qualified -> proposal` via endpoint `POST /v1/crm/conversations/:id/ai/execute` (`action=update_stage`)
-- Runtime-config CRM automacao aplicado no dev via API:
-  - `stage_followup_enabled=true`
-  - `stage_followup_stages=[qualified,proposal]`
-  - `stage_followup_delay_minutes=5`
-- Resultado observado no dev:
-  - response trouxe `execute_automation=null`
-  - `followups_for_lead=0`
-- Implicacao:
-  - T8 permanece `in_progress` ate confirmar paridade de deploy/runtime do bloco `crm.automation` em dev AWS e evidenciar follow-up automatico agendado.
-
-## Update 2026-03-04 (Deploy dev + checagem de paridade)
-- Deploy dev executado:
-  - comando: `npm run deploy:dev -- -SkipNpmCi`
-  - branch/commit aplicado: `main` em `4a6c3af`
-  - health publico: `https://dev.automaniaai.com.br/api/health` (`ok`)
-- Resultado de paridade no UAT:
-  - runtime remoto ainda sem comportamento esperado para `crm.automation` no fluxo real (`execute_automation=null`, `followups_for_lead=0`).
-- Consequencia operacional:
-  - fechamento de T8 permanece bloqueado ate publicar/deploy das alteracoes locais pendentes que completam a trilha de automacao de follow-up no dev AWS.
-
-
-## Update 2026-03-04 (T8 paridade crm.automation fechada)
-- Deploy dev executado com commit `11a5243` (runtime controls + AI followup automation no backend).
-- UAT focado em dev confirmou no endpoint `POST /v1/crm/conversations/:id/ai/execute` (action=`update_stage`):
-  - `automation.status=scheduled`;
-  - `followups_for_lead=1`.
-- Evidencias:
-  - `tools/reports/t8-uat-followup-20260304-083425.json`
-  - `tools/reports/saas-endpoint-smoke-20260304-083431.json` (`PASS=25`, `WARN=1`, `FAIL=0`)

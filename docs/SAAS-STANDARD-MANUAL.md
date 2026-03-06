@@ -42,7 +42,7 @@ npm run generate:saas-starter -- --saas-name "Nome do SaaS" --tenant-id "tenant_
 4. Manter contratos e módulos core sem hardcode de empresa.
 
 ## 6. Ajustar layout/paleta por cliente
-- Layouts disponíveis: `fabio2`, `studio`, `zazi`.
+- Layouts disponíveis: `fabio2`, `studio`.
 - Paletas disponíveis: `ocean`, `forest`, `sunset`.
 - Ajuste rápido em `mod-06` ou por preset em `apps/owner-console/src/app.js` (`TENANT_THEME_PRESETS`).
 
