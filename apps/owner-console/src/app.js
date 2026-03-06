@@ -20,36 +20,17 @@ const MODULE_COST_LABELS = {
   'mod-05-faturamento-cobranca': 'Modulo 05 - Faturamento/Cobranca'
 };
 
-const VALID_LAYOUTS = ['layout1', 'layout2', 'layout3'];
-const VALID_PALETTES = ['palette1', 'palette2', 'palette3', 'palette4'];
-const CRM_STAGE_KEYS = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'nurturing'];
+const VALID_LAYOUTS = ['fabio2', 'studio'];
+const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
 const CONFIG_STORAGE_KEY = 'owner_console_config_v1';
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const SETTINGS_ADMIN_PASSWORD = '191530';
 const SETTINGS_UNLOCK_SESSION_KEY = 'owner_console_settings_admin_unlock_v1';
-const LAYOUT_ALIASES = {
-  fabio2: 'layout1',
-  studio: 'layout2',
-  zazi: 'layout3',
-  layout1: 'layout1',
-  layout2: 'layout2',
-  layout3: 'layout3'
-};
-const PALETTE_ALIASES = {
-  darkgreen: 'palette1',
-  ocean: 'palette2',
-  forest: 'palette3',
-  sunset: 'palette4',
-  palette1: 'palette1',
-  palette2: 'palette2',
-  palette3: 'palette3',
-  palette4: 'palette4'
-};
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'layout1', palette: 'palette2' },
-  tenant_clinica: { layout: 'layout3', palette: 'palette3' },
-  tenant_comercial: { layout: 'layout1', palette: 'palette4' }
+  tenant_automania: { layout: 'studio', palette: 'darkgreen' },
+  tenant_clinica: { layout: 'studio', palette: 'forest' },
+  tenant_comercial: { layout: 'studio', palette: 'sunset' }
 };
 
 const state = {
@@ -65,8 +46,6 @@ const state = {
   mediaRecorder: null,
   mediaStream: null,
   config: null,
-  runtimeConfigLoadedTenantId: null,
-  runtimeConfigLoadPromise: null,
   settingsUnlocked: false,
   moduleData: {
     customers: [],
@@ -86,10 +65,6 @@ const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const sidebarBackdropEl = document.getElementById('sidebarBackdrop');
 const topModuleTitleEl = document.getElementById('topModuleTitle');
 const topTenantLabelEl = document.getElementById('topTenantLabel');
-const ownerHeroTenantEl = document.getElementById('ownerHeroTenant');
-const ownerHeroSessionEl = document.getElementById('ownerHeroSession');
-const ownerHeroProviderEl = document.getElementById('ownerHeroProvider');
-const ownerHeroHealthEl = document.getElementById('ownerHeroHealth');
 const openSettingsBtn = document.getElementById('openSettingsBtn');
 const settingsLockStatusEl = document.getElementById('settingsLockStatus');
 
@@ -119,9 +94,6 @@ const customerDetailIdInput = document.getElementById('customerDetailId');
 const customerDetailBtn = document.getElementById('customerDetailBtn');
 const customerDetailOutputEl = document.getElementById('customerDetailOutput');
 const customerIdOptionsEl = document.getElementById('customerIdOptions');
-const customersCountKpiEl = document.getElementById('customersCountKpi');
-const customersPhoneKpiEl = document.getElementById('customersPhoneKpi');
-const customersEmailKpiEl = document.getElementById('customersEmailKpi');
 
 const appointmentCreateForm = document.getElementById('appointmentCreateForm');
 const appointmentTitleInput = document.getElementById('appointmentTitle');
@@ -147,9 +119,6 @@ const reminderRecipientInput = document.getElementById('reminderRecipient');
 const remindersRefreshBtn = document.getElementById('remindersRefreshBtn');
 const remindersRowsEl = document.getElementById('remindersRows');
 const agendaStatusEl = document.getElementById('agendaStatus');
-const agendaAppointmentsKpiEl = document.getElementById('agendaAppointmentsKpi');
-const agendaRemindersKpiEl = document.getElementById('agendaRemindersKpi');
-const agendaWhatsappKpiEl = document.getElementById('agendaWhatsappKpi');
 
 const chargeCreateForm = document.getElementById('chargeCreateForm');
 const chargeCustomerIdInput = document.getElementById('chargeCustomerId');
@@ -175,9 +144,6 @@ const chargesRefreshBtn = document.getElementById('chargesRefreshBtn');
 const chargesRowsEl = document.getElementById('chargesRows');
 const chargeIdOptionsEl = document.getElementById('chargeIdOptions');
 const billingStatusEl = document.getElementById('billingStatus');
-const billingChargesKpiEl = document.getElementById('billingChargesKpi');
-const billingOpenKpiEl = document.getElementById('billingOpenKpi');
-const billingPaidKpiEl = document.getElementById('billingPaidKpi');
 
 const healthStatusEl = document.getElementById('healthStatus');
 const assistantProviderStatusEl = document.getElementById('assistantProviderStatus');
@@ -193,9 +159,7 @@ const confirmationsLimitEl = document.getElementById('confirmationsLimit');
 const confirmationsRefreshBtn = document.getElementById('confirmationsRefreshBtn');
 
 const continuousBtn = document.getElementById('continuousBtn');
-const continuousInlineBtn = document.getElementById('continuousInlineBtn');
 const continuousStateEl = document.getElementById('continuousState');
-const ownerContinuousModeEl = document.getElementById('ownerContinuousMode');
 const continuousBackBtn = document.getElementById('continuousBackBtn');
 const avatarEl = document.getElementById('avatar');
 const simulateVoiceBtn = document.getElementById('simulateVoiceBtn');
@@ -231,12 +195,6 @@ const cfgPersona2PromptInput = document.getElementById('cfgPersona2Prompt');
 const cfgWhatsappAiEnabledInput = document.getElementById('cfgWhatsappAiEnabled');
 const cfgWhatsappAiModeInput = document.getElementById('cfgWhatsappAiMode');
 const cfgWhatsappAiMinConfidenceInput = document.getElementById('cfgWhatsappAiMinConfidence');
-const cfgCrmPipelineStagesInput = document.getElementById('cfgCrmPipelineStages');
-const cfgCrmDefaultStageInput = document.getElementById('cfgCrmDefaultStage');
-const cfgCrmAutomationStageFollowupEnabledInput = document.getElementById('cfgCrmAutomationStageFollowupEnabled');
-const cfgCrmAutomationStagesInput = document.getElementById('cfgCrmAutomationStages');
-const cfgCrmAutomationDelayMinutesInput = document.getElementById('cfgCrmAutomationDelayMinutes');
-const cfgCrmAutomationMessageTemplateInput = document.getElementById('cfgCrmAutomationMessageTemplate');
 
 const cfgGoogleClientIdInput = document.getElementById('cfgGoogleClientId');
 const cfgGoogleClientSecretInput = document.getElementById('cfgGoogleClientSecret');
@@ -396,8 +354,8 @@ function createDefaultConfig() {
       api_base_url: deriveDefaultApiBase(),
       tenant_id: 'tenant_automania',
       session_id: crypto.randomUUID(),
-      layout: 'layout1',
-      palette: 'palette2'
+      layout: 'studio',
+      palette: 'darkgreen'
     },
     openai: {
       api_key: '',
@@ -416,18 +374,6 @@ function createDefaultConfig() {
       whatsapp_ai_enabled: true,
       whatsapp_ai_mode: 'assist_execute',
       whatsapp_ai_min_confidence: 0.7
-    },
-    crm: {
-      pipeline: {
-        stages: normalizeCrmPipelineStages(CRM_STAGE_KEYS),
-        default_stage: 'new'
-      },
-      automation: {
-        stage_followup_enabled: false,
-        stage_followup_stages: ['qualified', 'proposal'],
-        stage_followup_delay_minutes: 45,
-        stage_followup_message_template: 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
-      }
     },
     integrations: {
       agenda_google: {
@@ -453,13 +399,11 @@ function createDefaultConfig() {
 }
 
 function normalizeLayout(layout) {
-  const canonical = LAYOUT_ALIASES[String(layout ?? '').trim().toLowerCase()];
-  return VALID_LAYOUTS.includes(canonical) ? canonical : 'layout1';
+  return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
 }
 
 function normalizePalette(palette) {
-  const canonical = PALETTE_ALIASES[String(palette ?? '').trim().toLowerCase()];
-  return VALID_PALETTES.includes(canonical) ? canonical : 'palette1';
+  return VALID_PALETTES.includes(palette) ? palette : 'darkgreen';
 }
 
 function safeNumber(value, fallback = 0) {
@@ -478,56 +422,6 @@ function normalizeWhatsappAiMinConfidence(value, fallback = 0.7) {
   if (parsed < 0) return 0;
   if (parsed > 1) return 1;
   return parsed;
-}
-
-function normalizeCrmStage(value, fallback = 'new') {
-  const raw = String(value ?? '').trim().toLowerCase();
-  return CRM_STAGE_KEYS.includes(raw) ? raw : fallback;
-}
-
-function normalizeCrmStageList(value, fallback = ['qualified', 'proposal']) {
-  const source = Array.isArray(value)
-    ? value
-    : String(value ?? '')
-      .split(',')
-      .map((item) => item.trim());
-  const dedup = [];
-  for (const item of source) {
-    const stage = normalizeCrmStage(item, '');
-    if (!stage) continue;
-    if (!dedup.includes(stage)) dedup.push(stage);
-  }
-  return dedup.length > 0 ? dedup : [...fallback];
-}
-
-function normalizeCrmPipelineStages(value) {
-  const stageKeys = normalizeCrmStageList(value, CRM_STAGE_KEYS);
-  return stageKeys.map((stage, index) => ({
-    stage,
-    label: stage.charAt(0).toUpperCase() + stage.slice(1),
-    active: true,
-    order: (index + 1) * 10
-  }));
-}
-
-function normalizeCrmDefaultStage(value, stages = []) {
-  const active = Array.isArray(stages)
-    ? stages
-      .filter((item) => item && item.active !== false)
-      .map((item) => normalizeCrmStage(item.stage, ''))
-      .filter(Boolean)
-    : [];
-  const target = normalizeCrmStage(value, active[0] ?? 'new');
-  if (active.length === 0) return target;
-  return active.includes(target) ? target : active[0];
-}
-
-function normalizeCrmAutomationDelayMinutes(value, fallback = 45) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  if (parsed < 0) return 0;
-  if (parsed > 10080) return 10080;
-  return Math.floor(parsed);
 }
 
 function mergeConfig(raw) {
@@ -569,35 +463,6 @@ function mergeConfig(raw) {
         defaults.execution.whatsapp_ai_min_confidence
       )
     },
-    crm: (() => {
-      const rawStages = Array.isArray(raw?.crm?.pipeline?.stages)
-        ? raw.crm.pipeline.stages.map((item) => normalizeCrmStage(item?.stage, '')).filter(Boolean)
-        : defaults.crm.pipeline.stages.map((item) => item.stage);
-      const stages = normalizeCrmPipelineStages(rawStages);
-      return {
-        pipeline: {
-          stages,
-          default_stage: normalizeCrmDefaultStage(raw?.crm?.pipeline?.default_stage, stages)
-        },
-        automation: {
-          stage_followup_enabled: raw?.crm?.automation?.stage_followup_enabled == null
-            ? defaults.crm.automation.stage_followup_enabled
-            : Boolean(raw.crm.automation.stage_followup_enabled),
-          stage_followup_stages: normalizeCrmStageList(
-            raw?.crm?.automation?.stage_followup_stages,
-            defaults.crm.automation.stage_followup_stages
-          ),
-          stage_followup_delay_minutes: normalizeCrmAutomationDelayMinutes(
-            raw?.crm?.automation?.stage_followup_delay_minutes,
-            defaults.crm.automation.stage_followup_delay_minutes
-          ),
-          stage_followup_message_template: String(
-            raw?.crm?.automation?.stage_followup_message_template
-              ?? defaults.crm.automation.stage_followup_message_template
-          ).trim() || defaults.crm.automation.stage_followup_message_template
-        }
-      };
-    })(),
     integrations: {
       agenda_google: {
         ...defaults.integrations.agenda_google,
@@ -670,25 +535,6 @@ function renderSettingsLockStatus() {
   settingsLockStatusEl.classList.toggle('is-locked', !state.settingsUnlocked);
 }
 
-function updateOwnerHeroRuntime() {
-  if (ownerHeroTenantEl) {
-    ownerHeroTenantEl.textContent = state.config?.runtime?.tenant_id || '-';
-  }
-  if (ownerHeroSessionEl) {
-    ownerHeroSessionEl.textContent = sessionId();
-  }
-}
-
-function updateOwnerHeroProvider(value) {
-  if (!ownerHeroProviderEl) return;
-  ownerHeroProviderEl.textContent = String(value || 'idle').replace(/^provider:\s*/i, '');
-}
-
-function updateOwnerHeroHealth(value) {
-  if (!ownerHeroHealthEl) return;
-  ownerHeroHealthEl.textContent = String(value || 'idle');
-}
-
 function setAssistantProviderStatus(provider, options = {}) {
   if (!assistantProviderStatusEl) return;
 
@@ -731,7 +577,6 @@ function setAssistantProviderStatus(provider, options = {}) {
 
   assistantProviderStatusEl.textContent = text;
   assistantProviderStatusEl.title = title;
-  updateOwnerHeroProvider(text);
 }
 
 function getNavModules() {
@@ -756,79 +601,22 @@ const MODULE_VIEW_BY_ID = {
   'mod-05-faturamento-cobranca': moduleBillingViewEl
 };
 
-const CRM_EMBED_POSTMESSAGE_TYPE = 'saas.crm.embed.height';
-const CRM_EMBED_URL_REV = '20260306f';
-
-function crmEmbeddedUrl(forceReload = false) {
+function crmEmbeddedUrl() {
   const params = new URLSearchParams({
     tenant: tenantId(),
     api: apiBase(),
     layout: state.config.runtime.layout,
     palette: state.config.runtime.palette,
-    embedded: '1',
-    view: 'pipeline',
-    rev: CRM_EMBED_URL_REV
+    embedded: '1'
   });
-  if (forceReload) {
-    params.set('nonce', String(Date.now()));
-  }
   return `/crm/?${params.toString()}`;
-}
-
-function applyCrmEmbeddedHeight(rawHeight) {
-  if (!crmEmbeddedFrameEl) return;
-  const parsed = Number(rawHeight);
-  if (!Number.isFinite(parsed) || parsed <= 0) return;
-  const clamped = Math.max(920, Math.min(Math.ceil(parsed) + 20, 6400));
-  crmEmbeddedFrameEl.style.height = `${clamped}px`;
-}
-
-function bindCrmEmbeddedMessageListener() {
-  if (window.__ownerCrmEmbedMessageBound) return;
-  window.addEventListener('message', (event) => {
-    if (event.origin !== window.location.origin) return;
-    const payload = event.data;
-    if (!payload || payload.type !== CRM_EMBED_POSTMESSAGE_TYPE) return;
-    applyCrmEmbeddedHeight(payload.height);
-  });
-  window.__ownerCrmEmbedMessageBound = true;
-}
-
-function enforceCrmEmbeddedChrome() {
-  if (!crmEmbeddedFrameEl) return;
-  try {
-    const doc = crmEmbeddedFrameEl.contentDocument;
-    if (!doc) return;
-    doc.documentElement.dataset.embedded = '1';
-    if (doc.body) {
-      doc.body.classList.add('embedded-mode');
-    }
-    doc.getElementById('sidebar')?.style.setProperty('display', 'none', 'important');
-    doc.querySelector('.topbar')?.style.setProperty('display', 'none', 'important');
-    const inferredHeight = Math.max(
-      Number(doc.documentElement?.scrollHeight ?? 0),
-      Number(doc.body?.scrollHeight ?? 0)
-    );
-    applyCrmEmbeddedHeight(inferredHeight);
-    crmEmbeddedFrameEl.contentWindow?.scrollTo?.(0, 0);
-  } catch {
-    // Keep owner resilient if iframe is not ready/cross-origin.
-  }
 }
 
 function syncCrmEmbeddedFrame(forceReload = false) {
   if (!crmEmbeddedFrameEl) return;
-  bindCrmEmbeddedMessageListener();
-  if (!crmEmbeddedFrameEl.dataset.embedListenerBound) {
-    crmEmbeddedFrameEl.addEventListener('load', () => {
-      enforceCrmEmbeddedChrome();
-    });
-    crmEmbeddedFrameEl.dataset.embedListenerBound = '1';
-  }
-  const nextUrl = crmEmbeddedUrl(forceReload);
+  const nextUrl = crmEmbeddedUrl();
   const currentUrl = crmEmbeddedFrameEl.dataset.currentSrc || crmEmbeddedFrameEl.getAttribute('src') || '';
   if (!forceReload && currentUrl === nextUrl) {
-    enforceCrmEmbeddedChrome();
     return;
   }
   crmEmbeddedFrameEl.src = nextUrl;
@@ -849,7 +637,6 @@ function setTopbarLabels() {
   const meta = moduleMeta(state.activeModuleId);
   topModuleTitleEl.textContent = meta.title;
   topTenantLabelEl.textContent = state.config.runtime.tenant_id;
-  updateOwnerHeroRuntime();
 }
 
 function setModuleStatus(element, text, isError = false) {
@@ -915,7 +702,6 @@ function renderCustomersTable() {
   if (state.moduleData.customers.length === 0) {
     customersRowsEl.innerHTML = '<tr><td colspan="5">Sem clientes para este tenant.</td></tr>';
     updateDatalist(customerIdOptionsEl, []);
-    renderCustomerOverview();
     return;
   }
 
@@ -937,16 +723,6 @@ function renderCustomersTable() {
     customerIdOptionsEl,
     state.moduleData.customers.map((item) => item.customer_id)
   );
-  renderCustomerOverview();
-}
-
-function renderCustomerOverview() {
-  const items = Array.isArray(state.moduleData.customers) ? state.moduleData.customers : [];
-  const withPhone = items.filter((item) => String(item?.primary_phone ?? '').trim().length > 0).length;
-  const withEmail = items.filter((item) => String(item?.primary_email ?? '').trim().length > 0).length;
-  if (customersCountKpiEl) customersCountKpiEl.textContent = String(items.length);
-  if (customersPhoneKpiEl) customersPhoneKpiEl.textContent = String(withPhone);
-  if (customersEmailKpiEl) customersEmailKpiEl.textContent = String(withEmail);
 }
 
 function renderAppointmentsTable() {
@@ -954,7 +730,6 @@ function renderAppointmentsTable() {
   if (state.moduleData.appointments.length === 0) {
     appointmentsRowsEl.innerHTML = '<tr><td colspan="5">Sem appointments nesta sessao.</td></tr>';
     updateDatalist(appointmentIdOptionsEl, []);
-    renderAgendaOverview();
     return;
   }
 
@@ -976,14 +751,12 @@ function renderAppointmentsTable() {
     appointmentIdOptionsEl,
     state.moduleData.appointments.map((item) => item.appointment_id)
   );
-  renderAgendaOverview();
 }
 
 function renderRemindersTable() {
   if (!remindersRowsEl) return;
   if (state.moduleData.reminders.length === 0) {
     remindersRowsEl.innerHTML = '<tr><td colspan="6">Sem reminders para este tenant.</td></tr>';
-    renderAgendaOverview();
     return;
   }
 
@@ -1001,16 +774,6 @@ function renderRemindersTable() {
     `
     )
     .join('');
-  renderAgendaOverview();
-}
-
-function renderAgendaOverview() {
-  const appointments = Array.isArray(state.moduleData.appointments) ? state.moduleData.appointments : [];
-  const reminders = Array.isArray(state.moduleData.reminders) ? state.moduleData.reminders : [];
-  const whatsappCount = reminders.filter((item) => String(item?.channel ?? '').trim().toLowerCase() === 'whatsapp').length;
-  if (agendaAppointmentsKpiEl) agendaAppointmentsKpiEl.textContent = String(appointments.length);
-  if (agendaRemindersKpiEl) agendaRemindersKpiEl.textContent = String(reminders.length);
-  if (agendaWhatsappKpiEl) agendaWhatsappKpiEl.textContent = String(whatsappCount);
 }
 
 function renderChargesTable() {
@@ -1018,7 +781,6 @@ function renderChargesTable() {
   if (state.moduleData.charges.length === 0) {
     chargesRowsEl.innerHTML = '<tr><td colspan="6">Sem cobrancas para este tenant.</td></tr>';
     updateDatalist(chargeIdOptionsEl, []);
-    renderBillingOverview();
     return;
   }
 
@@ -1041,16 +803,6 @@ function renderChargesTable() {
     chargeIdOptionsEl,
     state.moduleData.charges.map((item) => item.charge_id)
   );
-  renderBillingOverview();
-}
-
-function renderBillingOverview() {
-  const charges = Array.isArray(state.moduleData.charges) ? state.moduleData.charges : [];
-  const openCount = charges.filter((item) => String(item?.status ?? '').trim().toLowerCase() === 'open').length;
-  const paidCount = charges.filter((item) => String(item?.status ?? '').trim().toLowerCase() === 'paid').length;
-  if (billingChargesKpiEl) billingChargesKpiEl.textContent = String(charges.length);
-  if (billingOpenKpiEl) billingOpenKpiEl.textContent = String(openCount);
-  if (billingPaidKpiEl) billingPaidKpiEl.textContent = String(paidCount);
 }
 
 function confirmationFilterValue() {
@@ -1164,23 +916,6 @@ function buildRuntimeConfigSyncPayload() {
             0.7
           )
         },
-        crm: {
-          pipeline: {
-            stages: state.config.crm.pipeline.stages,
-            default_stage: state.config.crm.pipeline.default_stage
-          },
-          automation: {
-            stage_followup_enabled: Boolean(state.config.crm.automation.stage_followup_enabled),
-            stage_followup_stages: state.config.crm.automation.stage_followup_stages,
-            stage_followup_delay_minutes: normalizeCrmAutomationDelayMinutes(
-              state.config.crm.automation.stage_followup_delay_minutes,
-              45
-            ),
-            stage_followup_message_template: String(
-              state.config.crm.automation.stage_followup_message_template || ''
-            ).trim()
-          }
-        },
         integrations: {
           crm_evolution: {
             base_url: state.config.integrations.crm_evolution.base_url || '',
@@ -1213,32 +948,6 @@ async function pushRuntimeConfigToBackend() {
   };
 }
 
-async function ensureRuntimeConfigLoaded(forceReload = false) {
-  const tenant = tenantId();
-  if (!tenant) return;
-
-  if (!forceReload && state.runtimeConfigLoadedTenantId === tenant) {
-    return;
-  }
-
-  if (state.runtimeConfigLoadPromise) {
-    await state.runtimeConfigLoadPromise;
-    if (!forceReload && state.runtimeConfigLoadedTenantId === tenant) {
-      return;
-    }
-  }
-
-  state.runtimeConfigLoadPromise = pullRuntimeConfigFromBackend()
-    .then(() => {
-      state.runtimeConfigLoadedTenantId = tenant;
-    })
-    .finally(() => {
-      state.runtimeConfigLoadPromise = null;
-    });
-
-  await state.runtimeConfigLoadPromise;
-}
-
 async function pullRuntimeConfigFromBackend() {
   const body = await fetchJsonOrThrow(
     `/v1/owner-concierge/runtime-config?tenant_id=${encodeURIComponent(tenantId())}`
@@ -1268,32 +977,6 @@ async function pullRuntimeConfigFromBackend() {
       body.execution.whatsapp_ai_min_confidence,
       0.7
     );
-  }
-  if (body?.crm?.pipeline) {
-    const stageKeys = Array.isArray(body.crm.pipeline.stages)
-      ? body.crm.pipeline.stages.map((item) => normalizeCrmStage(item?.stage, '')).filter(Boolean)
-      : [];
-    const stages = normalizeCrmPipelineStages(stageKeys.length > 0 ? stageKeys : CRM_STAGE_KEYS);
-    state.config.crm.pipeline.stages = stages;
-    state.config.crm.pipeline.default_stage = normalizeCrmDefaultStage(
-      body.crm.pipeline.default_stage,
-      stages
-    );
-  }
-  if (body?.crm?.automation) {
-    state.config.crm.automation.stage_followup_enabled = Boolean(body.crm.automation.stage_followup_enabled);
-    state.config.crm.automation.stage_followup_stages = normalizeCrmStageList(
-      body.crm.automation.stage_followup_stages,
-      ['qualified', 'proposal']
-    );
-    state.config.crm.automation.stage_followup_delay_minutes = normalizeCrmAutomationDelayMinutes(
-      body.crm.automation.stage_followup_delay_minutes,
-      45
-    );
-    state.config.crm.automation.stage_followup_message_template = String(
-      body.crm.automation.stage_followup_message_template
-        ?? 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
-    ).trim() || 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.';
   }
   if (body?.integrations?.crm_evolution && typeof body.integrations.crm_evolution === 'object') {
     const ce = body.integrations.crm_evolution;
@@ -1809,7 +1492,7 @@ async function loadModuleWorkspace(moduleId) {
   renderModuleWorkspace(moduleId);
 
   if (moduleId === 'mod-02-whatsapp-crm') {
-    syncCrmEmbeddedFrame(true);
+    syncCrmEmbeddedFrame();
     return;
   }
 
@@ -2037,7 +1720,7 @@ function startContinuousVoiceRecognition() {
       stopContinuousSpeechOutput();
       applyContinuousUiState();
       continuousStateEl.textContent = 'one-shot';
-      syncContinuousButtonsUi();
+      continuousBtn.textContent = 'Ativar Continuo';
       return;
     }
 
@@ -2077,20 +1760,6 @@ function applyContinuousUiState() {
   bodyEl.classList.toggle('continuous-active', state.continuous === true);
 }
 
-function syncContinuousButtonsUi() {
-  const label = state.continuous ? 'Pausar Continua' : 'Fala Continua';
-  if (continuousBtn) {
-    continuousBtn.textContent = state.continuous ? 'Pausar Continuo' : 'Ativar Continuo';
-  }
-  if (continuousInlineBtn) {
-    continuousInlineBtn.textContent = label;
-    continuousInlineBtn.classList.toggle('is-active', state.continuous === true);
-  }
-  if (ownerContinuousModeEl) {
-    ownerContinuousModeEl.textContent = state.continuous ? 'continuous' : 'one-shot';
-  }
-}
-
 function isMobileViewport() {
   return window.matchMedia('(max-width: 900px)').matches;
 }
@@ -2112,7 +1781,7 @@ function applyVisualMode(layout, palette, persist = true) {
     persistConfig();
   }
 
-  if (safeLayout === 'layout2') {
+  if (safeLayout === 'studio') {
     bodyEl.classList.remove('menu-open');
   }
 
@@ -2127,7 +1796,6 @@ function setActiveModule(moduleId) {
   }
 
   state.activeModuleId = moduleId;
-  bodyEl.classList.toggle('crm-embed-focus', moduleId === 'mod-02-whatsapp-crm');
   renderModuleNav();
   setTopbarLabels();
 
@@ -2147,7 +1815,7 @@ function setActiveModule(moduleId) {
       stopContinuousSpeechOutput();
       applyContinuousUiState();
       continuousStateEl.textContent = 'one-shot';
-      syncContinuousButtonsUi();
+      continuousBtn.textContent = 'Ativar Continuo';
     }
     chatWorkspaceEl.classList.add('hidden');
     moduleWorkspaceEl.classList.add('hidden');
@@ -2164,7 +1832,7 @@ function setActiveModule(moduleId) {
       stopContinuousSpeechOutput();
       applyContinuousUiState();
       continuousStateEl.textContent = 'one-shot';
-      syncContinuousButtonsUi();
+      continuousBtn.textContent = 'Ativar Continuo';
     }
     chatWorkspaceEl.classList.add('hidden');
     moduleWorkspaceEl.classList.remove('hidden');
@@ -2329,44 +1997,6 @@ function populateConfigForm() {
       normalizeWhatsappAiMinConfidence(state.config.execution.whatsapp_ai_min_confidence, 0.7)
     );
   }
-  if (cfgCrmPipelineStagesInput) {
-    const stageCsv = (state.config.crm?.pipeline?.stages ?? [])
-      .map((item) => normalizeCrmStage(item?.stage, ''))
-      .filter(Boolean)
-      .join(',');
-    cfgCrmPipelineStagesInput.value = stageCsv;
-  }
-  if (cfgCrmDefaultStageInput) {
-    cfgCrmDefaultStageInput.value = normalizeCrmDefaultStage(
-      state.config.crm?.pipeline?.default_stage,
-      state.config.crm?.pipeline?.stages
-    );
-  }
-  if (cfgCrmAutomationStageFollowupEnabledInput) {
-    cfgCrmAutomationStageFollowupEnabledInput.checked = Boolean(
-      state.config.crm?.automation?.stage_followup_enabled
-    );
-  }
-  if (cfgCrmAutomationStagesInput) {
-    cfgCrmAutomationStagesInput.value = normalizeCrmStageList(
-      state.config.crm?.automation?.stage_followup_stages,
-      ['qualified', 'proposal']
-    ).join(',');
-  }
-  if (cfgCrmAutomationDelayMinutesInput) {
-    cfgCrmAutomationDelayMinutesInput.value = String(
-      normalizeCrmAutomationDelayMinutes(
-        state.config.crm?.automation?.stage_followup_delay_minutes,
-        45
-      )
-    );
-  }
-  if (cfgCrmAutomationMessageTemplateInput) {
-    cfgCrmAutomationMessageTemplateInput.value = String(
-      state.config.crm?.automation?.stage_followup_message_template
-        ?? 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
-    );
-  }
 
   cfgGoogleClientIdInput.value = state.config.integrations.agenda_google.client_id;
   cfgGoogleClientSecretInput.value = state.config.integrations.agenda_google.client_secret;
@@ -2388,7 +2018,6 @@ function populateConfigForm() {
 }
 
 function collectConfigForm() {
-  const previousTenantId = String(state.config?.runtime?.tenant_id ?? '').trim();
   state.config.runtime.api_base_url = normalizeApiBase(cfgApiBaseInput.value);
   state.config.runtime.tenant_id = cfgTenantIdInput.value.trim();
   state.config.runtime.session_id = cfgSessionIdInput.value.trim() || crypto.randomUUID();
@@ -2412,25 +2041,6 @@ function collectConfigForm() {
     cfgWhatsappAiMinConfidenceInput?.value,
     0.7
   );
-  const pipelineStages = normalizeCrmPipelineStages(cfgCrmPipelineStagesInput?.value ?? CRM_STAGE_KEYS.join(','));
-  state.config.crm.pipeline.stages = pipelineStages;
-  state.config.crm.pipeline.default_stage = normalizeCrmDefaultStage(
-    cfgCrmDefaultStageInput?.value,
-    pipelineStages
-  );
-  state.config.crm.automation.stage_followup_enabled = cfgCrmAutomationStageFollowupEnabledInput?.checked ?? false;
-  state.config.crm.automation.stage_followup_stages = normalizeCrmStageList(
-    cfgCrmAutomationStagesInput?.value,
-    ['qualified', 'proposal']
-  );
-  state.config.crm.automation.stage_followup_delay_minutes = normalizeCrmAutomationDelayMinutes(
-    cfgCrmAutomationDelayMinutesInput?.value,
-    45
-  );
-  state.config.crm.automation.stage_followup_message_template = String(
-    cfgCrmAutomationMessageTemplateInput?.value
-      ?? 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
-  ).trim() || 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.';
 
   state.config.integrations.agenda_google.client_id = cfgGoogleClientIdInput.value.trim();
   state.config.integrations.agenda_google.client_secret = cfgGoogleClientSecretInput.value.trim();
@@ -2444,10 +2054,6 @@ function collectConfigForm() {
     || 'Recebemos sua mensagem no WhatsApp. Em instantes retornaremos por aqui.';
   state.config.integrations.billing.provider = cfgBillingProviderInput.value.trim();
   state.config.integrations.billing.api_key = cfgBillingApiKeyInput.value.trim();
-
-  if (previousTenantId !== state.config.runtime.tenant_id) {
-    state.runtimeConfigLoadedTenantId = null;
-  }
 }
 
 function ensureModuleMetric(moduleId) {
@@ -2580,9 +2186,13 @@ function estimateMessageCostUSD(attachments) {
 
 function buildPersonaOverridesFromConfig() {
   const ownerPrompt = state.config.personas.owner_concierge_prompt.trim();
+  const whatsappPrompt = state.config.personas.whatsapp_agent_prompt.trim();
   const overrides = {};
   if (ownerPrompt.length > 0) {
     overrides.owner_concierge_prompt = ownerPrompt;
+  }
+  if (whatsappPrompt.length > 0) {
+    overrides.whatsapp_agent_prompt = whatsappPrompt;
   }
   return Object.keys(overrides).length > 0 ? overrides : null;
 }
@@ -2600,16 +2210,13 @@ function normalizeAssistantOutputText(rawText) {
 
 async function callHealth() {
   healthStatusEl.textContent = 'checking...';
-  updateOwnerHeroHealth('checking...');
   try {
     const response = await fetch(`${apiBase()}/health`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.json();
     healthStatusEl.textContent = body.status === 'ok' ? 'online' : 'degraded';
-    updateOwnerHeroHealth(healthStatusEl.textContent);
   } catch {
     healthStatusEl.textContent = 'offline';
-    updateOwnerHeroHealth('offline');
   }
 }
 
@@ -2698,7 +2305,7 @@ async function toggleContinuousMode() {
       stopContinuousSpeechOutput();
       continuousStateEl.textContent = 'one-shot';
     }
-    syncContinuousButtonsUi();
+    continuousBtn.textContent = state.continuous ? 'Pausar Continuo' : 'Ativar Continuo';
     updateConfigStatus(state.continuous ? 'Modo continuo ativado.' : 'Modo continuo pausado.');
     trackModuleSpend('mod-01-owner-concierge', 0.001, 1);
   } catch (error) {
@@ -2742,14 +2349,12 @@ async function sendInteraction(text, attachments = []) {
         : {})
     }));
   }
+  const personaOverrides = buildPersonaOverridesFromConfig();
+  if (personaOverrides) {
+    payload.persona_overrides = personaOverrides;
+  }
+
   try {
-    await ensureRuntimeConfigLoaded();
-
-    const personaOverrides = buildPersonaOverridesFromConfig();
-    if (personaOverrides) {
-      payload.persona_overrides = personaOverrides;
-    }
-
     const submitInteraction = () => fetch(`${apiBase()}/v1/owner-concierge/interaction`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -2794,18 +2399,6 @@ async function sendInteraction(text, attachments = []) {
       ? assistantOutput.fallback_reason
       : null;
     appendMessage(output);
-    const queuedTasks = Array.isArray(body.response?.downstream_tasks)
-      ? body.response.downstream_tasks
-      : [];
-    if (queuedTasks.length > 0) {
-      const summary = queuedTasks
-        .map((item) => `${item.target_module} ${item.task_type} [${item.status}]`)
-        .join(' | ');
-      appendMessage(
-        `[runtime] ${summary}. Isso ainda nao gera registro ou KPI ate haver comprovante de execucao.`,
-        'assistant'
-      );
-    }
     setAssistantProviderStatus(provider, {
       model,
       fallbackReason
@@ -3019,7 +2612,6 @@ async function saveConfig() {
   renderMetricsTable();
   try {
     const syncResult = await pushRuntimeConfigToBackend();
-    state.runtimeConfigLoadedTenantId = tenantId();
     updateConfigStatus(
       `Configuracoes salvas e aplicadas no backend (mode=${syncResult.ownerResponseMode}, model=${syncResult.model}).`
     );
@@ -3039,19 +2631,6 @@ function resetMetrics() {
 
 function bootstrapConfig() {
   state.config = mergeConfig(loadConfig());
-  const tenant = String(state.config?.runtime?.tenant_id ?? '').trim().toLowerCase();
-  const preset = TENANT_THEME_PRESETS[tenant];
-  const shouldMigrateLegacyLayout =
-    tenant === 'tenant_automania' && normalizeLayout(state.config?.runtime?.layout) === 'layout3';
-  const shouldPromoteLegacyDefault =
-    tenant === 'tenant_automania' &&
-    normalizeLayout(state.config?.runtime?.layout) === 'layout2' &&
-    normalizePalette(state.config?.runtime?.palette) === 'palette1';
-  if (preset && (!state.config.runtime.layout || shouldMigrateLegacyLayout || shouldPromoteLegacyDefault)) {
-    state.config.runtime.layout = preset.layout;
-    state.config.runtime.palette = preset.palette;
-    persistConfig();
-  }
   state.settingsUnlocked = loadSettingsUnlockState();
   applyVisualMode(state.config.runtime.layout, state.config.runtime.palette, false);
   populateConfigForm();
@@ -3064,7 +2643,7 @@ function bootstrapConfig() {
 
 function setupEvents() {
   mobileMenuBtn.addEventListener('click', () => {
-    if (rootEl.dataset.layout === 'layout2') return;
+    if (rootEl.dataset.layout === 'studio') return;
     if (!isMobileViewport()) return;
     bodyEl.classList.toggle('menu-open');
   });
@@ -3082,7 +2661,6 @@ function setupEvents() {
 
   healthBtn?.addEventListener('click', callHealth);
   continuousBtn?.addEventListener('click', toggleContinuousMode);
-  continuousInlineBtn?.addEventListener('click', toggleContinuousMode);
   if (recoverSessionBtn) {
     recoverSessionBtn.addEventListener('click', () => {
       recoverLatestSession();
@@ -3222,17 +2800,16 @@ async function bootstrap() {
   applyAvatarVideoSource();
   setupAvatarMobilePlay();
   bootstrapConfig();
-  syncContinuousButtonsUi();
   syncCrmEmbeddedFrame();
   renderModuleNav();
   setActiveModule('mod-01-owner-concierge');
+  setupEvents();
   await callHealth();
   try {
-    await ensureRuntimeConfigLoaded();
+    await pullRuntimeConfigFromBackend();
   } catch {
     // backend runtime config may not be available yet during cold start
   }
-  setupEvents();
   refreshInteractionConfirmations();
 }
 

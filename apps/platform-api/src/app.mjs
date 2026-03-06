@@ -472,169 +472,6 @@ function normalizeCrmAiMode(value, fallback = 'assist_execute') {
   return fallback;
 }
 
-const CRM_PIPELINE_STAGE_KEYS = new Set([
-  'new',
-  'contacted',
-  'qualified',
-  'proposal',
-  'negotiation',
-  'won',
-  'lost',
-  'nurturing'
-]);
-
-const DEFAULT_CRM_PIPELINE_STAGES = [
-  { stage: 'new', label: 'New', active: true, order: 10 },
-  { stage: 'contacted', label: 'Contacted', active: true, order: 20 },
-  { stage: 'qualified', label: 'Qualified', active: true, order: 30 },
-  { stage: 'proposal', label: 'Proposal', active: true, order: 40 },
-  { stage: 'negotiation', label: 'Negotiation', active: true, order: 50 },
-  { stage: 'won', label: 'Won', active: true, order: 60 },
-  { stage: 'lost', label: 'Lost', active: true, order: 70 },
-  { stage: 'nurturing', label: 'Nurturing', active: true, order: 80 }
-];
-
-function integerOrFallback(value, fallback = 0) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.floor(parsed);
-}
-
-function normalizeCrmPipelineStageKey(value, fallback = 'new') {
-  const raw = String(value ?? '').trim().toLowerCase();
-  if (CRM_PIPELINE_STAGE_KEYS.has(raw)) return raw;
-  return fallback;
-}
-
-function normalizeCrmPipelineStageLabel(stage, value) {
-  const label = stringOrFallback(value, '');
-  if (label.length > 0) return label;
-  return stage.charAt(0).toUpperCase() + stage.slice(1);
-}
-
-function normalizeCrmPipelineStages(inputStages, fallbackStages = DEFAULT_CRM_PIPELINE_STAGES) {
-  const source = Array.isArray(inputStages) ? inputStages : fallbackStages;
-  const dedup = new Map();
-  for (let index = 0; index < source.length; index += 1) {
-    const item = source[index];
-    if (!item || typeof item !== 'object') continue;
-    const stage = normalizeCrmPipelineStageKey(item.stage, '');
-    if (!stage) continue;
-    dedup.set(stage, {
-      stage,
-      label: normalizeCrmPipelineStageLabel(stage, item.label),
-      active: boolOrFallback(item.active, true),
-      order: clampNumber(integerOrFallback(item.order, (index + 1) * 10), 1, 10000)
-    });
-  }
-
-  if (dedup.size === 0) {
-    return DEFAULT_CRM_PIPELINE_STAGES.map((item) => ({ ...item }));
-  }
-
-  return [...dedup.values()].sort((left, right) => {
-    if (left.order !== right.order) return left.order - right.order;
-    return left.stage.localeCompare(right.stage);
-  });
-}
-
-function normalizeCrmStageList(value, fallback = ['qualified', 'proposal']) {
-  const source = Array.isArray(value)
-    ? value
-    : typeof value === 'string'
-      ? value.split(',').map((item) => item.trim())
-      : fallback;
-  const unique = [];
-  for (const item of source) {
-    const stage = normalizeCrmPipelineStageKey(item, '');
-    if (!stage) continue;
-    if (!unique.includes(stage)) unique.push(stage);
-  }
-  return unique.length > 0 ? unique : [...fallback];
-}
-
-function normalizeCrmRuntimeConfig(rawCrm = {}, fallbackCrm = {}) {
-  const pipelineRaw = rawCrm.pipeline && typeof rawCrm.pipeline === 'object' ? rawCrm.pipeline : {};
-  const pipelineFallback =
-    fallbackCrm.pipeline && typeof fallbackCrm.pipeline === 'object' ? fallbackCrm.pipeline : {};
-  const automationRaw = rawCrm.automation && typeof rawCrm.automation === 'object' ? rawCrm.automation : {};
-  const automationFallback =
-    fallbackCrm.automation && typeof fallbackCrm.automation === 'object' ? fallbackCrm.automation : {};
-
-  const stages = normalizeCrmPipelineStages(pipelineRaw.stages, pipelineFallback.stages);
-  const activeStages = stages.filter((item) => item.active !== false).map((item) => item.stage);
-  const requestedDefault = normalizeCrmPipelineStageKey(
-    pipelineRaw.default_stage,
-    normalizeCrmPipelineStageKey(
-      pipelineFallback.default_stage,
-      activeStages[0] ?? stages[0]?.stage ?? 'new'
-    )
-  );
-  const defaultStage = activeStages.includes(requestedDefault)
-    ? requestedDefault
-    : (activeStages[0] ?? stages[0]?.stage ?? 'new');
-
-  const fallbackDelay = clampNumber(integerOrFallback(automationFallback.stage_followup_delay_minutes, 45), 0, 10080);
-  const delayMinutes = clampNumber(integerOrFallback(automationRaw.stage_followup_delay_minutes, fallbackDelay), 0, 10080);
-
-  return {
-    pipeline: {
-      stages,
-      default_stage: defaultStage
-    },
-    automation: {
-      stage_followup_enabled: boolOrFallback(
-        automationRaw.stage_followup_enabled,
-        boolOrFallback(automationFallback.stage_followup_enabled, false)
-      ),
-      stage_followup_stages: normalizeCrmStageList(
-        automationRaw.stage_followup_stages,
-        normalizeCrmStageList(automationFallback.stage_followup_stages, ['qualified', 'proposal'])
-      ),
-      stage_followup_delay_minutes: delayMinutes,
-      stage_followup_message_template: stringOrFallback(
-        automationRaw.stage_followup_message_template,
-        stringOrFallback(
-          automationFallback.stage_followup_message_template,
-          'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
-        )
-      )
-    }
-  };
-}
-
-function crmActiveStages(crmConfig) {
-  const stages = Array.isArray(crmConfig?.pipeline?.stages) ? crmConfig.pipeline.stages : [];
-  const active = stages
-    .filter((item) => item && typeof item === 'object' && item.active !== false)
-    .map((item) => normalizeCrmPipelineStageKey(item.stage, ''))
-    .filter(Boolean);
-  if (active.length > 0) return active;
-  return ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'nurturing'];
-}
-
-function isCrmStageEnabled(crmConfig, stage) {
-  const normalized = normalizeCrmPipelineStageKey(stage, '');
-  if (!normalized) return false;
-  return crmActiveStages(crmConfig).includes(normalized);
-}
-
-function buildStageFollowupMessage(template, context) {
-  const source = stringOrFallback(template, '').trim()
-    || 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.';
-  const safe = {
-    lead_name: cleanShortText(context.lead_name ?? 'cliente', 120),
-    from_stage: cleanShortText(context.from_stage ?? '', 40),
-    to_stage: cleanShortText(context.to_stage ?? '', 40),
-    tenant_id: cleanShortText(context.tenant_id ?? '', 80)
-  };
-  return source
-    .replaceAll('{lead_name}', safe.lead_name || 'cliente')
-    .replaceAll('{from_stage}', safe.from_stage || '-')
-    .replaceAll('{to_stage}', safe.to_stage || '-')
-    .replaceAll('{tenant_id}', safe.tenant_id || '-');
-}
-
 function parseBooleanFlag(value, fallback = false) {
   if (typeof value === 'boolean') return value;
   const normalized = String(value ?? '').trim().toLowerCase();
@@ -749,8 +586,6 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
   const integrationsRaw = raw.integrations && typeof raw.integrations === 'object' ? raw.integrations : {};
   const integrationsFallback =
     fallback.integrations && typeof fallback.integrations === 'object' ? fallback.integrations : {};
-  const crmRaw = raw.crm && typeof raw.crm === 'object' ? raw.crm : {};
-  const crmFallback = fallback.crm && typeof fallback.crm === 'object' ? fallback.crm : {};
   const crmEvolutionRaw =
     integrationsRaw.crm_evolution && typeof integrationsRaw.crm_evolution === 'object'
       ? integrationsRaw.crm_evolution
@@ -842,8 +677,7 @@ function sanitizeTenantRuntimeConfigInput(rawConfig, fallbackConfig = null) {
           )
         )
       }
-    },
-    crm: normalizeCrmRuntimeConfig(crmRaw, crmFallback)
+    }
   };
 }
 
@@ -1080,18 +914,6 @@ function createRuntimeConfigSummary(tenantId, configRecord) {
         auto_reply_enabled: normalized.integrations.crm_evolution.auto_reply_enabled === true,
         auto_reply_use_ai: normalized.integrations.crm_evolution.auto_reply_use_ai === true,
         auto_reply_text: normalized.integrations.crm_evolution.auto_reply_text
-      }
-    },
-    crm: {
-      pipeline: {
-        stages: normalized.crm.pipeline.stages,
-        default_stage: normalized.crm.pipeline.default_stage
-      },
-      automation: {
-        stage_followup_enabled: normalized.crm.automation.stage_followup_enabled,
-        stage_followup_stages: normalized.crm.automation.stage_followup_stages,
-        stage_followup_delay_minutes: normalized.crm.automation.stage_followup_delay_minutes,
-        stage_followup_message_template: normalized.crm.automation.stage_followup_message_template
       }
     },
     updated_at: typeof configRecord?.updated_at === 'string' ? configRecord.updated_at : null
@@ -4524,20 +4346,8 @@ export function createApp(options = {}) {
         }
 
         const request = body.request;
-        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(request.tenant_id);
-        const tenantCrmConfig = sanitizeTenantRuntimeConfigInput(tenantRuntimeConfig ?? {}).crm;
         const correlationId = request.correlation_id ?? randomUUID();
         const traceId = randomUUID();
-        const requestedStage = normalizeCrmPipelineStageKey(
-          request.lead.stage ?? tenantCrmConfig.pipeline.default_stage,
-          'new'
-        );
-        if (!isCrmStageEnabled(tenantCrmConfig, requestedStage)) {
-          return json(res, 400, {
-            error: 'stage_disabled_for_tenant',
-            stage: requestedStage
-          });
-        }
         let createResult;
         try {
           createResult = await leadStore.createLead({
@@ -4547,7 +4357,7 @@ export function createApp(options = {}) {
             display_name: request.lead.display_name,
             phone_e164: request.lead.phone_e164,
             source_channel: request.lead.source_channel,
-            stage: requestedStage,
+            stage: request.lead.stage ?? 'new',
             metadata: request.lead.metadata ?? {}
           });
         } catch (error) {
@@ -4607,20 +4417,6 @@ export function createApp(options = {}) {
         }
 
         const request = body.request;
-        const previousLead = await leadStore.getLeadById(request.tenant_id, leadId);
-        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(request.tenant_id);
-        const tenantCrmConfig = sanitizeTenantRuntimeConfigInput(tenantRuntimeConfig ?? {}).crm;
-        const targetStage = normalizeCrmPipelineStageKey(request.changes?.to_stage, '');
-        if (!targetStage) {
-          return json(res, 400, { error: 'missing_to_stage' });
-        }
-        if (!isCrmStageEnabled(tenantCrmConfig, targetStage)) {
-          return json(res, 400, {
-            error: 'stage_disabled_for_tenant',
-            stage: targetStage
-          });
-        }
-
         let updateResult;
         try {
           updateResult = await leadStore.updateLeadStage(
@@ -4645,93 +4441,11 @@ export function createApp(options = {}) {
           });
         }
 
-        let automation = { status: 'not_applicable' };
-        const fromStage = normalizeCrmPipelineStageKey(previousLead?.stage, '');
-        const toStage = normalizeCrmPipelineStageKey(updateResult?.lead?.stage, '');
-        const stageChanged = fromStage && toStage && fromStage !== toStage;
-        const autoCfg = tenantCrmConfig.automation;
-        if (
-          stageChanged &&
-          autoCfg.stage_followup_enabled === true &&
-          Array.isArray(autoCfg.stage_followup_stages) &&
-          autoCfg.stage_followup_stages.includes(toStage)
-        ) {
-          const leadPhone = stringOrFallback(updateResult.lead?.phone_e164, '');
-          if (leadPhone.length > 0) {
-            const delayMinutes = clampNumber(
-              integerOrFallback(autoCfg.stage_followup_delay_minutes, 45),
-              0,
-              10080
-            );
-            const scheduleAt = new Date(Date.now() + (delayMinutes * 60 * 1000)).toISOString();
-            const followupMessage = buildStageFollowupMessage(
-              autoCfg.stage_followup_message_template,
-              {
-                lead_name: updateResult.lead?.display_name ?? '',
-                from_stage: fromStage,
-                to_stage: toStage,
-                tenant_id: request.tenant_id
-              }
-            );
-            const correlationId = request.correlation_id ?? randomUUID();
-            const traceId = randomUUID();
-            try {
-              const followupResult = await crmAutomationStore.createFollowup({
-                followup_id: randomUUID(),
-                tenant_id: request.tenant_id,
-                campaign_id: null,
-                external_key: `stage-auto:${request.tenant_id}:${leadId}:${toStage}:${scheduleAt.slice(0, 16)}`,
-                lead_id: leadId,
-                customer_id: null,
-                phone_e164: leadPhone,
-                message: followupMessage,
-                schedule_at: scheduleAt,
-                channel: 'whatsapp',
-                status: 'pending',
-                metadata: {
-                  source: 'crm_stage_automation',
-                  from_stage: fromStage,
-                  to_stage: toStage,
-                  delay_minutes: delayMinutes
-                },
-                correlation_id: correlationId,
-                trace_id: traceId
-              });
-              automation = {
-                status: followupResult.action === 'created' ? 'scheduled' : 'idempotent',
-                followup_id: followupResult.followup?.followup_id ?? null,
-                schedule_at: followupResult.followup?.schedule_at ?? scheduleAt
-              };
-              if (followupResult.action === 'created') {
-                const scheduledEvent = createCrmFollowupEvent(
-                  'crm.followup.scheduled',
-                  followupResult.followup,
-                  correlationId,
-                  traceId,
-                  request.request_id
-                );
-                const scheduledEventResult = await validateAndPersistEvent(store, scheduledEvent);
-                if (!scheduledEventResult.ok) {
-                  throw new Error(`${scheduledEventResult.type}:${scheduledEventResult.details}`);
-                }
-              }
-            } catch (error) {
-              automation = {
-                status: 'error',
-                details: String(error.message ?? error)
-              };
-            }
-          } else {
-            automation = { status: 'skipped_missing_phone' };
-          }
-        }
-
         return json(res, 200, {
           response: {
             request_id: request.request_id,
             status: 'updated',
-            lead: updateResult.lead,
-            automation
+            lead: updateResult.lead
           }
         });
       }
@@ -5181,14 +4895,6 @@ export function createApp(options = {}) {
         }
 
         const request = body.request;
-        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(request.tenant_id);
-        const tenantCrmConfig = sanitizeTenantRuntimeConfigInput(tenantRuntimeConfig ?? {}).crm;
-        if (!isCrmStageEnabled(tenantCrmConfig, request.deal.stage)) {
-          return json(res, 400, {
-            error: 'stage_disabled_for_tenant',
-            stage: request.deal.stage
-          });
-        }
         const correlationId = request.correlation_id ?? randomUUID();
         const traceId = randomUUID();
 
@@ -5276,14 +4982,6 @@ export function createApp(options = {}) {
         const request = body.request;
         if (request.deal_id !== dealId) {
           return json(res, 400, { error: 'deal_id_mismatch' });
-        }
-        const tenantRuntimeConfig = await resolveTenantRuntimeConfig(request.tenant_id);
-        const tenantCrmConfig = sanitizeTenantRuntimeConfigInput(tenantRuntimeConfig ?? {}).crm;
-        if (Object.hasOwn(request.patch, 'stage') && !isCrmStageEnabled(tenantCrmConfig, request.patch.stage)) {
-          return json(res, 400, {
-            error: 'stage_disabled_for_tenant',
-            stage: request.patch.stage
-          });
         }
 
         const previousDeal = await crmCoreStore.getDealById(request.tenant_id, dealId);
@@ -6033,7 +5731,6 @@ export function createApp(options = {}) {
 
         const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
         const aiConfig = resolveCrmAiRuntimeConfig(tenantRuntimeConfig);
-        const tenantCrmConfig = sanitizeTenantRuntimeConfigInput(tenantRuntimeConfig ?? {}).crm;
         if (!aiConfig.enabled) {
           return json(res, 403, {
             error: 'crm_ai_disabled',
@@ -6143,7 +5840,6 @@ export function createApp(options = {}) {
 
         const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
         const aiConfig = resolveCrmAiRuntimeConfig(tenantRuntimeConfig);
-        const tenantCrmConfig = sanitizeTenantRuntimeConfigInput(tenantRuntimeConfig ?? {}).crm;
         if (!aiConfig.enabled) {
           return json(res, 403, {
             error: 'crm_ai_disabled',
@@ -6194,11 +5890,6 @@ export function createApp(options = {}) {
           suggestedStage = qualification.currentStage;
           requiredTrigger = null;
           reason = `Confianca ${confidence.toFixed(2)} abaixo do limiar ${aiConfig.minConfidence.toFixed(2)}; manter stage atual.`;
-        }
-        if (!isCrmStageEnabled(tenantCrmConfig, suggestedStage)) {
-          suggestedStage = qualification.currentStage;
-          requiredTrigger = null;
-          reason = `Stage ${qualification.suggestedStage} esta desabilitado no pipeline deste tenant; manter stage atual.`;
         }
 
         appendCrmAiAudit({
@@ -6267,7 +5958,6 @@ export function createApp(options = {}) {
 
         const tenantRuntimeConfig = await resolveTenantRuntimeConfig(tenantId);
         const aiConfig = resolveCrmAiRuntimeConfig(tenantRuntimeConfig);
-        const tenantCrmConfig = sanitizeTenantRuntimeConfigInput(tenantRuntimeConfig ?? {}).crm;
         if (!aiConfig.enabled) {
           return json(res, 403, {
             error: 'crm_ai_disabled',
@@ -6404,12 +6094,6 @@ export function createApp(options = {}) {
           if (!toStage) {
             return json(res, 400, { error: 'missing_to_stage' });
           }
-          if (!isCrmStageEnabled(tenantCrmConfig, toStage)) {
-            return json(res, 400, {
-              error: 'stage_disabled_for_tenant',
-              stage: toStage
-            });
-          }
 
           const transition = findLeadStageTransition(currentStage, toStage);
           const trigger = cleanShortText(request?.payload?.trigger ?? transition?.trigger ?? '', 120);
@@ -6452,81 +6136,6 @@ export function createApp(options = {}) {
             });
           }
 
-          let automation = { status: 'not_applicable' };
-          const autoCfg = tenantCrmConfig.automation;
-          if (
-            autoCfg.stage_followup_enabled === true &&
-            Array.isArray(autoCfg.stage_followup_stages) &&
-            autoCfg.stage_followup_stages.includes(toStage)
-          ) {
-            const leadPhone = stringOrFallback(updateResult.lead?.phone_e164, '');
-            if (leadPhone.length > 0) {
-              const delayMinutes = clampNumber(
-                integerOrFallback(autoCfg.stage_followup_delay_minutes, 45),
-                0,
-                10080
-              );
-              const scheduleAt = new Date(Date.now() + (delayMinutes * 60 * 1000)).toISOString();
-              const followupMessage = buildStageFollowupMessage(
-                autoCfg.stage_followup_message_template,
-                {
-                  lead_name: updateResult.lead?.display_name ?? '',
-                  from_stage: currentStage,
-                  to_stage: toStage,
-                  tenant_id: tenantId
-                }
-              );
-              try {
-                const followupResult = await crmAutomationStore.createFollowup({
-                  followup_id: randomUUID(),
-                  tenant_id: tenantId,
-                  campaign_id: null,
-                  external_key: `stage-auto-ai:${tenantId}:${lead.lead_id}:${toStage}:${scheduleAt.slice(0, 16)}`,
-                  lead_id: lead.lead_id,
-                  customer_id: null,
-                  phone_e164: leadPhone,
-                  message: followupMessage,
-                  schedule_at: scheduleAt,
-                  channel: 'whatsapp',
-                  status: 'pending',
-                  metadata: {
-                    source: 'crm_stage_automation_ai',
-                    from_stage: currentStage,
-                    to_stage: toStage,
-                    delay_minutes: delayMinutes
-                  },
-                  correlation_id: correlationId,
-                  trace_id: traceId
-                });
-                automation = {
-                  status: followupResult.action === 'created' ? 'scheduled' : 'idempotent',
-                  followup_id: followupResult.followup?.followup_id ?? null,
-                  schedule_at: followupResult.followup?.schedule_at ?? scheduleAt
-                };
-                if (followupResult.action === 'created') {
-                  const scheduledEvent = createCrmFollowupEvent(
-                    'crm.followup.scheduled',
-                    followupResult.followup,
-                    correlationId,
-                    traceId,
-                    request.request_id
-                  );
-                  const scheduledEventResult = await validateAndPersistEvent(store, scheduledEvent);
-                  if (!scheduledEventResult.ok) {
-                    throw new Error(`${scheduledEventResult.type}:${scheduledEventResult.details}`);
-                  }
-                }
-              } catch (error) {
-                automation = {
-                  status: 'error',
-                  details: String(error.message ?? error)
-                };
-              }
-            } else {
-              automation = { status: 'skipped_missing_phone' };
-            }
-          }
-
           appendCrmAiAudit({
             tenant_id: tenantId,
             conversation_id: conversationId,
@@ -6544,7 +6153,6 @@ export function createApp(options = {}) {
             executed_action: 'update_stage',
             conversation_id: conversationId,
             lead_result: updateResult.lead,
-            automation,
             correlation_id: correlationId,
             trace_id: traceId
           };

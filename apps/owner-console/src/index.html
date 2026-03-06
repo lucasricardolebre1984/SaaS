@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="pt-BR" data-layout="layout1" data-palette="palette2">
+<html lang="pt-BR" data-layout="studio" data-palette="darkgreen">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Owner Console | SaaS</title>
-    <link rel="stylesheet" href="./styles.css?v=20260306f" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="shell-bg"></div>
@@ -45,33 +45,6 @@
 
         <main class="workspace" id="chatWorkspace">
           <section class="chat-panel card">
-            <section class="owner-hero-band">
-              <div class="owner-hero-band__intro">
-                <p class="owner-hero-band__eyebrow">Modulo 01</p>
-                <h3 class="owner-hero-band__title">Control Tower IA</h3>
-                <p class="owner-hero-band__text">
-                  Orquestre CRM, agenda e cobranca com runtime centralizado, sessao auditavel e configuracao tenant-scoped.
-                </p>
-              </div>
-              <div class="owner-hero-band__signals">
-                <article class="owner-signal-card">
-                  <span class="owner-signal-card__label">Tenant</span>
-                  <strong id="ownerHeroTenant">tenant_automania</strong>
-                </article>
-                <article class="owner-signal-card">
-                  <span class="owner-signal-card__label">Sessao</span>
-                  <strong id="ownerHeroSession">-</strong>
-                </article>
-                <article class="owner-signal-card">
-                  <span class="owner-signal-card__label">Provider</span>
-                  <strong id="ownerHeroProvider">idle</strong>
-                </article>
-                <article class="owner-signal-card">
-                  <span class="owner-signal-card__label">Health</span>
-                  <strong id="ownerHeroHealth">idle</strong>
-                </article>
-              </div>
-            </section>
             <header class="card__header">
               <h3>Chat do Proprietario</h3>
             </header>
@@ -126,7 +99,6 @@
 
               <div class="composer-row">
                 <div class="composer-tools composer-tools--compact">
-                  <button id="continuousInlineBtn" class="btn btn--ghost" type="button">Fala Continua</button>
                   <button id="audioRecordBtn" class="btn btn--ghost" type="button">Audio</button>
                   <button id="photoPickBtn" class="btn btn--ghost" type="button">Foto</button>
                   <button id="filePickBtn" class="btn btn--ghost" type="button">Arquivo</button>
@@ -149,7 +121,7 @@
               Voltar
             </button>
             <header class="card__header">
-              <h3>Centro de Controle</h3>
+              <h3>Avatar Continuo</h3>
               <div class="card__actions">
                 <button id="continuousBtn" class="btn btn--ghost" type="button">Ativar Continuo</button>
                 <span id="continuousState" class="status-pill">one-shot</span>
@@ -180,33 +152,7 @@
             </div>
 
             <div class="voice-panel__meta">
-              <section class="owner-rail-section">
-                <div class="owner-rail-section__header">
-                  <span class="owner-rail-section__eyebrow">Runtime</span>
-                  <strong>Cockpit ativo</strong>
-                </div>
-                <div class="owner-rail-grid">
-                  <article class="owner-rail-card">
-                    <span class="owner-rail-card__label">Modo</span>
-                    <strong id="ownerContinuousMode">one-shot</strong>
-                  </article>
-                  <article class="owner-rail-card">
-                    <span class="owner-rail-card__label">Ultima acao</span>
-                    <strong id="lastRun">Sem interacao ainda.</strong>
-                  </article>
-                </div>
-              </section>
-              <section class="owner-rail-section">
-                <div class="owner-rail-section__header">
-                  <span class="owner-rail-section__eyebrow">Guia</span>
-                  <strong>Uso premium do owner</strong>
-                </div>
-                <ul class="owner-rail-list">
-                  <li>Defina layout, paleta e personas no modulo 06 antes do teste funcional.</li>
-                  <li>Use o CRM no modulo 02 para confirmar reflexo real de leads e conversas.</li>
-                  <li>Ative fala continua apenas quando quiser operacao por voz com avatar.</li>
-                </ul>
-              </section>
+              <p id="lastRun">Sem interacao ainda.</p>
               <p class="muted">Modo continuo ligado ao avatar para experiencia de voz assistida.</p>
             </div>
           </aside>
@@ -231,30 +177,6 @@
           </section>
 
           <section class="module-view hidden" id="moduleClientesView">
-            <section class="module-hero card">
-              <div class="module-hero__content">
-                <p class="module-hero__eyebrow">Modulo 03</p>
-                <h3 class="module-hero__title">Clientes</h3>
-                <p class="module-hero__text">
-                  Cadastro, consulta e conversao de lead em cliente no cockpit do proprietario.
-                </p>
-              </div>
-              <div class="module-kpis">
-                <article class="module-kpi">
-                  <span class="module-kpi__label">Clientes</span>
-                  <strong id="customersCountKpi" class="module-kpi__value">0</strong>
-                </article>
-                <article class="module-kpi">
-                  <span class="module-kpi__label">Com Telefone</span>
-                  <strong id="customersPhoneKpi" class="module-kpi__value">0</strong>
-                </article>
-                <article class="module-kpi">
-                  <span class="module-kpi__label">Com Email</span>
-                  <strong id="customersEmailKpi" class="module-kpi__value">0</strong>
-                </article>
-              </div>
-            </section>
-
             <section class="card">
               <header class="card__header">
                 <h3>Clientes - Cadastro</h3>
@@ -313,30 +235,6 @@
           </section>
 
           <section class="module-view hidden" id="moduleAgendaView">
-            <section class="module-hero card">
-              <div class="module-hero__content">
-                <p class="module-hero__eyebrow">Modulo 04</p>
-                <h3 class="module-hero__title">Agenda</h3>
-                <p class="module-hero__text">
-                  Appointments e reminders operacionais com visao rapida de agenda ativa e disparos.
-                </p>
-              </div>
-              <div class="module-kpis">
-                <article class="module-kpi">
-                  <span class="module-kpi__label">Appointments</span>
-                  <strong id="agendaAppointmentsKpi" class="module-kpi__value">0</strong>
-                </article>
-                <article class="module-kpi">
-                  <span class="module-kpi__label">Reminders</span>
-                  <strong id="agendaRemindersKpi" class="module-kpi__value">0</strong>
-                </article>
-                <article class="module-kpi">
-                  <span class="module-kpi__label">WhatsApp</span>
-                  <strong id="agendaWhatsappKpi" class="module-kpi__value">0</strong>
-                </article>
-              </div>
-            </section>
-
             <section class="card">
               <header class="card__header">
                 <h3>Agenda - Appointment</h3>
@@ -452,30 +350,6 @@
           </section>
 
           <section class="module-view hidden" id="moduleBillingView">
-            <section class="module-hero card">
-              <div class="module-hero__content">
-                <p class="module-hero__eyebrow">Modulo 05</p>
-                <h3 class="module-hero__title">Cobranca</h3>
-                <p class="module-hero__text">
-                  Charges, collection e pagamentos com acompanhamento rapido do funil financeiro.
-                </p>
-              </div>
-              <div class="module-kpis">
-                <article class="module-kpi">
-                  <span class="module-kpi__label">Charges</span>
-                  <strong id="billingChargesKpi" class="module-kpi__value">0</strong>
-                </article>
-                <article class="module-kpi">
-                  <span class="module-kpi__label">Open</span>
-                  <strong id="billingOpenKpi" class="module-kpi__value">0</strong>
-                </article>
-                <article class="module-kpi">
-                  <span class="module-kpi__label">Paid</span>
-                  <strong id="billingPaidKpi" class="module-kpi__value">0</strong>
-                </article>
-              </div>
-            </section>
-
             <section class="card">
               <header class="card__header">
                 <h3>Cobranca - Charge</h3>
@@ -616,17 +490,16 @@
               </div>
               <label>Layout
                 <select id="cfgLayout">
-                  <option value="layout1">Layout 1</option>
-                  <option value="layout2">Layout 2</option>
-                  <option value="layout3">Layout 3</option>
+                  <option value="fabio2">Fabio2</option>
+                  <option value="studio">Studio</option>
                 </select>
               </label>
               <label>Paleta
                 <select id="cfgPalette">
-                  <option value="palette1">Paleta 1 - Premium</option>
-                  <option value="palette2">Paleta 2 - Signature</option>
-                  <option value="palette3">Paleta 3 - Balance</option>
-                  <option value="palette4">Paleta 4 - Warm</option>
+                  <option value="darkgreen">Dark Green</option>
+                  <option value="ocean">Ocean</option>
+                  <option value="forest">Forest</option>
+                  <option value="sunset">Sunset</option>
                 </select>
               </label>
               <label>FX USD-BRL (estimativa)<input id="cfgFxUsdBrl" type="number" step="0.01" min="0.01" /></label>
@@ -708,51 +581,6 @@
 
           <section class="card">
             <header class="card__header">
-              <h3>CRM Pipeline e Automacao (Tenant)</h3>
-            </header>
-            <div class="settings-grid">
-              <label>Stages ativas (CSV)
-                <input
-                  id="cfgCrmPipelineStages"
-                  placeholder="new,contacted,qualified,proposal,negotiation,won,lost,nurturing"
-                />
-              </label>
-              <label>Stage default
-                <select id="cfgCrmDefaultStage">
-                  <option value="new">new</option>
-                  <option value="contacted">contacted</option>
-                  <option value="qualified">qualified</option>
-                  <option value="proposal">proposal</option>
-                  <option value="negotiation">negotiation</option>
-                  <option value="won">won</option>
-                  <option value="lost">lost</option>
-                  <option value="nurturing">nurturing</option>
-                </select>
-              </label>
-              <label class="toggle-label">
-                <input id="cfgCrmAutomationStageFollowupEnabled" type="checkbox" />
-                Follow-up automatico por stage
-              </label>
-              <label>Stages com follow-up (CSV)
-                <input id="cfgCrmAutomationStages" placeholder="qualified,proposal" />
-              </label>
-              <label>Delay follow-up (min)
-                <input id="cfgCrmAutomationDelayMinutes" type="number" min="0" max="10080" step="1" />
-              </label>
-              <label>Template follow-up
-                <input
-                  id="cfgCrmAutomationMessageTemplate"
-                  placeholder="Ola {lead_name}, seguimos na etapa {to_stage}."
-                />
-              </label>
-            </div>
-            <p class="settings-note">
-              Placeholders aceitos: <code>{lead_name}</code>, <code>{from_stage}</code>, <code>{to_stage}</code>, <code>{tenant_id}</code>.
-            </p>
-          </section>
-
-          <section class="card">
-            <header class="card__header">
               <h3>Integracoes por Modulo</h3>
             </header>
             <div class="settings-grid">
@@ -794,6 +622,6 @@
       </div>
     </div>
 
-    <script type="module" src="./app.js?v=20260306f"></script>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>

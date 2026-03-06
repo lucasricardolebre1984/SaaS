@@ -38,139 +38,6 @@ function asNumberInRange(value, fallback = 0.7, min = 0, max = 1) {
   return parsed;
 }
 
-const CRM_STAGE_KEYS = new Set([
-  'new',
-  'contacted',
-  'qualified',
-  'proposal',
-  'negotiation',
-  'won',
-  'lost',
-  'nurturing'
-]);
-
-const DEFAULT_CRM_PIPELINE_STAGES = [
-  { stage: 'new', label: 'New', active: true, order: 10 },
-  { stage: 'contacted', label: 'Contacted', active: true, order: 20 },
-  { stage: 'qualified', label: 'Qualified', active: true, order: 30 },
-  { stage: 'proposal', label: 'Proposal', active: true, order: 40 },
-  { stage: 'negotiation', label: 'Negotiation', active: true, order: 50 },
-  { stage: 'won', label: 'Won', active: true, order: 60 },
-  { stage: 'lost', label: 'Lost', active: true, order: 70 },
-  { stage: 'nurturing', label: 'Nurturing', active: true, order: 80 }
-];
-
-function asIntegerInRange(value, fallback = 0, min = 0, max = 10080) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  const rounded = Math.floor(parsed);
-  if (rounded < min) return min;
-  if (rounded > max) return max;
-  return rounded;
-}
-
-function normalizeCrmStageKey(value, fallback = 'new') {
-  const raw = asString(value, fallback).toLowerCase();
-  if (CRM_STAGE_KEYS.has(raw)) return raw;
-  return fallback;
-}
-
-function normalizeCrmStageLabel(stage, value) {
-  const trimmed = asString(value, '');
-  if (trimmed.length > 0) return trimmed;
-  return stage.charAt(0).toUpperCase() + stage.slice(1);
-}
-
-function normalizeCrmPipelineStages(inputStages, fallbackStages = DEFAULT_CRM_PIPELINE_STAGES) {
-  const source = Array.isArray(inputStages) ? inputStages : fallbackStages;
-  const dedup = new Map();
-  for (let index = 0; index < source.length; index += 1) {
-    const item = source[index];
-    if (!item || typeof item !== 'object') continue;
-    const stage = normalizeCrmStageKey(item.stage, '');
-    if (!stage) continue;
-    dedup.set(stage, {
-      stage,
-      label: normalizeCrmStageLabel(stage, item.label),
-      active: asBool(item.active, true),
-      order: asIntegerInRange(item.order, (index + 1) * 10, 1, 10000)
-    });
-  }
-
-  if (dedup.size === 0) {
-    return DEFAULT_CRM_PIPELINE_STAGES.map((item) => ({ ...item }));
-  }
-
-  return [...dedup.values()].sort((left, right) => {
-    if (left.order !== right.order) return left.order - right.order;
-    return left.stage.localeCompare(right.stage);
-  });
-}
-
-function normalizeCrmStageList(value, fallback = ['qualified', 'proposal']) {
-  const source = Array.isArray(value)
-    ? value
-    : typeof value === 'string'
-      ? value.split(',').map((item) => item.trim())
-      : fallback;
-  const unique = [];
-  for (const item of source) {
-    const stage = normalizeCrmStageKey(item, '');
-    if (!stage) continue;
-    if (!unique.includes(stage)) unique.push(stage);
-  }
-  return unique.length > 0 ? unique : [...fallback];
-}
-
-function normalizeCrmConfig(input = {}, fallback = {}) {
-  const rawPipeline = input.pipeline && typeof input.pipeline === 'object' ? input.pipeline : {};
-  const fbPipeline = fallback.pipeline && typeof fallback.pipeline === 'object' ? fallback.pipeline : {};
-  const rawAutomation = input.automation && typeof input.automation === 'object' ? input.automation : {};
-  const fbAutomation = fallback.automation && typeof fallback.automation === 'object' ? fallback.automation : {};
-
-  const stages = normalizeCrmPipelineStages(rawPipeline.stages, fbPipeline.stages);
-  const activeStages = stages.filter((item) => item.active !== false).map((item) => item.stage);
-  const defaultStage = normalizeCrmStageKey(
-    rawPipeline.default_stage,
-    normalizeCrmStageKey(
-      fbPipeline.default_stage,
-      activeStages[0] ?? stages[0]?.stage ?? 'new'
-    )
-  );
-
-  return {
-    pipeline: {
-      stages,
-      default_stage: activeStages.includes(defaultStage)
-        ? defaultStage
-        : (activeStages[0] ?? stages[0]?.stage ?? 'new')
-    },
-    automation: {
-      stage_followup_enabled: asBool(
-        rawAutomation.stage_followup_enabled,
-        asBool(fbAutomation.stage_followup_enabled, false)
-      ),
-      stage_followup_stages: normalizeCrmStageList(
-        rawAutomation.stage_followup_stages,
-        normalizeCrmStageList(fbAutomation.stage_followup_stages, ['qualified', 'proposal'])
-      ),
-      stage_followup_delay_minutes: asIntegerInRange(
-        rawAutomation.stage_followup_delay_minutes,
-        asIntegerInRange(fbAutomation.stage_followup_delay_minutes, 45, 0, 10080),
-        0,
-        10080
-      ),
-      stage_followup_message_template: asString(
-        rawAutomation.stage_followup_message_template,
-        asString(
-          fbAutomation.stage_followup_message_template,
-          'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
-        )
-      )
-    }
-  };
-}
-
 function normalizeCrmAiMode(value, fallback = 'assist_execute') {
   const raw = asString(value, fallback).toLowerCase();
   if (raw === 'suggest_only' || raw === 'assist_execute') return raw;
@@ -209,8 +76,6 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
   const executionFallback = fallback.execution ?? {};
   const integrationsInput = input.integrations ?? {};
   const integrationsFallback = fallback.integrations ?? {};
-  const crmInput = input.crm ?? {};
-  const crmFallback = fallback.crm ?? {};
 
   return {
     openai: {
@@ -262,8 +127,7 @@ function normalizeTenantRuntimeConfig(input = {}, fallback = {}) {
         integrationsInput,
         integrationsFallback
       )
-    },
-    crm: normalizeCrmConfig(crmInput, crmFallback)
+    }
   };
 }
 
@@ -313,7 +177,6 @@ export function createTenantRuntimeConfigStore(options = {}) {
         existing.personas = normalized.personas;
         existing.execution = normalized.execution;
         existing.integrations = normalized.integrations;
-        existing.crm = normalized.crm;
         existing.updated_at = nowIso;
         persist();
         return structuredClone(existing);
@@ -325,7 +188,6 @@ export function createTenantRuntimeConfigStore(options = {}) {
         personas: normalized.personas,
         execution: normalized.execution,
         integrations: normalized.integrations,
-        crm: normalized.crm,
         created_at: nowIso,
         updated_at: nowIso
       };

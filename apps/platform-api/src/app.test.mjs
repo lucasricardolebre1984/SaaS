@@ -57,25 +57,6 @@ function validRuntimeConfigUpsertRequest(overrides = {}) {
           whatsapp_ai_mode: 'assist_execute',
           whatsapp_ai_min_confidence: 0.7
         },
-        crm: {
-          pipeline: {
-            stages: [
-              { stage: 'new', label: 'New', active: true, order: 10 },
-              { stage: 'contacted', label: 'Contacted', active: true, order: 20 },
-              { stage: 'qualified', label: 'Qualified', active: true, order: 30 },
-              { stage: 'proposal', label: 'Proposal', active: true, order: 40 },
-              { stage: 'won', label: 'Won', active: true, order: 50 },
-              { stage: 'lost', label: 'Lost', active: true, order: 60 }
-            ],
-            default_stage: 'new'
-          },
-          automation: {
-            stage_followup_enabled: false,
-            stage_followup_stages: ['qualified', 'proposal'],
-            stage_followup_delay_minutes: 45,
-            stage_followup_message_template: 'Ola {lead_name}, seguimos com seu atendimento na etapa {to_stage}.'
-          }
-        },
         integrations: {
           crm_evolution: {
             base_url: 'http://127.0.0.1:8080',
@@ -1406,128 +1387,6 @@ test('POST/PATCH/GET /v1/crm/leads creates, transitions, and lists leads', async
   assert.ok(listBody.items.some((item) => item.lead_id === leadId));
 });
 
-test('tenant CRM runtime controls apply default stage, stage guard, and stage automation followup', async () => {
-  const localStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-crm-runtime-controls-'));
-  const appServer = http.createServer(
-    createApp({
-      orchestrationStorageDir: localStorageDir,
-      leadStorageDir: path.join(localStorageDir, 'crm'),
-      crmAutomationStorageDir: path.join(localStorageDir, 'crm-automation'),
-      tenantRuntimeConfigStorageDir: path.join(localStorageDir, 'runtime-config')
-    })
-  );
-  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
-  const appAddress = appServer.address();
-  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
-
-  try {
-    const runtimeRes = await fetch(`${appBaseUrl}/v1/owner-concierge/runtime-config`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        request: {
-          request_id: '9c5e5104-58cd-4a7f-9f63-605542f2d269',
-          tenant_id: 'tenant_automania',
-          config: {
-            crm: {
-              pipeline: {
-                stages: [
-                  { stage: 'new', label: 'New', active: true, order: 10 },
-                  { stage: 'contacted', label: 'Contacted', active: true, order: 20 },
-                  { stage: 'qualified', label: 'Qualified', active: true, order: 30 },
-                  { stage: 'proposal', label: 'Proposal', active: true, order: 40 }
-                ],
-                default_stage: 'contacted'
-              },
-              automation: {
-                stage_followup_enabled: true,
-                stage_followup_stages: ['qualified'],
-                stage_followup_delay_minutes: 0,
-                stage_followup_message_template: 'Ola {lead_name}, etapa {to_stage}.'
-              }
-            }
-          }
-        }
-      })
-    });
-    assert.equal(runtimeRes.status, 200);
-
-    const baseLead = validLeadCreateRequest().request.lead;
-    const createRes = await fetch(`${appBaseUrl}/v1/crm/leads`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(validLeadCreateRequest({
-        lead: {
-          ...baseLead,
-          lead_id: '8244f707-fd24-493f-a50d-a3d7462466de',
-          external_key: 'lead-tenant-runtime-default-stage',
-          display_name: 'Lead Runtime Stage',
-          stage: undefined
-        }
-      }))
-    });
-    assert.equal(createRes.status, 200);
-    const createBody = await createRes.json();
-    assert.equal(createBody.response.lead.stage, 'contacted');
-
-    const leadId = createBody.response.lead.lead_id;
-    const stageRes = await fetch(`${appBaseUrl}/v1/crm/leads/${leadId}/stage`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        request: {
-          request_id: '2cc99f2b-e562-42f9-a013-7580f2cb5d16',
-          tenant_id: 'tenant_automania',
-          source_module: 'mod-02-whatsapp-crm',
-          changes: {
-            to_stage: 'qualified',
-            trigger: 'qualification_passed'
-          }
-        }
-      })
-    });
-    assert.equal(stageRes.status, 200);
-    const stageBody = await stageRes.json();
-    assert.equal(stageBody.response.lead.stage, 'qualified');
-    assert.equal(stageBody.response.automation.status, 'scheduled');
-
-    const followupsRes = await fetch(`${appBaseUrl}/v1/crm/followups?tenant_id=tenant_automania`);
-    assert.equal(followupsRes.status, 200);
-    const followupsBody = await followupsRes.json();
-    const autoFollowup = followupsBody.items.find((item) => item.lead_id === leadId);
-    assert.ok(autoFollowup);
-    assert.equal(autoFollowup.status, 'pending');
-    assert.equal(autoFollowup.metadata.source, 'crm_stage_automation');
-    assert.match(autoFollowup.message, /Lead Runtime Stage/i);
-    assert.match(autoFollowup.message, /qualified/i);
-
-    const disabledStageRes = await fetch(`${appBaseUrl}/v1/crm/leads/${leadId}/stage`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        request: {
-          request_id: 'd5f4bc6c-cc57-4306-b89e-9e8707f26ac4',
-          tenant_id: 'tenant_automania',
-          source_module: 'mod-02-whatsapp-crm',
-          changes: {
-            to_stage: 'lost',
-            trigger: 'explicit_close_lost'
-          }
-        }
-      })
-    });
-    assert.equal(disabledStageRes.status, 400);
-    const disabledStageBody = await disabledStageRes.json();
-    assert.equal(disabledStageBody.error, 'stage_disabled_for_tenant');
-    assert.equal(disabledStageBody.stage, 'lost');
-  } finally {
-    await new Promise((resolve, reject) => {
-      appServer.close((err) => (err ? reject(err) : resolve()));
-    });
-    await fs.rm(localStorageDir, { recursive: true, force: true });
-  }
-});
-
 test('T5 CRM core APIs support deal -> activity -> stage update flow with audit trace', async () => {
   const accountRes = await fetch(`${baseUrl}/v1/crm/accounts`, {
     method: 'POST',
@@ -2831,9 +2690,6 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
     assert.equal(upsertBody.response.execution.whatsapp_ai_enabled, true);
     assert.equal(upsertBody.response.execution.whatsapp_ai_mode, 'assist_execute');
     assert.equal(upsertBody.response.execution.whatsapp_ai_min_confidence, 0.7);
-    assert.equal(Array.isArray(upsertBody.response.crm.pipeline.stages), true);
-    assert.equal(upsertBody.response.crm.pipeline.default_stage, 'new');
-    assert.equal(upsertBody.response.crm.automation.stage_followup_enabled, false);
     assert.equal(upsertBody.response.runtime.model, 'gpt-5-mini');
     assert.equal(upsertBody.response.integrations.crm_evolution.auto_reply_enabled, false);
     assert.equal(upsertBody.response.integrations.crm_evolution.auto_reply_text, 'Auto reply customizado');
@@ -2849,8 +2705,6 @@ test('POST/GET /v1/owner-concierge/runtime-config persists tenant runtime settin
     assert.equal(getBody.personas.owner_concierge_prompt.length > 0, true);
     assert.equal(getBody.execution.whatsapp_ai_enabled, true);
     assert.equal(getBody.execution.whatsapp_ai_mode, 'assist_execute');
-    assert.equal(getBody.crm.pipeline.default_stage, 'new');
-    assert.equal(getBody.crm.automation.stage_followup_enabled, false);
     assert.equal(getBody.runtime.model, 'gpt-5-mini');
     assert.equal(getBody.integrations.crm_evolution.auto_reply_enabled, false);
     assert.equal(getBody.integrations.crm_evolution.auto_reply_text, 'Auto reply customizado');
@@ -3641,91 +3495,6 @@ test('POST /v1/owner-concierge/interaction accepts persona overrides and propaga
     taskCommand.payload.input.persona_overrides.whatsapp_agent_prompt,
     payload.request.payload.persona_overrides.whatsapp_agent_prompt
   );
-});
-
-test('POST /v1/owner-concierge/interaction ignores whatsapp persona prompt in owner ai instructions', async () => {
-  let providerCalled = false;
-  const mockProviderServer = http.createServer(async (req, res) => {
-    if (req.url === '/responses') {
-      res.writeHead(404, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'not_found' }));
-      return;
-    }
-
-    if (req.url !== '/chat/completions') {
-      res.writeHead(404, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'not_found' }));
-      return;
-    }
-
-    providerCalled = true;
-    const chunks = [];
-    for await (const chunk of req) {
-      chunks.push(chunk);
-    }
-    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    const messages = Array.isArray(body.messages) ? body.messages : [];
-    const systemMessages = messages
-      .filter((item) => item && item.role === 'system' && typeof item.content === 'string')
-      .map((item) => item.content)
-      .join('\n');
-
-    assert.match(systemMessages, /Owner persona override:/);
-    assert.match(systemMessages, /executivo owner only/i);
-    assert.doesNotMatch(systemMessages, /WhatsApp agent guidance:/i);
-    assert.doesNotMatch(systemMessages, /nao deve ir para owner/i);
-
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({
-      model: 'gpt-5-mini',
-      choices: [{
-        message: { content: 'ok owner prompt only' }
-      }]
-    }));
-  });
-  await new Promise((resolve) => mockProviderServer.listen(0, '127.0.0.1', resolve));
-  const providerAddress = mockProviderServer.address();
-  const providerBaseUrl = `http://127.0.0.1:${providerAddress.port}`;
-
-  const storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-owner-openai-prompt-'));
-  const appServer = http.createServer(
-    createApp({
-      orchestrationStorageDir: storageDir,
-      ownerResponseMode: 'openai',
-      ownerResponseModel: 'gpt-5-mini',
-      openaiApiKey: 'test-key',
-      openaiBaseUrl: providerBaseUrl
-    })
-  );
-  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
-  const appAddress = appServer.address();
-  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
-
-  try {
-    const payload = validOwnerRequest();
-    payload.request.payload = {
-      text: 'teste de persona owner',
-      persona_overrides: {
-        owner_concierge_prompt: 'executivo owner only',
-        whatsapp_agent_prompt: 'nao deve ir para owner'
-      }
-    };
-
-    const res = await fetch(`${appBaseUrl}/v1/owner-concierge/interaction`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    assert.equal(res.status, 200);
-    const body = await res.json();
-    assert.equal(body.response.assistant_output.provider, 'openai');
-    assert.equal(providerCalled, true);
-  } finally {
-    await new Promise((resolve, reject) => appServer.close((err) => (err ? reject(err) : resolve())));
-    await new Promise((resolve, reject) => mockProviderServer.close((err) => (err ? reject(err) : resolve())));
-    await fs.rm(storageDir, { recursive: true, force: true });
-  }
 });
 
 test('POST /v1/owner-concierge/interaction rejects empty persona_overrides object', async () => {
