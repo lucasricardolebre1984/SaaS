@@ -2460,6 +2460,12 @@ function appendFallbackReason(existingValue, newReason) {
   return `${existing}|${newReason}`;
 }
 
+function isRetryableProviderStatus(status) {
+  const numeric = Number(status);
+  if (!Number.isFinite(numeric) || numeric <= 0) return true;
+  return numeric === 408 || numeric === 409 || numeric === 425 || numeric === 429 || numeric >= 500;
+}
+
 function hasExecutionCompletionClaim(text) {
   const normalized = String(text ?? '').trim();
   if (!normalized) return false;
@@ -6063,18 +6069,29 @@ export function createApp(options = {}) {
         }
 
         if (!providerResult?.ok) {
-          return json(res, 502, {
-            error: 'provider_send_error',
-            provider_status: providerResult?.status ?? 502,
-            details: providerResult?.errorDetails ?? 'provider_send_error',
-            message: saved.message
+          return json(res, 200, {
+            status: 'provider_failed',
+            message: saved.message,
+            provider_message_id: null,
+            provider: {
+              outcome: 'failed',
+              status: providerResult?.status ?? 502,
+              retryable: isRetryableProviderStatus(providerResult?.status ?? 502),
+              details: providerResult?.errorDetails ?? 'provider_send_error'
+            }
           });
         }
 
         return json(res, 200, {
           status: 'sent',
           message: saved.message,
-          provider_message_id: providerResult.providerMessageId ?? null
+          provider_message_id: providerResult.providerMessageId ?? null,
+          provider: {
+            outcome: 'sent',
+            status: providerResult.status ?? 200,
+            retryable: false,
+            details: null
+          }
         });
       }
 

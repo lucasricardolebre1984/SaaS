@@ -1519,7 +1519,12 @@ async function sendThreadMessage(event) {
     }
 
     threadMessageInput.value = '';
-    formStatus.textContent = 'Mensagem enviada para WhatsApp.';
+    if (body.status === 'provider_failed') {
+      const providerStatus = body.provider?.status ? ` (${body.provider.status})` : '';
+      formStatus.textContent = `Mensagem registrada no CRM, mas o provider externo falhou${providerStatus}.`;
+    } else {
+      formStatus.textContent = 'Mensagem enviada para WhatsApp.';
+    }
     await openConversation(conversation.conversation_id, { markRead: false });
     await loadConversations();
     refreshLeadViews();
