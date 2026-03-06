@@ -45,6 +45,34 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-06: premium front revolution iniciada dentro de `crm-krayin-reference-modernization-slice`:
+  - `spec/design/tasks` ampliados para tratar `fabio2`, `studio` e `zazi` como sistemas visuais premium completos, e nao apenas troca de cor;
+  - primeira camada implementada em `apps/owner-console/src/styles.css` e `apps/crm-console/src/styles.css` com reforco de superficies, topbar, sidebar, cards, botoes e identidade especifica por layout;
+  - validacao inicial verde:
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`.
+- 2026-03-06: nomenclatura institucional dos layouts/paletas genericizada:
+  - layouts canonicos passam a ser `layout1`, `layout2`, `layout3`;
+  - paletas canonicas passam a ser `palette1`, `palette2`, `palette3`, `palette4`;
+  - aliases antigos (`fabio2/studio/zazi`, `darkgreen/ocean/forest/sunset`) permanecem apenas para compatibilidade de runtime/config legado;
+  - Owner/CRM, docs de geracao e manuais foram atualizados para expor apenas os nomes genericos;
+  - builds verdes apos a mudanca:
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`.
+- 2026-03-06: segunda camada do premium front aplicada:
+  - CRM recebeu endurecimento visual em `commandbar`, `board tabs`, `toolbar`, `kpis`, `conversation list`, `thread panel`, `detail panel`, `detail activities`, `pipeline` e `metric bars`;
+  - Owner recebeu endurecimento visual em `module hero`, `module kpis`, `table-wrap` e interacao de botoes;
+  - builds permaneceram verdes:
+    - `npx nx run app-owner-console:build`
+    - `npx nx run app-crm-console:build`.
+- 2026-03-06: slice estrategico `agent-skills-institutional-runtime` aberto em nivel de spec:
+  - objetivo: sair do MVP de 4 project skills para runtime institucional com manifesto canonico, router de triggers, install/audit multiagente e smoke de ativacao;
+  - artefatos criados:
+    - `.specs/features/agent-skills-institutional-runtime/spec.md`
+    - `.specs/features/agent-skills-institutional-runtime/design.md`
+    - `.specs/features/agent-skills-institutional-runtime/tasks.md`
+    - `docs/AGENT-SKILLS-INSTITUTIONAL-MANUAL.md`;
+  - decisao: "37+ skills instaladas" deixam de ser tratadas como equivalente a "37+ skills governadas automaticamente"; o modelo institucional correto passa a ser manifesto + perfil + trigger deterministico + hard-fail + smoke.
 - 2026-03-06: G5/P1 publicado no AWS dev:
   - commit `a8807ab` deployado via `npm run deploy:dev -- -SkipNpmCi`;
   - `POST /v1/crm/conversations/:id/send` passou a classificar falha externa como `status=provider_failed` mantendo `200` e persistencia local;

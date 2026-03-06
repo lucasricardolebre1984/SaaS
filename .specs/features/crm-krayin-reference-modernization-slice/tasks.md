@@ -22,14 +22,20 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
 - Status: in_progress
 - Definir tokens, componentes base e estados visuais.
 - Aplicar shell compartilhado em Owner + CRM.
+- Evoluir `layout1`, `layout2` e `layout3` para sistemas premium completos.
 - Aceite: prototipo navegavel com padrao unico dark/green em modulos 01..06.
 - Evidencia parcial:
-  - novo palette `darkgreen` aplicado em Owner e CRM;
-  - defaults de tenant/layout ajustados para `studio + darkgreen`;
-  - estilos `studio` migrados para acento baseado em `--color-primary` (removendo viés azul fixo);
+  - nova baseline `palette1` aplicada em Owner e CRM;
+  - defaults de tenant/layout ajustados para `layout2 + palette1`;
+  - estilos de `layout2` migrados para acento baseado em `--color-primary` (removendo viés azul fixo);
   - builds verdes:
     - `npx nx run app-owner-console:build`
     - `npx nx run app-crm-console:build`.
+  - extensao premium aberta em 2026-03-06:
+    - `layout1` promovido a institutional premium;
+    - `layout2` promovido a flagship dark neural;
+    - `layout3` promovido a executive light enterprise;
+    - hardening da regra "layout != apenas troca de cor" documentado em `spec/design`.
 
 ## T2) Gap matrix Krayin x SaaS CRM
 - Status: completed
@@ -131,13 +137,17 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
   - builds verdes apos v2:
     - `npx nx run app-crm-console:build`
     - `npx nx run app-owner-console:build`.
-  - layout adicional `zazi` (clean-room legacy-inspired) habilitado em Owner+CRM:
+  - layout adicional `layout3` (clean-room legacy-inspired) habilitado em Owner+CRM:
     - `VALID_LAYOUTS` + selectors UI + presets tenant + default visual em `index.html`
-    - overrides CSS para `html[data-layout='zazi']` em ambos consoles
-    - gerador/docs atualizados para suportar `layout-default zazi`
+    - overrides CSS para `html[data-layout='layout3']` em ambos consoles
+    - gerador/docs atualizados para suportar `layout-default layout3`
     - builds verdes:
       - `npx nx run app-owner-console:build`
       - `npx nx run app-crm-console:build`
+  - premium front revolution iniciada em 2026-03-06:
+    - alvo de paridade visual/funcional dos 3 layouts entre Owner e CRM;
+    - embed do CRM passa a obedecer `layout/palette` do modulo 06 como fonte unica;
+    - backlog visual premium segue acoplado a T1/T6/T8 ate fechar percepcao de produto caro.
 
 ## T7) Module 06 runtime controls
 - Status: completed
@@ -180,6 +190,9 @@ Transformar o CRM em nivel enterprise via implementacao incremental no stack atu
   - `npx nx run contract-tests:contract-checks`
 - UAT com WhatsApp real:
   - inbound -> deal update -> resposta -> qualificacao.
+- Gate premium adicional:
+  - validacao visual dos layouts `layout1`, `layout2` e `layout3` em Owner + CRM;
+  - confirmacao de troca de layout/paleta via modulo 06 sem quebra de embed, botoes, scroll ou dados.
 - Evidencia parcial (2026-03-04):
   - gates verdes:
     - `npx nx run app-platform-api:test` (`64/64` pass)

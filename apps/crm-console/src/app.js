@@ -1,12 +1,30 @@
-const VALID_LAYOUTS = ['fabio2', 'studio', 'zazi'];
-const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
+const VALID_LAYOUTS = ['layout1', 'layout2', 'layout3'];
+const VALID_PALETTES = ['palette1', 'palette2', 'palette3', 'palette4'];
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const API_BASE_STORAGE_KEY = 'crm_console_api_base_v1';
+const LAYOUT_ALIASES = {
+  fabio2: 'layout1',
+  studio: 'layout2',
+  zazi: 'layout3',
+  layout1: 'layout1',
+  layout2: 'layout2',
+  layout3: 'layout3'
+};
+const PALETTE_ALIASES = {
+  darkgreen: 'palette1',
+  ocean: 'palette2',
+  forest: 'palette3',
+  sunset: 'palette4',
+  palette1: 'palette1',
+  palette2: 'palette2',
+  palette3: 'palette3',
+  palette4: 'palette4'
+};
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'studio', palette: 'darkgreen' },
-  tenant_clinica: { layout: 'studio', palette: 'forest' },
-  tenant_comercial: { layout: 'studio', palette: 'sunset' }
+  tenant_automania: { layout: 'layout2', palette: 'palette1' },
+  tenant_clinica: { layout: 'layout2', palette: 'palette3' },
+  tenant_comercial: { layout: 'layout2', palette: 'palette4' }
 };
 
 const STAGE_TRIGGERS = {
@@ -148,11 +166,13 @@ let tenantCrmRuntime = {
 };
 
 function normalizeLayout(layout) {
-  return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
+  const canonical = LAYOUT_ALIASES[String(layout ?? '').trim().toLowerCase()];
+  return VALID_LAYOUTS.includes(canonical) ? canonical : 'layout1';
 }
 
 function normalizePalette(palette) {
-  return VALID_PALETTES.includes(palette) ? palette : 'darkgreen';
+  const canonical = PALETTE_ALIASES[String(palette ?? '').trim().toLowerCase()];
+  return VALID_PALETTES.includes(canonical) ? canonical : 'palette1';
 }
 
 function applyVisualMode({ layout, palette, persist = true }) {
@@ -163,17 +183,25 @@ function applyVisualMode({ layout, palette, persist = true }) {
   layoutSelect.value = safeLayout;
   paletteSelect.value = safePalette;
 
-  if (persist) {
+  if (persist && !embeddedMode) {
     localStorage.setItem('crm_console_layout', safeLayout);
     localStorage.setItem('crm_console_palette', safePalette);
   }
 
-  if (safeLayout === 'studio') {
+  if (safeLayout === 'layout2') {
     bodyEl.classList.remove('menu-open');
   }
 }
 
 function restoreVisualMode() {
+  if (detectEmbeddedMode()) {
+    applyVisualMode({
+      layout: rootEl.dataset.layout,
+      palette: rootEl.dataset.palette,
+      persist: false
+    });
+    return;
+  }
   const persistedLayout = localStorage.getItem('crm_console_layout');
   const persistedPalette = localStorage.getItem('crm_console_palette');
   applyVisualMode({
@@ -204,6 +232,9 @@ function normalizeApiBase(value) {
 }
 
 function loadApiBasePreference() {
+  if (detectEmbeddedMode()) {
+    return deriveDefaultApiBase();
+  }
   try {
     const stored = localStorage.getItem(API_BASE_STORAGE_KEY);
     const normalized = normalizeApiBase(stored);
@@ -217,6 +248,9 @@ function loadApiBasePreference() {
 }
 
 function persistApiBasePreference(value) {
+  if (embeddedMode || detectEmbeddedMode()) {
+    return;
+  }
   try {
     localStorage.setItem(API_BASE_STORAGE_KEY, normalizeApiBase(value));
   } catch {
@@ -321,6 +355,15 @@ function applyBootstrapFromQuery() {
   const view = String(params.get('view') || '').trim().toLowerCase();
   embeddedMode = detectEmbeddedMode(params);
   applyEmbeddedShellMode(embeddedMode);
+  if (embeddedMode) {
+    try {
+      localStorage.removeItem('crm_console_layout');
+      localStorage.removeItem('crm_console_palette');
+      localStorage.removeItem(API_BASE_STORAGE_KEY);
+    } catch {
+      // no-op
+    }
+  }
   if (view === 'pipeline' || view === 'leads' || view === 'inbox') {
     currentMainView = view;
   } else if (embeddedMode) {
@@ -1738,7 +1781,7 @@ async function handleUpdateStage() {
 }
 
 mobileMenuBtn.addEventListener('click', () => {
-  if (rootEl.dataset.layout === 'studio') return;
+  if (rootEl.dataset.layout === 'layout2') return;
   bodyEl.classList.toggle('menu-open');
 });
 

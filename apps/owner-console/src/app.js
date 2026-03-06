@@ -20,18 +20,36 @@ const MODULE_COST_LABELS = {
   'mod-05-faturamento-cobranca': 'Modulo 05 - Faturamento/Cobranca'
 };
 
-const VALID_LAYOUTS = ['fabio2', 'studio', 'zazi'];
-const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
+const VALID_LAYOUTS = ['layout1', 'layout2', 'layout3'];
+const VALID_PALETTES = ['palette1', 'palette2', 'palette3', 'palette4'];
 const CRM_STAGE_KEYS = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'nurturing'];
 const CONFIG_STORAGE_KEY = 'owner_console_config_v1';
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const SETTINGS_ADMIN_PASSWORD = '191530';
 const SETTINGS_UNLOCK_SESSION_KEY = 'owner_console_settings_admin_unlock_v1';
+const LAYOUT_ALIASES = {
+  fabio2: 'layout1',
+  studio: 'layout2',
+  zazi: 'layout3',
+  layout1: 'layout1',
+  layout2: 'layout2',
+  layout3: 'layout3'
+};
+const PALETTE_ALIASES = {
+  darkgreen: 'palette1',
+  ocean: 'palette2',
+  forest: 'palette3',
+  sunset: 'palette4',
+  palette1: 'palette1',
+  palette2: 'palette2',
+  palette3: 'palette3',
+  palette4: 'palette4'
+};
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'studio', palette: 'darkgreen' },
-  tenant_clinica: { layout: 'studio', palette: 'forest' },
-  tenant_comercial: { layout: 'studio', palette: 'sunset' }
+  tenant_automania: { layout: 'layout2', palette: 'palette1' },
+  tenant_clinica: { layout: 'layout2', palette: 'palette3' },
+  tenant_comercial: { layout: 'layout2', palette: 'palette4' }
 };
 
 const state = {
@@ -373,8 +391,8 @@ function createDefaultConfig() {
       api_base_url: deriveDefaultApiBase(),
       tenant_id: 'tenant_automania',
       session_id: crypto.randomUUID(),
-      layout: 'studio',
-      palette: 'darkgreen'
+      layout: 'layout2',
+      palette: 'palette1'
     },
     openai: {
       api_key: '',
@@ -430,11 +448,13 @@ function createDefaultConfig() {
 }
 
 function normalizeLayout(layout) {
-  return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
+  const canonical = LAYOUT_ALIASES[String(layout ?? '').trim().toLowerCase()];
+  return VALID_LAYOUTS.includes(canonical) ? canonical : 'layout1';
 }
 
 function normalizePalette(palette) {
-  return VALID_PALETTES.includes(palette) ? palette : 'darkgreen';
+  const canonical = PALETTE_ALIASES[String(palette ?? '').trim().toLowerCase()];
+  return VALID_PALETTES.includes(canonical) ? canonical : 'palette1';
 }
 
 function safeNumber(value, fallback = 0) {
@@ -712,7 +732,7 @@ const MODULE_VIEW_BY_ID = {
 };
 
 const CRM_EMBED_POSTMESSAGE_TYPE = 'saas.crm.embed.height';
-const CRM_EMBED_URL_REV = '20260306a';
+const CRM_EMBED_URL_REV = '20260306d';
 
 function crmEmbeddedUrl(forceReload = false) {
   const params = new URLSearchParams({
@@ -2063,7 +2083,7 @@ function applyVisualMode(layout, palette, persist = true) {
     persistConfig();
   }
 
-  if (safeLayout === 'studio') {
+  if (safeLayout === 'layout2') {
     bodyEl.classList.remove('menu-open');
   }
 
@@ -2990,7 +3010,7 @@ function bootstrapConfig() {
   const tenant = String(state.config?.runtime?.tenant_id ?? '').trim().toLowerCase();
   const preset = TENANT_THEME_PRESETS[tenant];
   const shouldMigrateLegacyLayout =
-    tenant === 'tenant_automania' && String(state.config?.runtime?.layout ?? '').trim().toLowerCase() === 'zazi';
+    tenant === 'tenant_automania' && normalizeLayout(state.config?.runtime?.layout) === 'layout3';
   if (preset && (!state.config.runtime.layout || shouldMigrateLegacyLayout)) {
     state.config.runtime.layout = preset.layout;
     state.config.runtime.palette = preset.palette;
@@ -3008,7 +3028,7 @@ function bootstrapConfig() {
 
 function setupEvents() {
   mobileMenuBtn.addEventListener('click', () => {
-    if (rootEl.dataset.layout === 'studio') return;
+    if (rootEl.dataset.layout === 'layout2') return;
     if (!isMobileViewport()) return;
     bodyEl.classList.toggle('menu-open');
   });

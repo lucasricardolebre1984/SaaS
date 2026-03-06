@@ -34,6 +34,11 @@ Usar estrategia de referencia + mapeamento de capacidades + implementacao contra
   - sidebar fixa,
   - barra superior contextual,
   - area principal com cards/tabelas/kanban/thread.
+- Elevar os tres layouts institucionais do produto para nivel premium real:
+  - `layout1` = institutional premium padrao de venda;
+  - `layout2` = flagship dark neural;
+  - `layout3` = executive light enterprise;
+  todos com paridade visual e sem quebra funcional entre Owner e CRM.
 - Contratos e modelo de dados para suportar esse blueprint.
 - Plano incremental de implementacao em fatias (sem big-bang).
 
@@ -52,6 +57,8 @@ Usar estrategia de referencia + mapeamento de capacidades + implementacao contra
 7. Superficies de Persona 1 e Persona 2 devem manter papis distintos no mesmo padrao visual:
    - Persona 1: cockpit operacional cross-modulo.
    - Persona 2: operacao CRM/WhatsApp com thread, qualificação e execucao.
+8. Cada layout (`layout1`, `layout2`, `layout3`) deve ser um sistema visual coerente, nao apenas troca superficial de cor.
+9. Troca de layout/paleta no modulo 06 deve refletir imediatamente no modulo 02 embutido e nas demais superficies sem competir com estado local.
 
 ## Visual Acceptance (Krayin-like target)
 1. CRM apresenta:
@@ -63,9 +70,11 @@ Usar estrategia de referencia + mapeamento de capacidades + implementacao contra
    - navegacao consistente entre modulos,
    - responsividade desktop/mobile sem quebra de usabilidade.
 3. Nao existe dependencia de servidor PHP/Laravel para renderizar UI/fluxos no produto final.
+4. Os tres layouts apresentam identidade premium perceptivel, sem aparencia de template generico/gerador.
 
 ## Acceptance Criteria
 1. Existe matriz de gaps Krayin x CRM SaaS com backlog priorizado.
 2. Existem `spec/design/tasks` aprovaveis para execucao por fases.
 3. Existe plano de rollout com rollback por fase e gates de validacao.
 4. Existe especificacao de design tokens dark/green e mapeamento por modulo (01..06).
+5. Existe plano explicito de premium front para os layouts `layout1`, `layout2` e `layout3`.

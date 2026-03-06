@@ -21,6 +21,8 @@
 Fonte ativa de execucao:
 - plano de gates: `.specs/project/PLANO-GATES-AUDITORIA-SAAS-2026-03-05.md`
 - feature ativa: `.specs/features/crm-krayin-reference-modernization-slice/tasks.md`
+- frente premium ativa:
+  - endurecer os layouts `layout1`, `layout2` e `layout3` ate nivel de produto caro, com paridade Owner + CRM e obediencia total ao modulo 06.
 
 Pre-condicoes (ja cumpridas):
 1. Slice de estabilidade M5B encerrado com `GO`.
