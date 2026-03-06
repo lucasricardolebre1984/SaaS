@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="pt-BR" data-layout="layout2" data-palette="palette1">
+<html lang="pt-BR" data-layout="layout1" data-palette="palette2">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Owner Console | SaaS</title>
-    <link rel="stylesheet" href="./styles.css?v=20260306d" />
+    <link rel="stylesheet" href="./styles.css?v=20260306e" />
   </head>
   <body>
     <div class="shell-bg"></div>
@@ -45,6 +45,33 @@
 
         <main class="workspace" id="chatWorkspace">
           <section class="chat-panel card">
+            <section class="owner-hero-band">
+              <div class="owner-hero-band__intro">
+                <p class="owner-hero-band__eyebrow">Modulo 01</p>
+                <h3 class="owner-hero-band__title">Control Tower IA</h3>
+                <p class="owner-hero-band__text">
+                  Orquestre CRM, agenda e cobranca com runtime centralizado, sessao auditavel e configuracao tenant-scoped.
+                </p>
+              </div>
+              <div class="owner-hero-band__signals">
+                <article class="owner-signal-card">
+                  <span class="owner-signal-card__label">Tenant</span>
+                  <strong id="ownerHeroTenant">tenant_automania</strong>
+                </article>
+                <article class="owner-signal-card">
+                  <span class="owner-signal-card__label">Sessao</span>
+                  <strong id="ownerHeroSession">-</strong>
+                </article>
+                <article class="owner-signal-card">
+                  <span class="owner-signal-card__label">Provider</span>
+                  <strong id="ownerHeroProvider">idle</strong>
+                </article>
+                <article class="owner-signal-card">
+                  <span class="owner-signal-card__label">Health</span>
+                  <strong id="ownerHeroHealth">idle</strong>
+                </article>
+              </div>
+            </section>
             <header class="card__header">
               <h3>Chat do Proprietario</h3>
             </header>
@@ -122,7 +149,7 @@
               Voltar
             </button>
             <header class="card__header">
-              <h3>Avatar Continuo</h3>
+              <h3>Centro de Controle</h3>
               <div class="card__actions">
                 <button id="continuousBtn" class="btn btn--ghost" type="button">Ativar Continuo</button>
                 <span id="continuousState" class="status-pill">one-shot</span>
@@ -153,7 +180,33 @@
             </div>
 
             <div class="voice-panel__meta">
-              <p id="lastRun">Sem interacao ainda.</p>
+              <section class="owner-rail-section">
+                <div class="owner-rail-section__header">
+                  <span class="owner-rail-section__eyebrow">Runtime</span>
+                  <strong>Cockpit ativo</strong>
+                </div>
+                <div class="owner-rail-grid">
+                  <article class="owner-rail-card">
+                    <span class="owner-rail-card__label">Modo</span>
+                    <strong id="ownerContinuousMode">one-shot</strong>
+                  </article>
+                  <article class="owner-rail-card">
+                    <span class="owner-rail-card__label">Ultima acao</span>
+                    <strong id="lastRun">Sem interacao ainda.</strong>
+                  </article>
+                </div>
+              </section>
+              <section class="owner-rail-section">
+                <div class="owner-rail-section__header">
+                  <span class="owner-rail-section__eyebrow">Guia</span>
+                  <strong>Uso premium do owner</strong>
+                </div>
+                <ul class="owner-rail-list">
+                  <li>Defina layout, paleta e personas no modulo 06 antes do teste funcional.</li>
+                  <li>Use o CRM no modulo 02 para confirmar reflexo real de leads e conversas.</li>
+                  <li>Ative fala continua apenas quando quiser operacao por voz com avatar.</li>
+                </ul>
+              </section>
               <p class="muted">Modo continuo ligado ao avatar para experiencia de voz assistida.</p>
             </div>
           </aside>
@@ -741,6 +794,6 @@
       </div>
     </div>
 
-    <script type="module" src="./app.js?v=20260306d"></script>
+    <script type="module" src="./app.js?v=20260306e"></script>
   </body>
 </html>

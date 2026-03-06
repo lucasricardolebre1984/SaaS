@@ -22,9 +22,9 @@ const PALETTE_ALIASES = {
 };
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'layout2', palette: 'palette1' },
-  tenant_clinica: { layout: 'layout2', palette: 'palette3' },
-  tenant_comercial: { layout: 'layout2', palette: 'palette4' }
+  tenant_automania: { layout: 'layout1', palette: 'palette2' },
+  tenant_clinica: { layout: 'layout3', palette: 'palette3' },
+  tenant_comercial: { layout: 'layout1', palette: 'palette4' }
 };
 
 const STAGE_TRIGGERS = {

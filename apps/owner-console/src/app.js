@@ -47,9 +47,9 @@ const PALETTE_ALIASES = {
 };
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'layout2', palette: 'palette1' },
-  tenant_clinica: { layout: 'layout2', palette: 'palette3' },
-  tenant_comercial: { layout: 'layout2', palette: 'palette4' }
+  tenant_automania: { layout: 'layout1', palette: 'palette2' },
+  tenant_clinica: { layout: 'layout3', palette: 'palette3' },
+  tenant_comercial: { layout: 'layout1', palette: 'palette4' }
 };
 
 const state = {
@@ -86,6 +86,10 @@ const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const sidebarBackdropEl = document.getElementById('sidebarBackdrop');
 const topModuleTitleEl = document.getElementById('topModuleTitle');
 const topTenantLabelEl = document.getElementById('topTenantLabel');
+const ownerHeroTenantEl = document.getElementById('ownerHeroTenant');
+const ownerHeroSessionEl = document.getElementById('ownerHeroSession');
+const ownerHeroProviderEl = document.getElementById('ownerHeroProvider');
+const ownerHeroHealthEl = document.getElementById('ownerHeroHealth');
 const openSettingsBtn = document.getElementById('openSettingsBtn');
 const settingsLockStatusEl = document.getElementById('settingsLockStatus');
 
@@ -191,6 +195,7 @@ const confirmationsRefreshBtn = document.getElementById('confirmationsRefreshBtn
 const continuousBtn = document.getElementById('continuousBtn');
 const continuousInlineBtn = document.getElementById('continuousInlineBtn');
 const continuousStateEl = document.getElementById('continuousState');
+const ownerContinuousModeEl = document.getElementById('ownerContinuousMode');
 const continuousBackBtn = document.getElementById('continuousBackBtn');
 const avatarEl = document.getElementById('avatar');
 const simulateVoiceBtn = document.getElementById('simulateVoiceBtn');
@@ -391,8 +396,8 @@ function createDefaultConfig() {
       api_base_url: deriveDefaultApiBase(),
       tenant_id: 'tenant_automania',
       session_id: crypto.randomUUID(),
-      layout: 'layout2',
-      palette: 'palette1'
+      layout: 'layout1',
+      palette: 'palette2'
     },
     openai: {
       api_key: '',
@@ -665,6 +670,25 @@ function renderSettingsLockStatus() {
   settingsLockStatusEl.classList.toggle('is-locked', !state.settingsUnlocked);
 }
 
+function updateOwnerHeroRuntime() {
+  if (ownerHeroTenantEl) {
+    ownerHeroTenantEl.textContent = state.config?.runtime?.tenant_id || '-';
+  }
+  if (ownerHeroSessionEl) {
+    ownerHeroSessionEl.textContent = sessionId();
+  }
+}
+
+function updateOwnerHeroProvider(value) {
+  if (!ownerHeroProviderEl) return;
+  ownerHeroProviderEl.textContent = String(value || 'idle').replace(/^provider:\s*/i, '');
+}
+
+function updateOwnerHeroHealth(value) {
+  if (!ownerHeroHealthEl) return;
+  ownerHeroHealthEl.textContent = String(value || 'idle');
+}
+
 function setAssistantProviderStatus(provider, options = {}) {
   if (!assistantProviderStatusEl) return;
 
@@ -707,6 +731,7 @@ function setAssistantProviderStatus(provider, options = {}) {
 
   assistantProviderStatusEl.textContent = text;
   assistantProviderStatusEl.title = title;
+  updateOwnerHeroProvider(text);
 }
 
 function getNavModules() {
@@ -732,7 +757,7 @@ const MODULE_VIEW_BY_ID = {
 };
 
 const CRM_EMBED_POSTMESSAGE_TYPE = 'saas.crm.embed.height';
-const CRM_EMBED_URL_REV = '20260306d';
+const CRM_EMBED_URL_REV = '20260306e';
 
 function crmEmbeddedUrl(forceReload = false) {
   const params = new URLSearchParams({
@@ -824,6 +849,7 @@ function setTopbarLabels() {
   const meta = moduleMeta(state.activeModuleId);
   topModuleTitleEl.textContent = meta.title;
   topTenantLabelEl.textContent = state.config.runtime.tenant_id;
+  updateOwnerHeroRuntime();
 }
 
 function setModuleStatus(element, text, isError = false) {
@@ -2060,6 +2086,9 @@ function syncContinuousButtonsUi() {
     continuousInlineBtn.textContent = label;
     continuousInlineBtn.classList.toggle('is-active', state.continuous === true);
   }
+  if (ownerContinuousModeEl) {
+    ownerContinuousModeEl.textContent = state.continuous ? 'continuous' : 'one-shot';
+  }
 }
 
 function isMobileViewport() {
@@ -2571,13 +2600,16 @@ function normalizeAssistantOutputText(rawText) {
 
 async function callHealth() {
   healthStatusEl.textContent = 'checking...';
+  updateOwnerHeroHealth('checking...');
   try {
     const response = await fetch(`${apiBase()}/health`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.json();
     healthStatusEl.textContent = body.status === 'ok' ? 'online' : 'degraded';
+    updateOwnerHeroHealth(healthStatusEl.textContent);
   } catch {
     healthStatusEl.textContent = 'offline';
+    updateOwnerHeroHealth('offline');
   }
 }
 
@@ -3011,7 +3043,11 @@ function bootstrapConfig() {
   const preset = TENANT_THEME_PRESETS[tenant];
   const shouldMigrateLegacyLayout =
     tenant === 'tenant_automania' && normalizeLayout(state.config?.runtime?.layout) === 'layout3';
-  if (preset && (!state.config.runtime.layout || shouldMigrateLegacyLayout)) {
+  const shouldPromoteLegacyDefault =
+    tenant === 'tenant_automania' &&
+    normalizeLayout(state.config?.runtime?.layout) === 'layout2' &&
+    normalizePalette(state.config?.runtime?.palette) === 'palette1';
+  if (preset && (!state.config.runtime.layout || shouldMigrateLegacyLayout || shouldPromoteLegacyDefault)) {
     state.config.runtime.layout = preset.layout;
     state.config.runtime.palette = preset.palette;
     persistConfig();
