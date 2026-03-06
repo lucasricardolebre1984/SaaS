@@ -190,6 +190,11 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\smoke-platform-api-build.ps1`
   - `npx nx run app-platform-api:test`
   - `npm run preprod:validate -- -SkipOperationalDrills`
+- Publicacao:
+  - commit `7b46e81`
+  - deploy dev executado via `npm run deploy:dev -- -SkipNpmCi`
+  - health publico manteve `ok`
+  - smoke remoto pos-deploy: `PASS=25`, `WARN=1`, `FAIL=0`
 
 ---
 

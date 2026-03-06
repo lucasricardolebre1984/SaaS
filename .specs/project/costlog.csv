@@ -252,3 +252,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,hardened public health endpoint and moved detailed runtime diagnostics to loopback-only internal health without breaking integrated gates
 2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit 163f04f to dev and confirmed public health hardening with remote smoke PASS26 WARN0 FAIL0
 2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,closed G2 by adding executable Nx build artifact for app-platform-api with packaged runtime libs and dedicated dist smoke validation
+2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit 7b46e81 to dev and confirmed build-artifact rollout preserved public health and remote endpoint smoke PASS25 WARN1 FAIL0

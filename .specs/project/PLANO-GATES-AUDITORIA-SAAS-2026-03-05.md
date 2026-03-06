@@ -125,6 +125,8 @@ Checkpoint 2026-03-06:
   - `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\smoke-platform-api-build.ps1`
   - `npx nx run app-platform-api:test`
   - `npm run preprod:validate -- -SkipOperationalDrills`
+- publicacao concluida em `7b46e81` com deploy dev realizado;
+- smoke remoto pos-deploy: `PASS=25`, `WARN=1`, `FAIL=0`.
 Arquivos:
 - `apps/platform-api/project.json`
 - `apps/platform-api/src/server.mjs`

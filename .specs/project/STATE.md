@@ -45,6 +45,10 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-06: G2/P1 publicado no AWS dev:
+  - commit `7b46e81` deployado via `npm run deploy:dev -- -SkipNpmCi`;
+  - health publico `https://dev.automaniaai.com.br/api/health` permaneceu `ok`;
+  - smoke remoto pos-deploy permaneceu verde em `PASS=25`, `WARN=1`, `FAIL=0`.
 - 2026-03-06: G2/P1 fechado localmente:
   - `app-platform-api:build` deixou de ser placeholder e passou a gerar artefato executavel em `dist/apps/platform-api`;
   - o build agora empacota `apps/platform-api`, UIs compiladas de Owner/CRM e a arvore `libs` consumida em runtime;
