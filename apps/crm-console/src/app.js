@@ -1802,6 +1802,7 @@ crmBoardCardsBtn?.addEventListener('click', () => switchMainView('leads'));
 crmBoardPipelineBtn?.addEventListener('click', () => switchMainView('pipeline'));
 crmCreateContactBtn?.addEventListener('click', () => {
   switchMainView('leads');
+  formStatus.textContent = 'Cadastro manual aberto em Leads. Preencha o formulario Novo Lead.';
   focusElement(document.getElementById('displayName'));
 });
 crmImportBtn?.addEventListener('click', () => {
@@ -1810,16 +1811,20 @@ crmImportBtn?.addEventListener('click', () => {
   focusElement(leadRows);
 });
 crmIntegrationsBtn?.addEventListener('click', () => {
+  formStatus.textContent = 'Painel de integracao focado. Revise o status do WhatsApp e gere QR se necessario.';
   focusElement(document.getElementById('whatsappQrBtn'));
 });
 crmAutomationsBtn?.addEventListener('click', () => {
+  formStatus.textContent = 'Automacoes focadas no thread atual. Use Qualificar por IA ou Executar IA.';
   focusElement(threadQualifyBtn);
 });
 crmGroupBtn?.addEventListener('click', () => {
   switchMainView('pipeline');
+  formStatus.textContent = 'Agrupamento focado. Ajuste o seletor Agrupar Pipeline.';
   focusElement(leadGroupBy);
 });
 crmFilterBtn?.addEventListener('click', () => {
+  formStatus.textContent = 'Filtro focado. Digite nome, telefone ou ID para reduzir a lista.';
   focusElement(leadSearchInput);
 });
 savedViewSelect.addEventListener('change', () => {
