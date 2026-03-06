@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="pt-BR" data-layout="layout1" data-palette="palette2">
+<html lang="pt-BR" data-layout="zazi" data-palette="darkgreen">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CRM Console | SaaS</title>
-    <link rel="stylesheet" href="./styles.css?v=20260306f" />
+    <link rel="stylesheet" href="./styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" crossorigin="anonymous"></script>
   </head>
   <body>
@@ -55,18 +55,18 @@
           <label>
             Layout
             <select id="layoutSelect">
-              <option value="layout1">Layout 1</option>
-              <option value="layout2">Layout 2</option>
-              <option value="layout3">Layout 3</option>
+              <option value="fabio2">Fabio2</option>
+              <option value="studio">Studio</option>
+              <option value="zazi">Zazi</option>
             </select>
           </label>
           <label>
             Paleta
             <select id="paletteSelect">
-              <option value="palette1">Paleta 1 - Premium</option>
-              <option value="palette2">Paleta 2 - Signature</option>
-              <option value="palette3">Paleta 3 - Balance</option>
-              <option value="palette4">Paleta 4 - Warm</option>
+              <option value="darkgreen">Dark Green</option>
+              <option value="ocean">Ocean</option>
+              <option value="forest">Forest</option>
+              <option value="sunset">Sunset</option>
             </select>
           </label>
           <button id="applyTenantThemeBtn" class="btn btn--ghost" type="button">Tema Tenant</button>
@@ -76,21 +76,21 @@
           <section class="main-grid">
             <section class="card crm-commandbar">
               <div class="crm-commandbar__left">
-                <button id="crmCreateContactBtn" class="btn" type="button">Criar contato</button>
-                <button id="crmImportBtn" class="btn btn--ghost" type="button">Importar</button>
-                <button id="crmIntegrationsBtn" class="btn btn--ghost" type="button">Integrar</button>
+                <button class="btn" type="button">Criar contato</button>
+                <button class="btn btn--ghost" type="button">Importar</button>
+                <button class="btn btn--ghost" type="button">Integrar</button>
               </div>
               <div class="crm-commandbar__right">
-                <button id="crmAutomationsBtn" class="btn btn--ghost" type="button">Automatizar</button>
-                <button id="crmGroupBtn" class="btn btn--ghost" type="button">Agrupar</button>
-                <button id="crmFilterBtn" class="btn btn--ghost" type="button">Filtrar</button>
+                <button class="btn btn--ghost" type="button">Automatizar</button>
+                <button class="btn btn--ghost" type="button">Agrupar</button>
+                <button class="btn btn--ghost" type="button">Filtrar</button>
               </div>
             </section>
 
             <section class="card crm-board-tabs">
-              <button id="crmBoardMainBtn" class="board-tab is-active" type="button">Quadro principal</button>
-              <button id="crmBoardCardsBtn" class="board-tab" type="button">Cards</button>
-              <button id="crmBoardPipelineBtn" class="board-tab" type="button">Pipeline</button>
+              <button class="board-tab is-active" type="button">Quadro principal</button>
+              <button class="board-tab" type="button">Cards</button>
+              <button class="board-tab" type="button">Pipeline</button>
             </section>
 
             <section class="kpis">
@@ -311,7 +311,7 @@
                 <h3>Conectar WhatsApp</h3>
               </header>
               <p class="whatsapp-qr-desc">Use a mesma Evolution API do Docker (instancia diferente do fabio2 para nao conflitar).</p>
-              <p id="whatsappQrNote" class="whatsapp-qr-desc whatsapp-qr-note">Ao conectar, o dispositivo no celular deve aparecer como <strong>Evolution API</strong> (ou o nome configurado no servidor). Se aparecer &quot;Chrome&quot;, configure no servidor da Evolution: <code>CONFIG_SESSION_PHONE_CLIENT=Evolution API</code> e <code>CONFIG_SESSION_PHONE_NAME=Evolution API</code>.</p>
+              <p class="whatsapp-qr-desc whatsapp-qr-note">Ao conectar, o dispositivo no celular deve aparecer como <strong>Evolution API</strong> (ou o nome configurado no servidor). Se aparecer &quot;Chrome&quot;, configure no servidor da Evolution: <code>CONFIG_SESSION_PHONE_CLIENT=Evolution API</code> e <code>CONFIG_SESSION_PHONE_NAME=Evolution API</code>.</p>
               <button id="whatsappQrBtn" class="btn" type="button">Gerar QR Code</button>
               <div id="whatsappQrResult" class="whatsapp-qr-result" hidden>
                 <p class="whatsapp-qr-status" id="whatsappQrStatus"></p>
@@ -335,6 +335,6 @@
       </div>
     </div>
 
-    <script type="module" src="./app.js?v=20260306f"></script>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>

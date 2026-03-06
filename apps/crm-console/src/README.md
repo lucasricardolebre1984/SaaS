@@ -9,11 +9,11 @@ Module 02 visual shell for CRM WhatsApp operations.
 - Lead creation form (`POST /v1/crm/leads`)
 - Tenant and API URL controls
 - Triple layout engine:
-  - `layout1`: institutional premium shell
-  - `layout2`: flagship neural shell
-  - `layout3`: executive light shell
+  - `fabio2`: canonical dashboard shell
+  - `studio`: premium AI-first shell
+  - `zazi`: legacy-inspired enterprise shell
 - Palette presets:
-  - `palette1`, `palette2`, `palette3`, `palette4`
+  - `ocean`, `forest`, `sunset`
 - Tenant theme map:
   - configured in `app.js` (`TENANT_THEME_PRESETS`)
 

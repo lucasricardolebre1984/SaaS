@@ -1,30 +1,12 @@
-const VALID_LAYOUTS = ['layout1', 'layout2', 'layout3'];
-const VALID_PALETTES = ['palette1', 'palette2', 'palette3', 'palette4'];
+const VALID_LAYOUTS = ['fabio2', 'studio', 'zazi'];
+const VALID_PALETTES = ['darkgreen', 'ocean', 'forest', 'sunset'];
 const LEGACY_DEFAULT_API_BASE = 'http://127.0.0.1:4300';
 const API_BASE_STORAGE_KEY = 'crm_console_api_base_v1';
-const LAYOUT_ALIASES = {
-  fabio2: 'layout1',
-  studio: 'layout2',
-  zazi: 'layout3',
-  layout1: 'layout1',
-  layout2: 'layout2',
-  layout3: 'layout3'
-};
-const PALETTE_ALIASES = {
-  darkgreen: 'palette1',
-  ocean: 'palette2',
-  forest: 'palette3',
-  sunset: 'palette4',
-  palette1: 'palette1',
-  palette2: 'palette2',
-  palette3: 'palette3',
-  palette4: 'palette4'
-};
 
 const TENANT_THEME_PRESETS = {
-  tenant_automania: { layout: 'layout1', palette: 'palette2' },
-  tenant_clinica: { layout: 'layout3', palette: 'palette3' },
-  tenant_comercial: { layout: 'layout1', palette: 'palette4' }
+  tenant_automania: { layout: 'zazi', palette: 'darkgreen' },
+  tenant_clinica: { layout: 'studio', palette: 'forest' },
+  tenant_comercial: { layout: 'studio', palette: 'sunset' }
 };
 
 const STAGE_TRIGGERS = {
@@ -69,15 +51,6 @@ const reloadBtn = document.getElementById('reloadBtn');
 const layoutSelect = document.getElementById('layoutSelect');
 const paletteSelect = document.getElementById('paletteSelect');
 const applyTenantThemeBtn = document.getElementById('applyTenantThemeBtn');
-const crmCreateContactBtn = document.getElementById('crmCreateContactBtn');
-const crmImportBtn = document.getElementById('crmImportBtn');
-const crmIntegrationsBtn = document.getElementById('crmIntegrationsBtn');
-const crmAutomationsBtn = document.getElementById('crmAutomationsBtn');
-const crmGroupBtn = document.getElementById('crmGroupBtn');
-const crmFilterBtn = document.getElementById('crmFilterBtn');
-const crmBoardMainBtn = document.getElementById('crmBoardMainBtn');
-const crmBoardCardsBtn = document.getElementById('crmBoardCardsBtn');
-const crmBoardPipelineBtn = document.getElementById('crmBoardPipelineBtn');
 
 const leadRows = document.getElementById('leadRows');
 const leadCount = document.getElementById('leadCount');
@@ -166,13 +139,11 @@ let tenantCrmRuntime = {
 };
 
 function normalizeLayout(layout) {
-  const canonical = LAYOUT_ALIASES[String(layout ?? '').trim().toLowerCase()];
-  return VALID_LAYOUTS.includes(canonical) ? canonical : 'layout1';
+  return VALID_LAYOUTS.includes(layout) ? layout : 'fabio2';
 }
 
 function normalizePalette(palette) {
-  const canonical = PALETTE_ALIASES[String(palette ?? '').trim().toLowerCase()];
-  return VALID_PALETTES.includes(canonical) ? canonical : 'palette1';
+  return VALID_PALETTES.includes(palette) ? palette : 'darkgreen';
 }
 
 function applyVisualMode({ layout, palette, persist = true }) {
@@ -183,25 +154,17 @@ function applyVisualMode({ layout, palette, persist = true }) {
   layoutSelect.value = safeLayout;
   paletteSelect.value = safePalette;
 
-  if (persist && !embeddedMode) {
+  if (persist) {
     localStorage.setItem('crm_console_layout', safeLayout);
     localStorage.setItem('crm_console_palette', safePalette);
   }
 
-  if (safeLayout === 'layout2') {
+  if (safeLayout === 'studio') {
     bodyEl.classList.remove('menu-open');
   }
 }
 
 function restoreVisualMode() {
-  if (detectEmbeddedMode()) {
-    applyVisualMode({
-      layout: rootEl.dataset.layout,
-      palette: rootEl.dataset.palette,
-      persist: false
-    });
-    return;
-  }
   const persistedLayout = localStorage.getItem('crm_console_layout');
   const persistedPalette = localStorage.getItem('crm_console_palette');
   applyVisualMode({
@@ -232,9 +195,6 @@ function normalizeApiBase(value) {
 }
 
 function loadApiBasePreference() {
-  if (detectEmbeddedMode()) {
-    return deriveDefaultApiBase();
-  }
   try {
     const stored = localStorage.getItem(API_BASE_STORAGE_KEY);
     const normalized = normalizeApiBase(stored);
@@ -248,9 +208,6 @@ function loadApiBasePreference() {
 }
 
 function persistApiBasePreference(value) {
-  if (embeddedMode || detectEmbeddedMode()) {
-    return;
-  }
   try {
     localStorage.setItem(API_BASE_STORAGE_KEY, normalizeApiBase(value));
   } catch {
@@ -355,15 +312,6 @@ function applyBootstrapFromQuery() {
   const view = String(params.get('view') || '').trim().toLowerCase();
   embeddedMode = detectEmbeddedMode(params);
   applyEmbeddedShellMode(embeddedMode);
-  if (embeddedMode) {
-    try {
-      localStorage.removeItem('crm_console_layout');
-      localStorage.removeItem('crm_console_palette');
-      localStorage.removeItem(API_BASE_STORAGE_KEY);
-    } catch {
-      // no-op
-    }
-  }
   if (view === 'pipeline' || view === 'leads' || view === 'inbox') {
     currentMainView = view;
   } else if (embeddedMode) {
@@ -850,18 +798,7 @@ function switchMainView(nextView) {
   viewInboxBtn.classList.toggle('is-active', currentMainView === 'inbox');
   viewPipelineBtn.classList.toggle('is-active', currentMainView === 'pipeline');
   viewLeadsBtn.classList.toggle('is-active', currentMainView === 'leads');
-  crmBoardMainBtn?.classList.toggle('is-active', currentMainView === 'inbox');
-  crmBoardCardsBtn?.classList.toggle('is-active', currentMainView === 'leads');
-  crmBoardPipelineBtn?.classList.toggle('is-active', currentMainView === 'pipeline');
   scheduleEmbeddedHeightPost();
-}
-
-function focusElement(element) {
-  if (!element) return;
-  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  if (typeof element.focus === 'function') {
-    element.focus({ preventScroll: true });
-  }
 }
 
 function applyFiltersToInputs() {
@@ -1582,12 +1519,7 @@ async function sendThreadMessage(event) {
     }
 
     threadMessageInput.value = '';
-    if (body.status === 'provider_failed') {
-      const providerStatus = body.provider?.status ? ` (${body.provider.status})` : '';
-      formStatus.textContent = `Mensagem registrada no CRM, mas o provider externo falhou${providerStatus}.`;
-    } else {
-      formStatus.textContent = 'Mensagem enviada para WhatsApp.';
-    }
+    formStatus.textContent = 'Mensagem enviada para WhatsApp.';
     await openConversation(conversation.conversation_id, { markRead: false });
     await loadConversations();
     refreshLeadViews();
@@ -1781,7 +1713,7 @@ async function handleUpdateStage() {
 }
 
 mobileMenuBtn.addEventListener('click', () => {
-  if (rootEl.dataset.layout === 'layout2') return;
+  if (rootEl.dataset.layout === 'studio') return;
   bodyEl.classList.toggle('menu-open');
 });
 
@@ -1797,36 +1729,6 @@ applyTenantThemeBtn.addEventListener('click', applyTenantTheme);
 viewInboxBtn.addEventListener('click', () => switchMainView('inbox'));
 viewPipelineBtn.addEventListener('click', () => switchMainView('pipeline'));
 viewLeadsBtn.addEventListener('click', () => switchMainView('leads'));
-crmBoardMainBtn?.addEventListener('click', () => switchMainView('inbox'));
-crmBoardCardsBtn?.addEventListener('click', () => switchMainView('leads'));
-crmBoardPipelineBtn?.addEventListener('click', () => switchMainView('pipeline'));
-crmCreateContactBtn?.addEventListener('click', () => {
-  switchMainView('leads');
-  formStatus.textContent = 'Cadastro manual aberto em Leads. Preencha o formulario Novo Lead.';
-  focusElement(document.getElementById('displayName'));
-});
-crmImportBtn?.addEventListener('click', () => {
-  switchMainView('leads');
-  formStatus.textContent = 'Importacao em backlog. Use Criar Lead para cadastro manual neste slice.';
-  focusElement(leadRows);
-});
-crmIntegrationsBtn?.addEventListener('click', () => {
-  formStatus.textContent = 'Painel de integracao focado. Revise o status do WhatsApp e gere QR se necessario.';
-  focusElement(document.getElementById('whatsappQrBtn'));
-});
-crmAutomationsBtn?.addEventListener('click', () => {
-  formStatus.textContent = 'Automacoes focadas no thread atual. Use Qualificar por IA ou Executar IA.';
-  focusElement(threadQualifyBtn);
-});
-crmGroupBtn?.addEventListener('click', () => {
-  switchMainView('pipeline');
-  formStatus.textContent = 'Agrupamento focado. Ajuste o seletor Agrupar Pipeline.';
-  focusElement(leadGroupBy);
-});
-crmFilterBtn?.addEventListener('click', () => {
-  formStatus.textContent = 'Filtro focado. Digite nome, telefone ou ID para reduzir a lista.';
-  focusElement(leadSearchInput);
-});
 savedViewSelect.addEventListener('change', () => {
   const viewId = String(savedViewSelect.value || '').trim();
   if (!viewId) {
@@ -1906,18 +1808,16 @@ apiBaseInput.addEventListener('blur', () => {
   persistApiBasePreference(apiBaseInput.value);
 });
 
-async function loadWhatsAppQr(options = {}) {
-  const auto = options.auto === true;
+async function loadWhatsAppQr() {
   stopQrConnectionPolling();
   const resultEl = document.getElementById('whatsappQrResult');
   const statusEl = document.getElementById('whatsappQrStatus');
   const imageWrap = document.getElementById('whatsappQrImageWrap');
   const pairingEl = document.getElementById('whatsappPairingCode');
   const btn = document.getElementById('whatsappQrBtn');
-  const noteEl = document.getElementById('whatsappQrNote');
   if (!resultEl || !statusEl || !imageWrap || !pairingEl || !btn) return;
   resultEl.hidden = false;
-  statusEl.textContent = auto ? 'Consultando status do WhatsApp...' : 'Buscando QR na Evolution API...';
+  statusEl.textContent = 'Buscando QR na Evolution API...';
   imageWrap.innerHTML = '';
   pairingEl.textContent = '';
   btn.disabled = true;
@@ -1945,9 +1845,7 @@ async function loadWhatsAppQr(options = {}) {
     let finalPayload = {};
     const maxAttempts = 16;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      statusEl.textContent = auto
-        ? `Consultando status do WhatsApp... (${attempt}/${maxAttempts})`
-        : `Buscando QR na Evolution API... (${attempt}/${maxAttempts})`;
+      statusEl.textContent = `Buscando QR na Evolution API... (${attempt}/${maxAttempts})`;
       const res = await fetch(url);
       const data = await res.json().catch(() => ({}));
       finalResponse = res;
@@ -2025,21 +1923,10 @@ async function loadWhatsAppQr(options = {}) {
       pairingEl.textContent = `Codigo recebido: ${code}`;
     }
 
-    const isConnected = backendStatus === 'connected' || connectionState === 'open' || connectionState === 'connected';
-    if (isConnected) {
-      statusEl.textContent = 'Status: conectado';
-      imageWrap.innerHTML = `<p class="whatsapp-qr-connected">Instancia: ${safeText(String(finalPayload.instanceId ?? tenantId() || 'tenant_automania'))}</p>`;
-      pairingEl.textContent = '';
-      btn.hidden = true;
-      noteEl?.setAttribute('hidden', '');
-      stopQrConnectionPolling();
-      return;
-    }
-
-    btn.hidden = false;
-    noteEl?.removeAttribute('hidden');
     if (backendMessage.length > 0) {
       statusEl.textContent = backendMessage;
+    } else if (backendStatus === 'connected' || connectionState === 'open' || connectionState === 'connected') {
+      statusEl.textContent = 'Instancia ja conectada no WhatsApp. Se quiser novo QR, desconecte a instancia primeiro.';
     } else if (looksLikeBase64Image || isEvolutionQrPayload || pairingCode.length > 0) {
       statusEl.textContent = 'Escaneie o QR com WhatsApp (Dispositivo vinculado) ou use o codigo de vinculacao.';
       startQrConnectionPolling(url, statusEl, imageWrap, pairingEl, btn);
@@ -2079,14 +1966,10 @@ function startQrConnectionPolling(url, statusEl, imageWrap, pairingEl, btn) {
       const backendStatus = String(data.status ?? '').trim().toLowerCase();
       if (connectionState === 'open' || connectionState === 'connected' || backendStatus === 'connected') {
         stopQrConnectionPolling();
-        statusEl.textContent = 'Status: conectado';
-        imageWrap.innerHTML = `<p class="whatsapp-qr-connected">Instancia: ${safeText(String(data.instanceId ?? tenantId() || 'tenant_automania'))}</p>`;
+        statusEl.textContent = 'Instancia ja conectada no WhatsApp. Se quiser novo QR, desconecte a instancia primeiro.';
+        imageWrap.innerHTML = '<p class="whatsapp-qr-connected">WhatsApp conectado.</p>';
         if (pairingEl) pairingEl.textContent = '';
-        if (btn) {
-          btn.disabled = false;
-          btn.hidden = true;
-        }
-        document.getElementById('whatsappQrNote')?.setAttribute('hidden', '');
+        if (btn) btn.disabled = false;
       }
     } catch {
       // ignore network errors during poll
@@ -2122,5 +2005,4 @@ applyEmbeddedShellMode(detectEmbeddedMode());
 switchMainView(currentMainView);
 bindEmbeddedHeightSync();
 loadAllData();
-void loadWhatsAppQr({ auto: true });
 startInboxPolling();
