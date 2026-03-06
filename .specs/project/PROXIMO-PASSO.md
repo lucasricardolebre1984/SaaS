@@ -2,7 +2,7 @@
 
 **Foco:** estabilidade operacional com rastreabilidade 100% (botao -> endpoint -> evidencia).
 
-**Ultima atualizacao:** 2026-03-06
+**Ultima atualizacao:** 2026-03-04
 
 ---
 
@@ -14,15 +14,9 @@
 
 ---
 
-## Uso correto deste documento
+## Proximo passo unico (ativo)
 
-**Este arquivo e referencia de contexto/servidor e nao deve ser usado como fila viva de execucao do agente.**
-
-Fonte ativa de execucao:
-- plano de gates: `.specs/project/PLANO-GATES-AUDITORIA-SAAS-2026-03-05.md`
-- feature ativa: `.specs/features/crm-krayin-reference-modernization-slice/tasks.md`
-- frente premium ativa:
-  - endurecer os layouts `layout1`, `layout2` e `layout3` ate nivel de produto caro, com paridade Owner + CRM e obediencia total ao modulo 06.
+**Executar T8 (Validation + UAT) do `crm-krayin-reference-modernization-slice`, validando o T7 em ambiente dev com fluxo real e sem regressao de inbox/pipeline.**
 
 Pre-condicoes (ja cumpridas):
 1. Slice de estabilidade M5B encerrado com `GO`.
@@ -86,23 +80,13 @@ Passos concluidos em 2026-03-04:
    - report: `tools/reports/t8-uat-real-20260304-053230.json`
    - evidencia: inbound real + historico outbound provider + transicao de stage `qualified -> proposal`.
 
-Passos concluidos em 2026-03-05:
-1. T8 (validation + UAT) fechado em dev AWS:
+Passo ativo agora:
+1. T8 (paridade de `crm.automation`) validado em dev AWS apos deploy do commit `11a5243`:
    - `POST /v1/crm/conversations/:id/ai/execute` (`update_stage`) retorna `automation.status=scheduled`;
    - evidencia de follow-up criada: `followups_for_lead=1`;
-   - smoke final dev: `PASS=25`, `WARN=1`, `FAIL=0`.
-2. Repositorio, GitHub e AWS dev alinhados no commit `b11bbe1`:
-   - local `main` limpo;
-   - GitHub `origin/main` em `b11bbe1`;
-   - Ubuntu `/srv/SaaS` em `b11bbe1`, `saas.service` ativo.
-3. Correcao de UX aplicada no modulo 02 embutido no Owner:
-   - scroll do CRM restaurado no embed;
-   - overflow interno dos paineis do CRM corrigido.
-
-Observacao operacional:
-1. T8 esta fechado em dev AWS.
-2. Local, GitHub e AWS dev estao alinhados em `b11bbe1`.
-3. A continuidade deve seguir a ordem do plano de gates, sem duplicar backlog aqui.
+   - report: `tools/reports/t8-uat-followup-20260304-083425.json`.
+2. Consolidar evidencias finais em `STATE`, `STATUS-ATUAL`, `worklog.csv` e `costlog.csv`.
+3. Preparar decisao de transicao para T9 (deploy/rollback plan) apos aceite do owner.
 
 ---
 
@@ -112,4 +96,4 @@ O ciclo de estabilidade foi fechado. Agora o trabalho passa para evolucao de CRM
 
 ---
 
-*Feature ativa: `crm-krayin-reference-modernization-slice` (fase: Implement + Validate).*
+*Feature ativa: `crm-krayin-reference-modernization-slice` (fase: Implement + Validate, foco ativo em T8 Validation + UAT).*

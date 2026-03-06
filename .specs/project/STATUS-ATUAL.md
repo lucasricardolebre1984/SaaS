@@ -1,7 +1,7 @@
 # Status Atual — Fabio SaaS (Modelo Universal)
 
 **Documento:** STATUS-ATUAL  
-**Ultima atualizacao:** 2026-03-06 (G2 fechado localmente com build executavel da API; G6 e G4 ja publicados em dev AWS)  
+**Ultima atualizacao:** 2026-03-03 (T7 runtime controls concluido; proximo foco movido para T8 validation + UAT)  
 **Objetivo:** Snapshot rastreavel do estado do repositorio, modelo de aprendizado continuo e conformidade com specs.
 
 ---
@@ -124,91 +124,12 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 
 ---
 
-## 6. Gate seguinte do plano
+## 6. Proximo passo natural
 
 - **Slice ativo:** `crm-krayin-reference-modernization-slice`.
-- **Gate seguinte:** `G7`, completude/posicionamento do molde UX SaaS.
-- **Objetivo imediato:** reduzir a distancia entre base tecnica funcional e percepcao de produto clonavel, especialmente na UX dos modulos 03..05 e no shell institucional.
-- **Gate principal:** preservar `preprod:validate` verde enquanto a UX deixa de depender de placeholders ambigos.
-- **Referencia:** `.specs/project/PLANO-GATES-AUDITORIA-SAAS-2026-03-05.md`.
-
-## Update 2026-03-05 (T8 fechado + alinhamento local/git/aws)
-- T8 efetivamente fechado em dev AWS:
-  - smoke remoto final em `https://dev.automaniaai.com.br/api` com `PASS=25`, `WARN=1`, `FAIL=0`;
-  - fluxo `owner interaction -> inbound webhook -> conversation -> ai suggest -> ai qualify -> ai execute update stage` validado ponta-a-ponta.
-- Repositorio e ambientes alinhados:
-  - local `main` limpo;
-  - GitHub `origin/main` em `b11bbe1`;
-  - Ubuntu `/srv/SaaS` em `b11bbe1`, `saas.service active`.
-- Hotfix funcional publicado:
-  - Owner embed do CRM com scroll restaurado;
-  - paineis internos do CRM com overflow corrigido no modulo 02.
-- Pendencia operacional residual:
-  - `crm:conversations:send` continua `WARN` no smoke sintetico quando o provider outbound responde `502`; nao bloqueia o gate geral do SaaS.
-
-## Update 2026-03-06 (G6 local fechado)
-- `tenant_runtime_config` passou a suportar backend Postgres no runtime:
-  - selecao por `ORCHESTRATION_STORE_BACKEND`;
-  - tabela `tenant_runtime_configs` adicionada ao baseline SQL;
-  - backfill do arquivo legado para banco no bootstrap Postgres.
-- Evidencia executada localmente:
-  - `npx nx run app-platform-api:test`
-  - `npx nx run contract-tests:contract-checks`
-  - `npm run smoke:postgres`
-  - `npm run preprod:validate -- -SkipOperationalDrills`
-- Resultado:
-  - smoke Postgres passou com `tenant_runtime_configs=1`;
-  - gate integrado permaneceu verde e o smoke remoto AWS seguiu `PASS=25`, `WARN=1`, `FAIL=0`.
-  - apos deploy do commit `73e9ef8`, o health remoto passou a mostrar `tenant_runtime_config.backend = postgres`.
-
-## Update 2026-03-06 (G4 hardening de health)
-- `/health` publico foi reduzido para um resumo operacional minimo:
-  - `status`
-  - `service`
-  - `version`
-  - `backend_summary`
-  - `owner_response`
-  - `owner_memory`
-- `/internal/health` passou a concentrar os detalhes de paths/storage e ficou restrito a loopback.
-- Validacao:
-  - `npx nx run app-platform-api:test`
-  - `npm run preprod:validate -- -SkipOperationalDrills`
-  - deploy dev do commit `163f04f`
-  - smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`
-
-## Update 2026-03-06 (G2 build real da API no Nx)
-- `app-platform-api:build` deixou de ser placeholder e passou a gerar artefato executavel em `dist/apps/platform-api`.
-- O build agora:
-  - compila `app-owner-console` e `app-crm-console`;
-  - empacota `apps/platform-api`;
-  - inclui `libs` consumidas em runtime para schemas e workflows.
-- Smoke dedicado do artefato foi adicionado:
-  - `tools/smoke-platform-api-build.ps1`
-  - valida subida direta do pacote em `dist/apps/platform-api` com `/health`, `/owner/` e `/crm/`.
-- Evidencia executada:
-  - `npx nx run app-platform-api:build`
-  - `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\smoke-platform-api-build.ps1`
-  - `npx nx run app-platform-api:test`
-  - `npm run preprod:validate -- -SkipOperationalDrills`
-- Publicacao:
-  - commit `7b46e81`
-  - deploy dev executado via `npm run deploy:dev -- -SkipNpmCi`
-  - health publico manteve `ok`
-  - smoke remoto pos-deploy: `PASS=25`, `WARN=1`, `FAIL=0`
-
-## Update 2026-03-06 (G5 semantica do provider outbound no CRM)
-- `POST /v1/crm/conversations/:id/send` deixou de mascarar falha externa como erro generico do produto.
-- Novo comportamento:
-  - quando o provider envia com sucesso: `status=sent`;
-  - quando a mensagem e persistida mas o provider externo falha: `status=provider_failed`, `provider.outcome=failed`, `provider.retryable` e `message.delivery_state=failed`.
-- CRM UI passou a informar explicitamente que a mensagem ficou registrada no CRM, mas o provider externo falhou.
-- Smoke de endpoints passou a tratar `provider_failed` classificado como `PASS`, eliminando o warning recorrente do gate.
-- Evidencia executada:
-  - `npx nx run app-platform-api:test`
-  - `npx nx run app-crm-console:build`
-  - `npm run preprod:validate -- -SkipOperationalDrills`
-  - deploy dev do commit `a8807ab`
-  - smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`
+- **Objetivo imediato:** executar T8 (validation + UAT) para validar T7 em fluxo real (inbound -> qualify -> stage move -> follow-up) sem regressao de inbox/thread.
+- **Gate principal:** `app-crm-console:build` + `app-owner-console:build` + `preprod:validate` mantendo fluxo `deal -> activity -> stage update` e smoke de botoes/endpoints.
+- **Referencia:** `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`.
 
 ---
 

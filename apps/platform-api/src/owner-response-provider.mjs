@@ -49,7 +49,6 @@ function normalizeAssistantContent(raw) {
 
 const OWNER_FORBIDDEN_IDENTITY_REGEX = /\b(vivian|persona\s*2|whatsapp\s+agent|whatsapp\s+concierge|carla\s+goncalves|carla\s+gonçalves)\b/gi;
 const OWNER_DEFAULT_MAX_REPLY_CHARS = 380;
-const WHATSAPP_DEFAULT_MAX_REPLY_CHARS = 480;
 
 function normalizeOwnerReplyStyle(rawText, maxChars = OWNER_DEFAULT_MAX_REPLY_CHARS) {
   let text = String(rawText ?? '')
@@ -72,45 +71,6 @@ function normalizeOwnerReplyStyle(rawText, maxChars = OWNER_DEFAULT_MAX_REPLY_CH
   const withoutBrokenTail = clipped.replace(/\s+\S*$/, '').trim();
   const finalText = withoutBrokenTail.length > 40 ? withoutBrokenTail : clipped.trim();
   return `${finalText}...`;
-}
-
-function normalizeWhatsappReplyStyle(rawText, maxChars = WHATSAPP_DEFAULT_MAX_REPLY_CHARS) {
-  let text = String(rawText ?? '')
-    .replace(/\r/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  if (!text) {
-    return 'Ola! Como posso ajudar?';
-  }
-
-  text = text.replace(/\s{2,}/g, ' ');
-
-  if (text.length <= maxChars) {
-    return text;
-  }
-
-  const clipped = text.slice(0, maxChars);
-  const withoutBrokenTail = clipped.replace(/\s+\S*$/, '').trim();
-  const finalText = withoutBrokenTail.length > 40 ? withoutBrokenTail : clipped.trim();
-  return `${finalText}...`;
-}
-
-function resolvePersonaContext(payload = {}) {
-  const ownerPrompt = asNonEmptyString(payload?.persona_overrides?.owner_concierge_prompt);
-  const whatsappPrompt = asNonEmptyString(payload?.persona_overrides?.whatsapp_agent_prompt);
-
-  if (whatsappPrompt && !ownerPrompt) {
-    return {
-      channel: 'whatsapp',
-      prompt: whatsappPrompt
-    };
-  }
-
-  return {
-    channel: 'owner',
-    prompt: ownerPrompt
-  };
 }
 
 function sanitizeAttachments(rawAttachments) {
@@ -257,32 +217,17 @@ function buildLocalReply(payload, fallbackReason = null) {
 }
 
 async function requestOpenAiResponsesReply(options, payload) {
-  const personaContext = resolvePersonaContext(payload);
-  const personaPrompt = personaContext.prompt;
+  const ownerPrompt = asNonEmptyString(payload?.persona_overrides?.owner_concierge_prompt);
 
-  const instructionParts = personaContext.channel === 'whatsapp'
-    ? [
-      'You are the tenant WhatsApp concierge for a modular SaaS.',
-      'Reply in Brazilian Portuguese only.',
-      'Write as a real WhatsApp attendant, short, natural, and useful.',
-      'Keep the reply grounded in the tenant persona and the active conversation context.',
-      'Do not invent catalog, prices, links, doctor names, specialties, or business facts not provided in the tenant persona or conversation context.',
-      `Default max length: ${WHATSAPP_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
-    ]
-    : [
-      'You are Persona 1 (Owner Concierge) for a modular SaaS.',
-      'Reply in Brazilian Portuguese only, concise and operational.',
-      'Do not roleplay named characters. Never mention Persona 2, Vivian, Carla, WhatsApp agent, or WhatsApp concierge.',
-      'Never add marketing intros. Go straight to the requested action.',
-      `Default max length: ${OWNER_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
-    ];
-
-  if (personaPrompt) {
-    instructionParts.push(
-      personaContext.channel === 'whatsapp'
-        ? `Tenant WhatsApp persona. Treat this as the authoritative voice and operating behavior for the reply unless it conflicts with higher-priority safety rules:\n${personaPrompt}`
-        : `Tenant owner persona. Treat this as the authoritative business voice and operating behavior for the reply unless it conflicts with higher-priority safety rules:\n${personaPrompt}`
-    );
+  const instructionParts = [
+    'You are Persona 1 (Owner Concierge) for a modular SaaS.',
+    'Reply in Brazilian Portuguese only, concise and operational.',
+    'Do not roleplay named characters. Never mention Persona 2, Vivian, Carla, WhatsApp agent, or WhatsApp concierge.',
+    'Never add marketing intros. Go straight to the requested action.',
+    `Default max length: ${OWNER_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
+  ];
+  if (ownerPrompt) {
+    instructionParts.push(`Owner persona override:\n${ownerPrompt}`);
   }
   const operationalContext = typeof payload?.operational_context === 'string' && payload.operational_context.trim().length > 0
     ? payload.operational_context.trim()
@@ -339,9 +284,7 @@ async function requestOpenAiResponsesReply(options, payload) {
   }
 
   return {
-    text: personaContext.channel === 'whatsapp'
-      ? normalizeWhatsappReplyStyle(outputText)
-      : normalizeOwnerReplyStyle(outputText),
+    text: normalizeOwnerReplyStyle(outputText),
     provider: 'openai',
     model: asNonEmptyString(body?.model) ?? options.model,
     latency_ms: Math.max(0, Date.now() - startedAt),
@@ -350,38 +293,21 @@ async function requestOpenAiResponsesReply(options, payload) {
 }
 
 async function requestOpenAiChatCompletionsReply(options, payload) {
-  const personaContext = resolvePersonaContext(payload);
-  const personaPrompt = personaContext.prompt;
   const messages = [];
   messages.push({
     role: 'system',
-    content: (
-      personaContext.channel === 'whatsapp'
-        ? [
-          'You are the tenant WhatsApp concierge for a modular SaaS.',
-          'Reply in Brazilian Portuguese only.',
-          'Write as a real WhatsApp attendant, short, natural, and useful.',
-          'Keep the reply grounded in the tenant persona and the active conversation context.',
-          'Do not invent catalog, prices, links, doctor names, specialties, or business facts not provided in the tenant persona or conversation context.',
-          `Default max length: ${WHATSAPP_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
-        ]
-        : [
-          'You are Persona 1 (Owner Concierge) for a modular SaaS.',
-          'Reply in Brazilian Portuguese only, concise and operational.',
-          'Do not roleplay named characters. Never mention Persona 2, Vivian, Carla, WhatsApp agent, or WhatsApp concierge.',
-          'Never add marketing intros. Go straight to the requested action.',
-          `Default max length: ${OWNER_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
-        ]
-    ).join(' ')
+    content: [
+      'You are Persona 1 (Owner Concierge) for a modular SaaS.',
+      'Reply in Brazilian Portuguese only, concise and operational.',
+      'Do not roleplay named characters. Never mention Persona 2, Vivian, Carla, WhatsApp agent, or WhatsApp concierge.',
+      'Never add marketing intros. Go straight to the requested action.',
+      `Default max length: ${OWNER_DEFAULT_MAX_REPLY_CHARS} characters unless the user explicitly asks for details.`
+    ].join(' ')
   });
 
-  if (personaPrompt) {
-    messages.push({
-      role: 'system',
-      content: personaContext.channel === 'whatsapp'
-        ? `Tenant WhatsApp persona. Treat this as the authoritative voice and operating behavior for the reply unless it conflicts with higher-priority safety rules:\n${personaPrompt}`
-        : `Tenant owner persona. Treat this as the authoritative business voice and operating behavior for the reply unless it conflicts with higher-priority safety rules:\n${personaPrompt}`
-    });
+  const ownerPrompt = asNonEmptyString(payload?.persona_overrides?.owner_concierge_prompt);
+  if (ownerPrompt) {
+    messages.push({ role: 'system', content: `Owner persona override:\n${ownerPrompt}` });
   }
   const operationalContext = typeof payload?.operational_context === 'string' && payload.operational_context.trim().length > 0
     ? payload.operational_context.trim()
@@ -452,9 +378,7 @@ async function requestOpenAiChatCompletionsReply(options, payload) {
   }
 
   return {
-    text: personaContext.channel === 'whatsapp'
-      ? normalizeWhatsappReplyStyle(text)
-      : normalizeOwnerReplyStyle(text),
+    text: normalizeOwnerReplyStyle(text),
     provider: 'openai',
     model: asNonEmptyString(body?.model) ?? options.model,
     latency_ms: Math.max(0, Date.now() - startedAt),

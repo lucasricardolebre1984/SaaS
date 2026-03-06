@@ -2460,12 +2460,6 @@ function appendFallbackReason(existingValue, newReason) {
   return `${existing}|${newReason}`;
 }
 
-function isRetryableProviderStatus(status) {
-  const numeric = Number(status);
-  if (!Number.isFinite(numeric) || numeric <= 0) return true;
-  return numeric === 408 || numeric === 409 || numeric === 425 || numeric === 429 || numeric >= 500;
-}
-
 function hasExecutionCompletionClaim(text) {
   const normalized = String(text ?? '').trim();
   if (!normalized) return false;
@@ -2652,55 +2646,6 @@ function tenantRuntimeConfigInfo(store) {
   };
 }
 
-function createPublicHealthSummary({
-  store,
-  customerStore,
-  agendaStore,
-  billingStore,
-  leadStore,
-  crmAutomationStore,
-  crmConversationStore,
-  crmCoreStore,
-  ownerMemoryStore,
-  ownerMemoryMaintenanceStore,
-  tenantRuntimeConfigStore,
-  ownerEmbeddingProvider,
-  ownerResponseProvider
-}) {
-  return {
-    status: 'ok',
-    service: 'app-platform-api',
-    version: process.env.APP_VERSION ?? null,
-    backend_summary: {
-      orchestration: store?.backend ?? 'file',
-      customers: customerStore?.backend ?? 'file',
-      agenda: agendaStore?.backend ?? 'file',
-      billing: billingStore?.backend ?? 'file',
-      crm_leads: leadStore?.backend ?? 'file',
-      crm_automation: crmAutomationStore?.backend ?? 'file',
-      crm_conversations: crmConversationStore?.backend ?? 'file',
-      crm_core: crmCoreStore?.backend ?? 'file',
-      owner_memory: ownerMemoryStore?.backend ?? 'file',
-      owner_memory_maintenance: ownerMemoryMaintenanceStore?.backend ?? 'file',
-      tenant_runtime_config: tenantRuntimeConfigStore?.backend ?? 'file'
-    },
-    owner_response: ownerResponseInfo(ownerResponseProvider),
-    owner_memory: {
-      backend: ownerMemoryStore?.backend ?? 'file',
-      embedding_mode: ownerEmbeddingProvider?.mode ?? 'local'
-    }
-  };
-}
-
-function isLoopbackRequest(req) {
-  const remoteAddress = String(
-    req.socket?.remoteAddress ??
-    req.connection?.remoteAddress ??
-    ''
-  ).trim();
-  return remoteAddress === '127.0.0.1' || remoteAddress === '::1' || remoteAddress === '::ffff:127.0.0.1';
-}
-
 function ownerResponseInfo(provider) {
   return {
     mode: provider?.mode ?? 'auto',
@@ -2878,11 +2823,7 @@ export function createApp(options = {}) {
     pgAutoMigrate
   });
   const tenantRuntimeConfigStore = createTenantRuntimeConfigStore({
-    backend,
-    storageDir: options.tenantRuntimeConfigStorageDir ?? options.orchestrationStorageDir,
-    pgConnectionString,
-    pgSchema,
-    pgAutoMigrate
+    storageDir: options.tenantRuntimeConfigStorageDir ?? options.orchestrationStorageDir
   });
   const shortMemoryStore = createOwnerShortMemoryStore({
     storageDir: options.ownerShortMemoryStorageDir ?? options.orchestrationStorageDir,
@@ -3250,27 +3191,6 @@ export function createApp(options = {}) {
 
     try {
       if (method === 'GET' && path === '/health') {
-        return json(res, 200, createPublicHealthSummary({
-          store,
-          customerStore,
-          agendaStore,
-          billingStore,
-          leadStore,
-          crmAutomationStore,
-          crmConversationStore,
-          crmCoreStore,
-          ownerMemoryStore,
-          ownerMemoryMaintenanceStore,
-          tenantRuntimeConfigStore,
-          ownerEmbeddingProvider,
-          ownerResponseProvider
-        }));
-      }
-
-      if (method === 'GET' && path === '/internal/health') {
-        if (!isLoopbackRequest(req)) {
-          return json(res, 403, { error: 'forbidden' });
-        }
         return json(res, 200, {
           status: 'ok',
           service: 'app-platform-api',
@@ -6069,29 +5989,18 @@ export function createApp(options = {}) {
         }
 
         if (!providerResult?.ok) {
-          return json(res, 200, {
-            status: 'provider_failed',
-            message: saved.message,
-            provider_message_id: null,
-            provider: {
-              outcome: 'failed',
-              status: providerResult?.status ?? 502,
-              retryable: isRetryableProviderStatus(providerResult?.status ?? 502),
-              details: providerResult?.errorDetails ?? 'provider_send_error'
-            }
+          return json(res, 502, {
+            error: 'provider_send_error',
+            provider_status: providerResult?.status ?? 502,
+            details: providerResult?.errorDetails ?? 'provider_send_error',
+            message: saved.message
           });
         }
 
         return json(res, 200, {
           status: 'sent',
           message: saved.message,
-          provider_message_id: providerResult.providerMessageId ?? null,
-          provider: {
-            outcome: 'sent',
-            status: providerResult.status ?? 200,
-            retryable: false,
-            details: null
-          }
+          provider_message_id: providerResult.providerMessageId ?? null
         });
       }
 

@@ -39,7 +39,7 @@ So se precisar de **4 deploys totalmente separados** (4 dominios diferentes, 4 c
 Sim. O fabio e o **modelo institucional** para clonar novos SaaS. Comando:
 
 ```powershell
-npm run generate:saas-starter -- --saas-name "Meu SaaS" --tenant-id "tenant_meu_saas" --layout-default layout2 --palette-default palette2
+npm run generate:saas-starter -- --saas-name "Meu SaaS" --tenant-id "tenant_meu_saas" --layout-default studio --palette-default ocean
 ```
 
 - Saida: **`.tmp/generated-saas/<slug>/`**

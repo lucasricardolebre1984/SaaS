@@ -35,15 +35,15 @@ Exemplo Persona 2:
 ## 5. Criar novo SaaS (starter)
 1. Executar gerador:
 ```powershell
-npm run generate:saas-starter -- --saas-name "Nome do SaaS" --tenant-id "tenant_nome" --layout-default layout2 --palette-default palette2
+npm run generate:saas-starter -- --saas-name "Nome do SaaS" --tenant-id "tenant_nome" --layout-default studio --palette-default ocean
 ```
 2. Abrir saída em `.tmp/generated-saas/<slug>`.
 3. Ajustar branding, domínios e integrações específicas.
 4. Manter contratos e módulos core sem hardcode de empresa.
 
 ## 6. Ajustar layout/paleta por cliente
-- Layouts disponíveis: `layout1`, `layout2`, `layout3`.
-- Paletas disponíveis: `palette1`, `palette2`, `palette3`, `palette4`.
+- Layouts disponíveis: `fabio2`, `studio`, `zazi`.
+- Paletas disponíveis: `ocean`, `forest`, `sunset`.
 - Ajuste rápido em `mod-06` ou por preset em `apps/owner-console/src/app.js` (`TENANT_THEME_PRESETS`).
 
 ## 7. Checklist de validação antes de usar o template

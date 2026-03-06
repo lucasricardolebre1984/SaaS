@@ -103,7 +103,7 @@ Acao:
 
 ## G2 - Workspace Nx e artefatos executaveis
 
-Status: PASS
+Status: WARN
 Objetivo: garantir que o monorepo e reproduzivel nao apenas por `serve`, mas tambem por build auditavel.
 Topicos:
 - apps e libs descobriveis via Nx
@@ -115,23 +115,9 @@ Evidencias:
 - `npx nx show project app-owner-console --json`
 - `npx nx show project app-crm-console --json`
 Achado:
-- `app-platform-api:build` ainda era placeholder e nao gerava artefato real.
-Checkpoint 2026-03-06:
-- `app-platform-api:build` passou a executar build dos consoles e empacotar artefato executavel em `dist/apps/platform-api`;
-- o empacotamento agora inclui `apps/platform-api`, `apps/owner-console`, `apps/crm-console` e `libs` consumidas em runtime;
-- smoke dedicado do artefato publicado em `tools/smoke-platform-api-build.ps1` validou subida direta via `node apps/platform-api/src/server.mjs` dentro de `dist/apps/platform-api`;
-- validacao local concluida com:
-  - `npx nx run app-platform-api:build`
-  - `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\smoke-platform-api-build.ps1`
-  - `npx nx run app-platform-api:test`
-  - `npm run preprod:validate -- -SkipOperationalDrills`
-- publicacao concluida em `7b46e81` com deploy dev realizado;
-- smoke remoto pos-deploy: `PASS=25`, `WARN=1`, `FAIL=0`.
+- `app-platform-api:build` ainda e placeholder e nao gera artefato real.
 Arquivos:
 - `apps/platform-api/project.json`
-- `apps/platform-api/src/server.mjs`
-- `tools/build-platform-api.mjs`
-- `tools/smoke-platform-api-build.ps1`
 Criterio de saida:
 - build real da API com output versionavel ou empacotavel
 - pipeline de deploy nao depender apenas de codigo fonte cru no servidor
@@ -156,7 +142,7 @@ Criterio de saida:
 
 ## G4 - Runtime core API e orchestration
 
-Status: PASS
+Status: PASS com ressalva
 Objetivo: garantir funcionamento de API, orchestration, memoria, agenda, clientes e billing.
 Topicos:
 - health
@@ -170,14 +156,6 @@ Evidencias:
 - `http://127.0.0.1:4001/health`
 Achado:
 - o runtime funciona, mas o endpoint `/health` expõe detalhes internos excessivos.
-Checkpoint 2026-03-06:
-- `/health` reduzido para resumo publico minimo (`status`, `service`, `version`, `backend_summary`, `owner_response`, `owner_memory`);
-- `/internal/health` criado para metadados detalhados e restrito a loopback;
-- validacao local concluida com:
-  - `npx nx run app-platform-api:test`
-  - `npm run preprod:validate -- -SkipOperationalDrills`
-- publicacao concluida em `163f04f` com deploy dev realizado;
-- smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`.
 Arquivos:
 - `apps/platform-api/src/app.mjs`
 - `apps/platform-api/src/app.test.mjs`
@@ -188,7 +166,7 @@ Prioridade: P1
 
 ## G5 - CRM enterprise e provider WhatsApp
 
-Status: PASS
+Status: PASS com ressalva
 Objetivo: garantir o fluxo real do modulo 02 e a trilha P1 -> P2 -> provider.
 Topicos:
 - inbound webhook
@@ -202,23 +180,7 @@ Evidencias:
 - `tools/reports/saas-endpoint-smoke-20260305-193642.json`
 Achados:
 - fluxo enterprise principal funciona e a automacao T8 foi provada com `automation.status=scheduled` e `followups_for_lead=1`
-- o envio outbound exigia semantica melhor quando a mensagem era persistida mas o provider externo falhava
-Checkpoint 2026-03-06:
-- `POST /v1/crm/conversations/:id/send` passou a responder `200` com `status=provider_failed` quando o CRM persiste a mensagem e a falha fica restrita ao provider externo;
-- a resposta agora classifica `provider.outcome`, `provider.status`, `provider.retryable` e preserva `message.delivery_state=failed`;
-- a UI do CRM passou a informar "mensagem registrada no CRM, mas o provider externo falhou" sem mascarar a persistencia local;
-- o smoke de endpoints foi ajustado para tratar `provider_failed` classificado como `PASS` em vez de `WARN/FAIL`;
-- validacao local concluida com:
-  - `npx nx run app-platform-api:test`
-  - `npx nx run app-crm-console:build`
-  - `npm run preprod:validate -- -SkipOperationalDrills`
-- publicacao concluida em `a8807ab` com deploy dev realizado;
-- smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`.
-Arquivos:
-- `apps/platform-api/src/app.mjs`
-- `apps/platform-api/src/app.test.mjs`
-- `apps/crm-console/src/app.js`
-- `tools/smoke-saas-endpoints.ps1`
+- envio outbound `crm:conversations:send` segue com warning recorrente (`502`) quando o provider falha, embora a persistencia local do endpoint esteja correta
 Criterio de saida:
 - manter `PASS` no smoke
 - diferenciar erro do provider externo de erro do produto
@@ -227,7 +189,7 @@ Prioridade: P1
 
 ## G6 - Persistencia multi-tenant e control plane
 
-Status: PASS
+Status: WARN
 Objetivo: garantir que o modulo 06 seja control plane robusto em ambiente real.
 Topicos:
 - persistencia tenant-scoped
@@ -239,17 +201,6 @@ Evidencias:
 - `apps/platform-api/src/tenant-runtime-config-store.mjs`
 Achado:
 - o SaaS remoto usa Postgres para quase tudo, mas `tenant_runtime_config` continua em arquivo local.
-Checkpoint 2026-03-06:
-- implementado store Postgres para `tenant_runtime_config` com auto-migrate e backfill do arquivo legado;
-- `apps/platform-api/sql/orchestration-postgres.sql` agora cria `tenant_runtime_configs`;
-- validacao local concluida com:
-  - `npx nx run app-platform-api:test`
-  - `npx nx run contract-tests:contract-checks`
-  - `npm run smoke:postgres`
-  - `npm run preprod:validate -- -SkipOperationalDrills`
-- publicacao concluida em `73e9ef8` com deploy dev realizado;
-- health remoto confirmou `tenant_runtime_config.backend = postgres`;
-- smoke remoto pos-deploy: `PASS=25`, `WARN=1`, `FAIL=0`.
 Risco:
 - consistencia fraca em multi-instancia
 - backup/restore parcial
@@ -358,9 +309,11 @@ Saida minima:
 
 1. G6 - persistencia do control plane
 2. G4 - hardening do `/health`
-3. G7 - completude do molde UX
-4. G8 - alinhamento fino de baseline IA
-5. G1 - consolidacao de parity report como rotina padrao
+3. G2 - build real da API
+4. G5 - outbound provider semantics
+5. G7 - completude do molde UX
+6. G8 - alinhamento fino de baseline IA
+7. G1 - consolidacao de parity report como rotina padrao
 
 ## 6. Definicao operacional de "SaaS funcional" nesta data
 

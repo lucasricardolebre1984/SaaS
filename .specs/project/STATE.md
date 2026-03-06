@@ -1,6 +1,6 @@
 # STATE
 
-Last update: 2026-03-06
+Last update: 2026-03-04
 Active phase: Implement + Validate (crm-krayin-reference-modernization-slice)
 Active feature: crm-krayin-reference-modernization-slice
 
@@ -45,80 +45,6 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
-- 2026-03-06: premium front revolution iniciada dentro de `crm-krayin-reference-modernization-slice`:
-  - `spec/design/tasks` ampliados para tratar `fabio2`, `studio` e `zazi` como sistemas visuais premium completos, e nao apenas troca de cor;
-  - primeira camada implementada em `apps/owner-console/src/styles.css` e `apps/crm-console/src/styles.css` com reforco de superficies, topbar, sidebar, cards, botoes e identidade especifica por layout;
-  - validacao inicial verde:
-    - `npx nx run app-owner-console:build`
-    - `npx nx run app-crm-console:build`.
-- 2026-03-06: nomenclatura institucional dos layouts/paletas genericizada:
-  - layouts canonicos passam a ser `layout1`, `layout2`, `layout3`;
-  - paletas canonicas passam a ser `palette1`, `palette2`, `palette3`, `palette4`;
-  - aliases antigos (`fabio2/studio/zazi`, `darkgreen/ocean/forest/sunset`) permanecem apenas para compatibilidade de runtime/config legado;
-  - Owner/CRM, docs de geracao e manuais foram atualizados para expor apenas os nomes genericos;
-  - builds verdes apos a mudanca:
-    - `npx nx run app-owner-console:build`
-    - `npx nx run app-crm-console:build`.
-- 2026-03-06: segunda camada do premium front aplicada:
-  - CRM recebeu endurecimento visual em `commandbar`, `board tabs`, `toolbar`, `kpis`, `conversation list`, `thread panel`, `detail panel`, `detail activities`, `pipeline` e `metric bars`;
-  - Owner recebeu endurecimento visual em `module hero`, `module kpis`, `table-wrap` e interacao de botoes;
-  - builds permaneceram verdes:
-    - `npx nx run app-owner-console:build`
-    - `npx nx run app-crm-console:build`.
-- 2026-03-06: slice estrategico `agent-skills-institutional-runtime` aberto em nivel de spec:
-  - objetivo: sair do MVP de 4 project skills para runtime institucional com manifesto canonico, router de triggers, install/audit multiagente e smoke de ativacao;
-  - artefatos criados:
-    - `.specs/features/agent-skills-institutional-runtime/spec.md`
-    - `.specs/features/agent-skills-institutional-runtime/design.md`
-    - `.specs/features/agent-skills-institutional-runtime/tasks.md`
-    - `docs/AGENT-SKILLS-INSTITUTIONAL-MANUAL.md`;
-  - decisao: "37+ skills instaladas" deixam de ser tratadas como equivalente a "37+ skills governadas automaticamente"; o modelo institucional correto passa a ser manifesto + perfil + trigger deterministico + hard-fail + smoke.
-- 2026-03-06: G5/P1 publicado no AWS dev:
-  - commit `a8807ab` deployado via `npm run deploy:dev -- -SkipNpmCi`;
-  - `POST /v1/crm/conversations/:id/send` passou a classificar falha externa como `status=provider_failed` mantendo `200` e persistencia local;
-  - smoke remoto pos-deploy evoluiu para `PASS=26`, `WARN=0`, `FAIL=0`.
-- 2026-03-06: G5/P1 endurecido localmente:
-  - endpoint de envio do CRM passou a diferenciar falha do provider externo sem mascarar o sucesso interno de persistencia;
-  - UI do CRM passou a exibir aviso operacional explicito quando o provider falha, sem tratar o caso como erro generico do produto;
-  - `npx nx run app-platform-api:test`, `npx nx run app-crm-console:build` e `npm run preprod:validate -- -SkipOperationalDrills` ficaram verdes.
-- 2026-03-06: G2/P1 publicado no AWS dev:
-  - commit `7b46e81` deployado via `npm run deploy:dev -- -SkipNpmCi`;
-  - health publico `https://dev.automaniaai.com.br/api/health` permaneceu `ok`;
-  - smoke remoto pos-deploy permaneceu verde em `PASS=25`, `WARN=1`, `FAIL=0`.
-- 2026-03-06: G2/P1 fechado localmente:
-  - `app-platform-api:build` deixou de ser placeholder e passou a gerar artefato executavel em `dist/apps/platform-api`;
-  - o build agora empacota `apps/platform-api`, UIs compiladas de Owner/CRM e a arvore `libs` consumida em runtime;
-  - smoke dedicado do artefato (`tools/smoke-platform-api-build.ps1`) validou `/health`, `/owner/` e `/crm/` servidos direto do `dist`;
-  - validacoes verdes: `npx nx run app-platform-api:build`, `pwsh -NoProfile -ExecutionPolicy Bypass -File .\\tools\\smoke-platform-api-build.ps1`, `npx nx run app-platform-api:test`, `npm run preprod:validate -- -SkipOperationalDrills`.
-- 2026-03-06: G4/P1 publicado no AWS dev:
-  - commit `163f04f` deployado via `npm run deploy:dev -- -SkipNpmCi`;
-  - `/health` publico passou a retornar apenas resumo minimo sem paths internos;
-  - smoke remoto pos-deploy evoluiu para `PASS=26`, `WARN=0`, `FAIL=0`.
-- 2026-03-06: G4/P1 endurecido localmente:
-  - `/health` passou a responder apenas resumo publico minimo;
-  - `/internal/health` foi criado para diagnostico detalhado em loopback;
-  - `npx nx run app-platform-api:test` e `npm run preprod:validate -- -SkipOperationalDrills` permaneceram verdes.
-- 2026-03-06: G6/P0 publicado no AWS dev:
-  - commit `73e9ef8` deployado via `npm run deploy:dev -- -SkipNpmCi`;
-  - health remoto em `https://dev.automaniaai.com.br/api/health` passou a expor `tenant_runtime_config.backend = postgres`;
-  - smoke remoto pos-deploy permaneceu verde (`PASS=25`, `WARN=1`, `FAIL=0`).
-- 2026-03-06: G6/P0 avancou de forma concreta no ambiente local:
-  - `tenant_runtime_config` ganhou store Postgres com auto-migrate, selecao por `ORCHESTRATION_STORE_BACKEND` e backfill do arquivo legado;
-  - baseline SQL passou a criar `public.tenant_runtime_configs`;
-  - `npm run smoke:postgres` passou com `tenant_runtime_configs=1`;
-  - `npm run preprod:validate -- -SkipOperationalDrills` passou com smoke Postgres e smoke remoto AWS verdes.
-- 2026-03-05: alinhamento operacional fechado ponta-a-ponta:
-  - local, GitHub e AWS dev sincronizados no commit `b11bbe1`;
-  - `npm run deploy:dev -- -SkipNpmCi` executado com pull/restart no Ubuntu;
-  - `saas.service` permaneceu `active` e health publico `https://dev.automaniaai.com.br/api/health` retornou `ok`.
-- 2026-03-05: T8 efetivamente fechado em dev AWS:
-  - smoke remoto final executado em `https://dev.automaniaai.com.br/api` com `PASS=25`, `WARN=1`, `FAIL=0`;
-  - fluxo `owner interaction -> inbound webhook -> conversation -> ai suggest -> ai qualify -> ai execute update stage` validado;
-  - warning remanescente permanece restrito a `crm:conversations:send` em numero/provider sintetico.
-- 2026-03-05: hotfix de UX do modulo 02 publicado:
-  - Owner embed do CRM voltou a permitir scroll;
-  - paineis internos do CRM (`conversation-list`, `thread`, `detail-panel`) passaram a respeitar overflow esperado.
-- 2026-03-05: auditoria formal de gates publicada em `.specs/project/PLANO-GATES-AUDITORIA-SAAS-2026-03-05.md` com decisao `GO CONTROLADO`.
 - 2026-03-04: paridade de `crm.automation` fechada em dev:
   - commit publicado/deployado: `11a5243`;
   - UAT focado confirmou `automation.status=scheduled` no `ai/execute update_stage` e `followups_for_lead=1`;

@@ -130,11 +130,10 @@ Nota de isolamento: o smoke deste repositório usa stack Docker `fabio-postgres-
 - **Ordem de carga (sessao):** `.specs/project/CONTEXT.md` -> PROJECT.md -> ROADMAP.md -> STATE.md -> feature ativa (spec.md, design.md, tasks.md). Ver `AGENTS.md`.
 - **Indice de docs:** STATUS-ATUAL.md, SKILLS-CATALOG.md, GATES.md, METRICS.md, MEMORY-CONTEXT-LEARNING-FLOW.md; features em `.specs/features/<feature>/`. Tudo rastreavel com data/hora onde aplicavel.
 - **Skills:** Project skills (4) em `skills/(project)/`; instalacao: `npm run skills:install` (Codex) ou `npm run skills:install:cursor` (Cursor). Catalogo completo (project + globais): `.specs/project/SKILLS-CATALOG.md`. O agente deve citar o skill em uso como prova.
-- **Manual institucional de agent skills:** `docs/AGENT-SKILLS-INSTITUTIONAL-MANUAL.md`
 
 ## Gerar novo SaaS (starter)
 ```powershell
-npm run generate:saas-starter -- --saas-name "Meu SaaS" --tenant-id "tenant_meu_saas" --layout-default layout2 --palette-default palette2
+npm run generate:saas-starter -- --saas-name "Meu SaaS" --tenant-id "tenant_meu_saas" --layout-default studio --palette-default ocean
 ```
 
 Manual operacional:

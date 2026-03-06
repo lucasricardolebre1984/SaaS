@@ -6,8 +6,8 @@ Feature: milestone-2-template-generator-slice
 ## Placeholder Schema
 - `{{saas_name}}`: display name for generated SaaS package.
 - `{{tenant_id}}`: default tenant id used by generated shell presets.
-- `{{layout_default}}`: default layout profile (`layout1` | `layout2` | `layout3`).
-- `{{palette_default}}`: default palette profile (`palette1` | `palette2` | `palette3` | `palette4`).
+- `{{layout_default}}`: default layout profile (`fabio2` | `studio` | `zazi`).
+- `{{palette_default}}`: default palette profile (`ocean` | `forest` | `sunset`).
 - `{{generated_at}}`: UTC timestamp written by generator runtime.
 
 ## Template Root

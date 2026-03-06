@@ -580,30 +580,8 @@ test.after(async () => {
   await fs.rm(storageDir, { recursive: true, force: true });
 });
 
-test('GET /health returns public runtime summary only', async () => {
+test('GET /health returns runtime metadata', async () => {
   const res = await fetch(`${baseUrl}/health`);
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.equal(body.status, 'ok');
-  assert.equal(body.service, 'app-platform-api');
-  assert.equal(body.backend_summary.orchestration, 'file');
-  assert.equal(body.backend_summary.customers, 'file');
-  assert.equal(body.backend_summary.agenda, 'file');
-  assert.equal(body.backend_summary.billing, 'file');
-  assert.equal(body.backend_summary.crm_leads, 'file');
-  assert.equal(body.backend_summary.crm_automation, 'file');
-  assert.equal(body.backend_summary.crm_core, 'file');
-  assert.equal(body.backend_summary.tenant_runtime_config, 'file');
-  assert.equal(body.owner_memory.backend, 'file');
-  assert.ok(body.version === null || typeof body.version === 'string');
-  assert.equal(typeof body.owner_response.openai_available, 'boolean');
-  assert.equal(body.orchestration, undefined);
-  assert.equal(body.customers, undefined);
-  assert.equal(body.tenant_runtime_config, undefined);
-});
-
-test('GET /internal/health returns detailed runtime metadata on loopback', async () => {
-  const res = await fetch(`${baseUrl}/internal/health`);
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.status, 'ok');
@@ -4246,8 +4224,6 @@ test('CRM conversation endpoints open thread and send outbound message', async (
     const sendBody = await sendRes.json();
     assert.equal(sendBody.status, 'sent');
     assert.equal(sendBody.provider_message_id, 'provider-msg-out-thread-001');
-    assert.equal(sendBody.provider.outcome, 'sent');
-    assert.equal(sendBody.provider.retryable, false);
 
     const messagesRes = await fetch(
       `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/messages?tenant_id=tenant_automania`
@@ -4259,112 +4235,6 @@ test('CRM conversation endpoints open thread and send outbound message', async (
     assert.equal(messagesBody.items[1].direction, 'outbound');
     assert.equal(messagesBody.items[1].text, 'Resposta pelo inbox.');
     assert.equal(evolutionRequests.length >= 1, true);
-  } finally {
-    await new Promise((resolve, reject) => {
-      appServer.close((err) => (err ? reject(err) : resolve()));
-    });
-    await new Promise((resolve, reject) => {
-      evolutionServer.close((err) => (err ? reject(err) : resolve()));
-    });
-    await fs.rm(localStorageDir, { recursive: true, force: true });
-  }
-});
-
-test('CRM conversation send classifies external provider failure without masking local persistence', async () => {
-  const localStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fabio-crm-inbox-provider-fail-'));
-  const evolutionServer = http.createServer(async (req, res) => {
-    for await (const _chunk of req) {}
-
-    if (req.method === 'POST' && req.url === '/message/sendText/tenant_automania') {
-      res.writeHead(502, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'provider_unavailable' }));
-      return;
-    }
-
-    res.writeHead(404, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ error: 'not_found' }));
-  });
-  await new Promise((resolve) => evolutionServer.listen(0, '127.0.0.1', resolve));
-  const evolutionAddress = evolutionServer.address();
-  const evolutionBaseUrl = `http://127.0.0.1:${evolutionAddress.port}`;
-
-  const appServer = http.createServer(
-    createApp({
-      orchestrationStorageDir: localStorageDir,
-      customerStorageDir: path.join(localStorageDir, 'customers'),
-      agendaStorageDir: path.join(localStorageDir, 'agenda'),
-      billingStorageDir: path.join(localStorageDir, 'billing'),
-      leadStorageDir: path.join(localStorageDir, 'crm'),
-      crmAutomationStorageDir: path.join(localStorageDir, 'crm-automation'),
-      crmConversationStorageDir: path.join(localStorageDir, 'crm-conversations'),
-      ownerMemoryStorageDir: path.join(localStorageDir, 'owner-memory'),
-      evolutionHttpBaseUrl: evolutionBaseUrl,
-      evolutionApiKey: 'test-evolution-key',
-      evolutionInstanceId: 'tenant_automania',
-      evolutionAutoReplyEnabled: false
-    })
-  );
-  await new Promise((resolve) => appServer.listen(0, '127.0.0.1', resolve));
-  const appAddress = appServer.address();
-  const appBaseUrl = `http://127.0.0.1:${appAddress.port}`;
-
-  try {
-    const webhookRes = await fetch(`${appBaseUrl}/provider/evolution/webhook`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        event: 'MESSAGES_UPSERT',
-        instance: 'tenant_automania',
-        data: {
-          key: {
-            id: 'thread-msg-in-502',
-            remoteJid: '5511977776666@s.whatsapp.net',
-            fromMe: false
-          },
-          pushName: 'Lead Provider Fail',
-          message: { conversation: 'Mensagem inbound para teste de falha externa.' }
-        },
-        date_time: '2026-03-01T12:00:00.000Z'
-      })
-    });
-    assert.equal(webhookRes.status, 200);
-
-    const conversationsRes = await fetch(`${appBaseUrl}/v1/crm/conversations?tenant_id=tenant_automania`);
-    assert.equal(conversationsRes.status, 200);
-    const conversationsBody = await conversationsRes.json();
-    const conversation = conversationsBody.items[0];
-    assert.ok(conversation);
-
-    const sendRes = await fetch(
-      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/send`,
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          request: {
-            request_id: '300b6b4d-c7a6-4e3c-b3dc-bb7ec9e878da',
-            tenant_id: 'tenant_automania',
-            text: 'Resposta que deve falhar no provider.'
-          }
-        })
-      }
-    );
-    assert.equal(sendRes.status, 200);
-    const sendBody = await sendRes.json();
-    assert.equal(sendBody.status, 'provider_failed');
-    assert.equal(sendBody.message.delivery_state, 'failed');
-    assert.equal(sendBody.provider.outcome, 'failed');
-    assert.equal(sendBody.provider.status, 502);
-    assert.equal(sendBody.provider.retryable, true);
-
-    const messagesRes = await fetch(
-      `${appBaseUrl}/v1/crm/conversations/${encodeURIComponent(conversation.conversation_id)}/messages?tenant_id=tenant_automania`
-    );
-    assert.equal(messagesRes.status, 200);
-    const messagesBody = await messagesRes.json();
-    assert.equal(messagesBody.count, 2);
-    assert.equal(messagesBody.items[1].direction, 'outbound');
-    assert.equal(messagesBody.items[1].delivery_state, 'failed');
   } finally {
     await new Promise((resolve, reject) => {
       appServer.close((err) => (err ? reject(err) : resolve()));

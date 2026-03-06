@@ -413,17 +413,10 @@ if ($conversationId) {
     }
   }
   $send = Invoke-Api -Method 'POST' -Path ("/v1/crm/conversations/{0}/send" -f [uri]::EscapeDataString($conversationId)) -Body $sendPayload
-  if (([int]$send.status -eq 200)) {
-    $sendStatus = ''
-    try { $sendStatus = [string]$send.body.status } catch {}
-
-    if ($sendStatus -eq 'provider_failed') {
-      Add-Result -Step 'crm:conversations:send' -Outcome 'PASS' -Response $send -Note 'provider_failed_classified_and_persisted'
-    } elseif (($sendStatus -eq '') -or ($sendStatus -eq 'sent')) {
-      Add-Result -Step 'crm:conversations:send' -Outcome 'PASS' -Response $send -Note 'provider_sent'
-    } else {
-      Add-Result -Step 'crm:conversations:send' -Outcome 'FAIL' -Response $send -Note "unexpected_send_status:$sendStatus"
-    }
+  if (([int]$send.status -eq 200) -or ([int]$send.status -eq 502)) {
+    $outcome = if ([int]$send.status -eq 200) { 'PASS' } else { 'WARN' }
+    $note = if ([int]$send.status -eq 200) { 'provider_sent' } else { 'provider_send_error_but_endpoint_persisted' }
+    Add-Result -Step 'crm:conversations:send' -Outcome $outcome -Response $send -Note $note
   } else {
     Add-Result -Step 'crm:conversations:send' -Outcome 'FAIL' -Response $send -Note 'unexpected_status'
   }
