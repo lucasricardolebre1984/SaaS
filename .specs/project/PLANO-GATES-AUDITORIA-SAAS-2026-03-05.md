@@ -189,7 +189,7 @@ Prioridade: P1
 
 ## G6 - Persistencia multi-tenant e control plane
 
-Status: WARN
+Status: PASS
 Objetivo: garantir que o modulo 06 seja control plane robusto em ambiente real.
 Topicos:
 - persistencia tenant-scoped
@@ -209,7 +209,9 @@ Checkpoint 2026-03-06:
   - `npx nx run contract-tests:contract-checks`
   - `npm run smoke:postgres`
   - `npm run preprod:validate -- -SkipOperationalDrills`
-- status do gate permanece `WARN` ate publicar/deployar no AWS e confirmar `tenant_runtime_config.backend = postgres` no health remoto.
+- publicacao concluida em `73e9ef8` com deploy dev realizado;
+- health remoto confirmou `tenant_runtime_config.backend = postgres`;
+- smoke remoto pos-deploy: `PASS=25`, `WARN=1`, `FAIL=0`.
 Risco:
 - consistencia fraca em multi-instancia
 - backup/restore parcial

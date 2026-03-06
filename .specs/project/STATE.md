@@ -45,6 +45,10 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-06: G6/P0 publicado no AWS dev:
+  - commit `73e9ef8` deployado via `npm run deploy:dev -- -SkipNpmCi`;
+  - health remoto em `https://dev.automaniaai.com.br/api/health` passou a expor `tenant_runtime_config.backend = postgres`;
+  - smoke remoto pos-deploy permaneceu verde (`PASS=25`, `WARN=1`, `FAIL=0`).
 - 2026-03-06: G6/P0 avancou de forma concreta no ambiente local:
   - `tenant_runtime_config` ganhou store Postgres com auto-migrate, selecao por `ORCHESTRATION_STORE_BACKEND` e backfill do arquivo legado;
   - baseline SQL passou a criar `public.tenant_runtime_configs`;

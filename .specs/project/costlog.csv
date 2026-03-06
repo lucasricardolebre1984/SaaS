@@ -248,3 +248,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-05,internal,engineering-time,local,0.00,0.00,operations,aligned local git and AWS dev to f14441c with deploy:dev and restored tenant runtime OpenAI fallback on dev; post-deploy smoke PASS25 WARN1 FAIL0
 2026-03-06,internal,engineering-time,local,0.00,0.00,governance,consolidated T8 closure and b11bbe1 alignment into central context docs and moved active next step to T6/T1 UX enterprise
 2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,implemented postgres persistence and legacy backfill for tenant runtime config with local smoke postgres and integrated preprod validation passing
+2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit 73e9ef8 to dev and confirmed tenant runtime config now runs on postgres with remote smoke still green

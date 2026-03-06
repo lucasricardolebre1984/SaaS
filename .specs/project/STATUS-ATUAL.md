@@ -158,6 +158,7 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 - Resultado:
   - smoke Postgres passou com `tenant_runtime_configs=1`;
   - gate integrado permaneceu verde e o smoke remoto AWS seguiu `PASS=25`, `WARN=1`, `FAIL=0`.
+  - apos deploy do commit `73e9ef8`, o health remoto passou a mostrar `tenant_runtime_config.backend = postgres`.
 
 ---
 
