@@ -95,6 +95,9 @@ const customerDetailIdInput = document.getElementById('customerDetailId');
 const customerDetailBtn = document.getElementById('customerDetailBtn');
 const customerDetailOutputEl = document.getElementById('customerDetailOutput');
 const customerIdOptionsEl = document.getElementById('customerIdOptions');
+const customersCountKpiEl = document.getElementById('customersCountKpi');
+const customersPhoneKpiEl = document.getElementById('customersPhoneKpi');
+const customersEmailKpiEl = document.getElementById('customersEmailKpi');
 
 const appointmentCreateForm = document.getElementById('appointmentCreateForm');
 const appointmentTitleInput = document.getElementById('appointmentTitle');
@@ -120,6 +123,9 @@ const reminderRecipientInput = document.getElementById('reminderRecipient');
 const remindersRefreshBtn = document.getElementById('remindersRefreshBtn');
 const remindersRowsEl = document.getElementById('remindersRows');
 const agendaStatusEl = document.getElementById('agendaStatus');
+const agendaAppointmentsKpiEl = document.getElementById('agendaAppointmentsKpi');
+const agendaRemindersKpiEl = document.getElementById('agendaRemindersKpi');
+const agendaWhatsappKpiEl = document.getElementById('agendaWhatsappKpi');
 
 const chargeCreateForm = document.getElementById('chargeCreateForm');
 const chargeCustomerIdInput = document.getElementById('chargeCustomerId');
@@ -145,6 +151,9 @@ const chargesRefreshBtn = document.getElementById('chargesRefreshBtn');
 const chargesRowsEl = document.getElementById('chargesRows');
 const chargeIdOptionsEl = document.getElementById('chargeIdOptions');
 const billingStatusEl = document.getElementById('billingStatus');
+const billingChargesKpiEl = document.getElementById('billingChargesKpi');
+const billingOpenKpiEl = document.getElementById('billingOpenKpi');
+const billingPaidKpiEl = document.getElementById('billingPaidKpi');
 
 const healthStatusEl = document.getElementById('healthStatus');
 const assistantProviderStatusEl = document.getElementById('assistantProviderStatus');
@@ -858,6 +867,7 @@ function renderCustomersTable() {
   if (state.moduleData.customers.length === 0) {
     customersRowsEl.innerHTML = '<tr><td colspan="5">Sem clientes para este tenant.</td></tr>';
     updateDatalist(customerIdOptionsEl, []);
+    renderCustomerOverview();
     return;
   }
 
@@ -879,6 +889,16 @@ function renderCustomersTable() {
     customerIdOptionsEl,
     state.moduleData.customers.map((item) => item.customer_id)
   );
+  renderCustomerOverview();
+}
+
+function renderCustomerOverview() {
+  const items = Array.isArray(state.moduleData.customers) ? state.moduleData.customers : [];
+  const withPhone = items.filter((item) => String(item?.primary_phone ?? '').trim().length > 0).length;
+  const withEmail = items.filter((item) => String(item?.primary_email ?? '').trim().length > 0).length;
+  if (customersCountKpiEl) customersCountKpiEl.textContent = String(items.length);
+  if (customersPhoneKpiEl) customersPhoneKpiEl.textContent = String(withPhone);
+  if (customersEmailKpiEl) customersEmailKpiEl.textContent = String(withEmail);
 }
 
 function renderAppointmentsTable() {
@@ -886,6 +906,7 @@ function renderAppointmentsTable() {
   if (state.moduleData.appointments.length === 0) {
     appointmentsRowsEl.innerHTML = '<tr><td colspan="5">Sem appointments nesta sessao.</td></tr>';
     updateDatalist(appointmentIdOptionsEl, []);
+    renderAgendaOverview();
     return;
   }
 
@@ -907,12 +928,14 @@ function renderAppointmentsTable() {
     appointmentIdOptionsEl,
     state.moduleData.appointments.map((item) => item.appointment_id)
   );
+  renderAgendaOverview();
 }
 
 function renderRemindersTable() {
   if (!remindersRowsEl) return;
   if (state.moduleData.reminders.length === 0) {
     remindersRowsEl.innerHTML = '<tr><td colspan="6">Sem reminders para este tenant.</td></tr>';
+    renderAgendaOverview();
     return;
   }
 
@@ -930,6 +953,16 @@ function renderRemindersTable() {
     `
     )
     .join('');
+  renderAgendaOverview();
+}
+
+function renderAgendaOverview() {
+  const appointments = Array.isArray(state.moduleData.appointments) ? state.moduleData.appointments : [];
+  const reminders = Array.isArray(state.moduleData.reminders) ? state.moduleData.reminders : [];
+  const whatsappCount = reminders.filter((item) => String(item?.channel ?? '').trim().toLowerCase() === 'whatsapp').length;
+  if (agendaAppointmentsKpiEl) agendaAppointmentsKpiEl.textContent = String(appointments.length);
+  if (agendaRemindersKpiEl) agendaRemindersKpiEl.textContent = String(reminders.length);
+  if (agendaWhatsappKpiEl) agendaWhatsappKpiEl.textContent = String(whatsappCount);
 }
 
 function renderChargesTable() {
@@ -937,6 +970,7 @@ function renderChargesTable() {
   if (state.moduleData.charges.length === 0) {
     chargesRowsEl.innerHTML = '<tr><td colspan="6">Sem cobrancas para este tenant.</td></tr>';
     updateDatalist(chargeIdOptionsEl, []);
+    renderBillingOverview();
     return;
   }
 
@@ -959,6 +993,16 @@ function renderChargesTable() {
     chargeIdOptionsEl,
     state.moduleData.charges.map((item) => item.charge_id)
   );
+  renderBillingOverview();
+}
+
+function renderBillingOverview() {
+  const charges = Array.isArray(state.moduleData.charges) ? state.moduleData.charges : [];
+  const openCount = charges.filter((item) => String(item?.status ?? '').trim().toLowerCase() === 'open').length;
+  const paidCount = charges.filter((item) => String(item?.status ?? '').trim().toLowerCase() === 'paid').length;
+  if (billingChargesKpiEl) billingChargesKpiEl.textContent = String(charges.length);
+  if (billingOpenKpiEl) billingOpenKpiEl.textContent = String(openCount);
+  if (billingPaidKpiEl) billingPaidKpiEl.textContent = String(paidCount);
 }
 
 function confirmationFilterValue() {

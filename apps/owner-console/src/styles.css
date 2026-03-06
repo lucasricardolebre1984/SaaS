@@ -652,6 +652,71 @@ textarea {
   overflow: auto;
 }
 
+.module-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.module-hero__content {
+  padding: var(--space-4);
+}
+
+.module-hero__eyebrow {
+  margin: 0 0 10px;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.module-hero__title {
+  margin: 0 0 10px;
+  font-size: 1.7rem;
+}
+
+.module-hero__text {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.module-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: var(--space-4);
+}
+
+.module-kpi {
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-card) 82%, white), var(--color-card));
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.module-kpi__label {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.module-kpi__value {
+  font-size: 2rem;
+  line-height: 1;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -1254,6 +1319,14 @@ html[data-layout='zazi'] .avatar {
 
   .workspace {
     min-width: 0;
+  }
+
+  .module-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .module-kpis {
+    grid-template-columns: 1fr;
   }
 
   .avatar {
