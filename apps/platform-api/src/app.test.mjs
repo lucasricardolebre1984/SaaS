@@ -580,8 +580,30 @@ test.after(async () => {
   await fs.rm(storageDir, { recursive: true, force: true });
 });
 
-test('GET /health returns runtime metadata', async () => {
+test('GET /health returns public runtime summary only', async () => {
   const res = await fetch(`${baseUrl}/health`);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.status, 'ok');
+  assert.equal(body.service, 'app-platform-api');
+  assert.equal(body.backend_summary.orchestration, 'file');
+  assert.equal(body.backend_summary.customers, 'file');
+  assert.equal(body.backend_summary.agenda, 'file');
+  assert.equal(body.backend_summary.billing, 'file');
+  assert.equal(body.backend_summary.crm_leads, 'file');
+  assert.equal(body.backend_summary.crm_automation, 'file');
+  assert.equal(body.backend_summary.crm_core, 'file');
+  assert.equal(body.backend_summary.tenant_runtime_config, 'file');
+  assert.equal(body.owner_memory.backend, 'file');
+  assert.ok(body.version === null || typeof body.version === 'string');
+  assert.equal(typeof body.owner_response.openai_available, 'boolean');
+  assert.equal(body.orchestration, undefined);
+  assert.equal(body.customers, undefined);
+  assert.equal(body.tenant_runtime_config, undefined);
+});
+
+test('GET /internal/health returns detailed runtime metadata on loopback', async () => {
+  const res = await fetch(`${baseUrl}/internal/health`);
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.status, 'ok');

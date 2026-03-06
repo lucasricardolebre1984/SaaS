@@ -160,6 +160,19 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - gate integrado permaneceu verde e o smoke remoto AWS seguiu `PASS=25`, `WARN=1`, `FAIL=0`.
   - apos deploy do commit `73e9ef8`, o health remoto passou a mostrar `tenant_runtime_config.backend = postgres`.
 
+## Update 2026-03-06 (G4 hardening de health)
+- `/health` publico foi reduzido para um resumo operacional minimo:
+  - `status`
+  - `service`
+  - `version`
+  - `backend_summary`
+  - `owner_response`
+  - `owner_memory`
+- `/internal/health` passou a concentrar os detalhes de paths/storage e ficou restrito a loopback.
+- Validacao:
+  - `npx nx run app-platform-api:test`
+  - `npm run preprod:validate -- -SkipOperationalDrills`
+
 ---
 
 ## 7. Higiene de repositorio (2026-02-27)

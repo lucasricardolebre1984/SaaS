@@ -249,3 +249,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-06,internal,engineering-time,local,0.00,0.00,governance,consolidated T8 closure and b11bbe1 alignment into central context docs and moved active next step to T6/T1 UX enterprise
 2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,implemented postgres persistence and legacy backfill for tenant runtime config with local smoke postgres and integrated preprod validation passing
 2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit 73e9ef8 to dev and confirmed tenant runtime config now runs on postgres with remote smoke still green
+2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,hardened public health endpoint and moved detailed runtime diagnostics to loopback-only internal health without breaking integrated gates

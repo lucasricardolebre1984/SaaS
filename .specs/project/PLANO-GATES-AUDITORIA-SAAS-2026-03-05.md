@@ -142,7 +142,7 @@ Criterio de saida:
 
 ## G4 - Runtime core API e orchestration
 
-Status: PASS com ressalva
+Status: PASS
 Objetivo: garantir funcionamento de API, orchestration, memoria, agenda, clientes e billing.
 Topicos:
 - health
@@ -156,6 +156,12 @@ Evidencias:
 - `http://127.0.0.1:4001/health`
 Achado:
 - o runtime funciona, mas o endpoint `/health` expõe detalhes internos excessivos.
+Checkpoint 2026-03-06:
+- `/health` reduzido para resumo publico minimo (`status`, `service`, `version`, `backend_summary`, `owner_response`, `owner_memory`);
+- `/internal/health` criado para metadados detalhados e restrito a loopback;
+- validacao local concluida com:
+  - `npx nx run app-platform-api:test`
+  - `npm run preprod:validate -- -SkipOperationalDrills`
 Arquivos:
 - `apps/platform-api/src/app.mjs`
 - `apps/platform-api/src/app.test.mjs`

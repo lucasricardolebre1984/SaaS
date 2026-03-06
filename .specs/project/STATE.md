@@ -45,6 +45,10 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-06: G4/P1 endurecido localmente:
+  - `/health` passou a responder apenas resumo publico minimo;
+  - `/internal/health` foi criado para diagnostico detalhado em loopback;
+  - `npx nx run app-platform-api:test` e `npm run preprod:validate -- -SkipOperationalDrills` permaneceram verdes.
 - 2026-03-06: G6/P0 publicado no AWS dev:
   - commit `73e9ef8` deployado via `npm run deploy:dev -- -SkipNpmCi`;
   - health remoto em `https://dev.automaniaai.com.br/api/health` passou a expor `tenant_runtime_config.backend = postgres`;
