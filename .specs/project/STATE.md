@@ -45,6 +45,14 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-06: G5/P1 publicado no AWS dev:
+  - commit `a8807ab` deployado via `npm run deploy:dev -- -SkipNpmCi`;
+  - `POST /v1/crm/conversations/:id/send` passou a classificar falha externa como `status=provider_failed` mantendo `200` e persistencia local;
+  - smoke remoto pos-deploy evoluiu para `PASS=26`, `WARN=0`, `FAIL=0`.
+- 2026-03-06: G5/P1 endurecido localmente:
+  - endpoint de envio do CRM passou a diferenciar falha do provider externo sem mascarar o sucesso interno de persistencia;
+  - UI do CRM passou a exibir aviso operacional explicito quando o provider falha, sem tratar o caso como erro generico do produto;
+  - `npx nx run app-platform-api:test`, `npx nx run app-crm-console:build` e `npm run preprod:validate -- -SkipOperationalDrills` ficaram verdes.
 - 2026-03-06: G2/P1 publicado no AWS dev:
   - commit `7b46e81` deployado via `npm run deploy:dev -- -SkipNpmCi`;
   - health publico `https://dev.automaniaai.com.br/api/health` permaneceu `ok`;

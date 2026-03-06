@@ -127,9 +127,9 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 ## 6. Gate seguinte do plano
 
 - **Slice ativo:** `crm-krayin-reference-modernization-slice`.
-- **Gate seguinte:** `G5`, semantica operacional do erro outbound no CRM (`crm:conversations:send`).
-- **Objetivo imediato:** diferenciar com clareza falha de provider externo versus falha do produto, preservando rastreabilidade tenant/correlation.
-- **Gate principal:** manter `preprod:validate` e smoke remoto verdes enquanto o endpoint de envio passa a devolver estado operacional mais claro.
+- **Gate seguinte:** `G7`, completude/posicionamento do molde UX SaaS.
+- **Objetivo imediato:** reduzir a distancia entre base tecnica funcional e percepcao de produto clonavel, especialmente na UX dos modulos 03..05 e no shell institucional.
+- **Gate principal:** preservar `preprod:validate` verde enquanto a UX deixa de depender de placeholders ambigos.
 - **Referencia:** `.specs/project/PLANO-GATES-AUDITORIA-SAAS-2026-03-05.md`.
 
 ## Update 2026-03-05 (T8 fechado + alinhamento local/git/aws)
@@ -195,6 +195,20 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - deploy dev executado via `npm run deploy:dev -- -SkipNpmCi`
   - health publico manteve `ok`
   - smoke remoto pos-deploy: `PASS=25`, `WARN=1`, `FAIL=0`
+
+## Update 2026-03-06 (G5 semantica do provider outbound no CRM)
+- `POST /v1/crm/conversations/:id/send` deixou de mascarar falha externa como erro generico do produto.
+- Novo comportamento:
+  - quando o provider envia com sucesso: `status=sent`;
+  - quando a mensagem e persistida mas o provider externo falha: `status=provider_failed`, `provider.outcome=failed`, `provider.retryable` e `message.delivery_state=failed`.
+- CRM UI passou a informar explicitamente que a mensagem ficou registrada no CRM, mas o provider externo falhou.
+- Smoke de endpoints passou a tratar `provider_failed` classificado como `PASS`, eliminando o warning recorrente do gate.
+- Evidencia executada:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run app-crm-console:build`
+  - `npm run preprod:validate -- -SkipOperationalDrills`
+  - deploy dev do commit `a8807ab`
+  - smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`
 
 ---
 

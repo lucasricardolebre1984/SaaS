@@ -188,7 +188,7 @@ Prioridade: P1
 
 ## G5 - CRM enterprise e provider WhatsApp
 
-Status: PASS com ressalva
+Status: PASS
 Objetivo: garantir o fluxo real do modulo 02 e a trilha P1 -> P2 -> provider.
 Topicos:
 - inbound webhook
@@ -202,7 +202,23 @@ Evidencias:
 - `tools/reports/saas-endpoint-smoke-20260305-193642.json`
 Achados:
 - fluxo enterprise principal funciona e a automacao T8 foi provada com `automation.status=scheduled` e `followups_for_lead=1`
-- envio outbound `crm:conversations:send` segue com warning recorrente (`502`) quando o provider falha, embora a persistencia local do endpoint esteja correta
+- o envio outbound exigia semantica melhor quando a mensagem era persistida mas o provider externo falhava
+Checkpoint 2026-03-06:
+- `POST /v1/crm/conversations/:id/send` passou a responder `200` com `status=provider_failed` quando o CRM persiste a mensagem e a falha fica restrita ao provider externo;
+- a resposta agora classifica `provider.outcome`, `provider.status`, `provider.retryable` e preserva `message.delivery_state=failed`;
+- a UI do CRM passou a informar "mensagem registrada no CRM, mas o provider externo falhou" sem mascarar a persistencia local;
+- o smoke de endpoints foi ajustado para tratar `provider_failed` classificado como `PASS` em vez de `WARN/FAIL`;
+- validacao local concluida com:
+  - `npx nx run app-platform-api:test`
+  - `npx nx run app-crm-console:build`
+  - `npm run preprod:validate -- -SkipOperationalDrills`
+- publicacao concluida em `a8807ab` com deploy dev realizado;
+- smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`.
+Arquivos:
+- `apps/platform-api/src/app.mjs`
+- `apps/platform-api/src/app.test.mjs`
+- `apps/crm-console/src/app.js`
+- `tools/smoke-saas-endpoints.ps1`
 Criterio de saida:
 - manter `PASS` no smoke
 - diferenciar erro do provider externo de erro do produto
@@ -342,10 +358,9 @@ Saida minima:
 
 1. G6 - persistencia do control plane
 2. G4 - hardening do `/health`
-3. G5 - outbound provider semantics
-4. G7 - completude do molde UX
-5. G8 - alinhamento fino de baseline IA
-6. G1 - consolidacao de parity report como rotina padrao
+3. G7 - completude do molde UX
+4. G8 - alinhamento fino de baseline IA
+5. G1 - consolidacao de parity report como rotina padrao
 
 ## 6. Definicao operacional de "SaaS funcional" nesta data
 

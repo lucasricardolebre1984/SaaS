@@ -253,3 +253,5 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit 163f04f to dev and confirmed public health hardening with remote smoke PASS26 WARN0 FAIL0
 2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,closed G2 by adding executable Nx build artifact for app-platform-api with packaged runtime libs and dedicated dist smoke validation
 2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit 7b46e81 to dev and confirmed build-artifact rollout preserved public health and remote endpoint smoke PASS25 WARN1 FAIL0
+2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,classified CRM outbound provider failures as explicit provider_failed responses with persisted message state and updated UI plus smoke semantics
+2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit a8807ab to dev and confirmed remote smoke PASS26 WARN0 FAIL0 with integrated preprod validation green
