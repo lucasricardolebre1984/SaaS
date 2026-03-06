@@ -8,8 +8,13 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "echo platform-api build placeholder (runtime script-based)"
-      }
+        "commands": [
+          "npx nx run app-owner-console:build",
+          "npx nx run app-crm-console:build",
+          "node tools/build-platform-api.mjs --owner dist/apps/owner-console --crm dist/apps/crm-console --out dist/apps/platform-api"
+        ]
+      },
+      "outputs": ["{workspaceRoot}/dist/apps/platform-api"]
     },
     "serve": {
       "executor": "nx:run-commands",

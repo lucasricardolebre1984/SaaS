@@ -1,7 +1,7 @@
 # Status Atual — Fabio SaaS (Modelo Universal)
 
 **Documento:** STATUS-ATUAL  
-**Ultima atualizacao:** 2026-03-06 (T8 fechado em dev AWS; repo e ambiente alinhados em `b11bbe1`; proximo foco movido para T6/T1 UX enterprise)  
+**Ultima atualizacao:** 2026-03-06 (G2 fechado localmente com build executavel da API; G6 e G4 ja publicados em dev AWS)  
 **Objetivo:** Snapshot rastreavel do estado do repositorio, modelo de aprendizado continuo e conformidade com specs.
 
 ---
@@ -124,12 +124,13 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
 
 ---
 
-## 6. Proximo passo natural
+## 6. Gate seguinte do plano
 
 - **Slice ativo:** `crm-krayin-reference-modernization-slice`.
-- **Objetivo imediato:** fechar T6/T1, evoluindo a UX enterprise do CRM e consolidando shell visual consistente dos modulos 01..06 sem regressao da baseline T8.
-- **Gate principal:** `app-crm-console:build` + `app-owner-console:build` + `preprod:validate` mantendo fluxo `deal -> activity -> stage update` e smoke de botoes/endpoints.
-- **Referencia:** `.specs/features/crm-krayin-reference-modernization-slice/gap-matrix.md`.
+- **Gate seguinte:** `G5`, semantica operacional do erro outbound no CRM (`crm:conversations:send`).
+- **Objetivo imediato:** diferenciar com clareza falha de provider externo versus falha do produto, preservando rastreabilidade tenant/correlation.
+- **Gate principal:** manter `preprod:validate` e smoke remoto verdes enquanto o endpoint de envio passa a devolver estado operacional mais claro.
+- **Referencia:** `.specs/project/PLANO-GATES-AUDITORIA-SAAS-2026-03-05.md`.
 
 ## Update 2026-03-05 (T8 fechado + alinhamento local/git/aws)
 - T8 efetivamente fechado em dev AWS:
@@ -174,6 +175,21 @@ O agente deve **citar o skill que esta usando** antes de aplica-lo. Catalogo: `.
   - `npm run preprod:validate -- -SkipOperationalDrills`
   - deploy dev do commit `163f04f`
   - smoke remoto pos-deploy: `PASS=26`, `WARN=0`, `FAIL=0`
+
+## Update 2026-03-06 (G2 build real da API no Nx)
+- `app-platform-api:build` deixou de ser placeholder e passou a gerar artefato executavel em `dist/apps/platform-api`.
+- O build agora:
+  - compila `app-owner-console` e `app-crm-console`;
+  - empacota `apps/platform-api`;
+  - inclui `libs` consumidas em runtime para schemas e workflows.
+- Smoke dedicado do artefato foi adicionado:
+  - `tools/smoke-platform-api-build.ps1`
+  - valida subida direta do pacote em `dist/apps/platform-api` com `/health`, `/owner/` e `/crm/`.
+- Evidencia executada:
+  - `npx nx run app-platform-api:build`
+  - `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\smoke-platform-api-build.ps1`
+  - `npx nx run app-platform-api:test`
+  - `npm run preprod:validate -- -SkipOperationalDrills`
 
 ---
 

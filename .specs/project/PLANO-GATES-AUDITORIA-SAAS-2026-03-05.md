@@ -103,7 +103,7 @@ Acao:
 
 ## G2 - Workspace Nx e artefatos executaveis
 
-Status: WARN
+Status: PASS
 Objetivo: garantir que o monorepo e reproduzivel nao apenas por `serve`, mas tambem por build auditavel.
 Topicos:
 - apps e libs descobriveis via Nx
@@ -115,9 +115,21 @@ Evidencias:
 - `npx nx show project app-owner-console --json`
 - `npx nx show project app-crm-console --json`
 Achado:
-- `app-platform-api:build` ainda e placeholder e nao gera artefato real.
+- `app-platform-api:build` ainda era placeholder e nao gerava artefato real.
+Checkpoint 2026-03-06:
+- `app-platform-api:build` passou a executar build dos consoles e empacotar artefato executavel em `dist/apps/platform-api`;
+- o empacotamento agora inclui `apps/platform-api`, `apps/owner-console`, `apps/crm-console` e `libs` consumidas em runtime;
+- smoke dedicado do artefato publicado em `tools/smoke-platform-api-build.ps1` validou subida direta via `node apps/platform-api/src/server.mjs` dentro de `dist/apps/platform-api`;
+- validacao local concluida com:
+  - `npx nx run app-platform-api:build`
+  - `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\smoke-platform-api-build.ps1`
+  - `npx nx run app-platform-api:test`
+  - `npm run preprod:validate -- -SkipOperationalDrills`
 Arquivos:
 - `apps/platform-api/project.json`
+- `apps/platform-api/src/server.mjs`
+- `tools/build-platform-api.mjs`
+- `tools/smoke-platform-api-build.ps1`
 Criterio de saida:
 - build real da API com output versionavel ou empacotavel
 - pipeline de deploy nao depender apenas de codigo fonte cru no servidor
@@ -328,11 +340,10 @@ Saida minima:
 
 1. G6 - persistencia do control plane
 2. G4 - hardening do `/health`
-3. G2 - build real da API
-4. G5 - outbound provider semantics
-5. G7 - completude do molde UX
-6. G8 - alinhamento fino de baseline IA
-7. G1 - consolidacao de parity report como rotina padrao
+3. G5 - outbound provider semantics
+4. G7 - completude do molde UX
+5. G8 - alinhamento fino de baseline IA
+6. G1 - consolidacao de parity report como rotina padrao
 
 ## 6. Definicao operacional de "SaaS funcional" nesta data
 

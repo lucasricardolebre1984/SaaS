@@ -24,8 +24,21 @@ const port = Number(process.env.PORT ?? 4001);
 const host = process.env.HOST ?? '127.0.0.1';
 const serveUnifiedUi = String(process.env.SERVE_UNIFIED_UI ?? '1') !== '0';
 
-const ownerRoot = path.join(repoRoot, 'apps', 'owner-console', 'src');
-const crmRoot = path.join(repoRoot, 'apps', 'crm-console', 'src');
+async function resolveStaticRoot(appName) {
+  const builtRoot = path.join(repoRoot, 'apps', appName);
+  const sourceRoot = path.join(repoRoot, 'apps', appName, 'src');
+
+  try {
+    const builtIndex = path.join(builtRoot, 'index.html');
+    await fs.access(builtIndex);
+    return builtRoot;
+  } catch {}
+
+  return sourceRoot;
+}
+
+const ownerRoot = await resolveStaticRoot('owner-console');
+const crmRoot = await resolveStaticRoot('crm-console');
 
 const app = createApp();
 

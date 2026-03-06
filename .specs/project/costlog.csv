@@ -251,3 +251,4 @@ date,provider,service,environment,amount_brl,amount_usd,category,reference
 2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit 73e9ef8 to dev and confirmed tenant runtime config now runs on postgres with remote smoke still green
 2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,hardened public health endpoint and moved detailed runtime diagnostics to loopback-only internal health without breaking integrated gates
 2026-03-06,internal,engineering-time,local,0.00,0.00,operations,deployed commit 163f04f to dev and confirmed public health hardening with remote smoke PASS26 WARN0 FAIL0
+2026-03-06,internal,engineering-time,local,0.00,0.00,implementation,closed G2 by adding executable Nx build artifact for app-platform-api with packaged runtime libs and dedicated dist smoke validation

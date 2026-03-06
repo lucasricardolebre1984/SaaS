@@ -45,6 +45,11 @@ Active feature: crm-krayin-reference-modernization-slice
 - Weekly architecture review before new migrations.
 
 ## Session Notes
+- 2026-03-06: G2/P1 fechado localmente:
+  - `app-platform-api:build` deixou de ser placeholder e passou a gerar artefato executavel em `dist/apps/platform-api`;
+  - o build agora empacota `apps/platform-api`, UIs compiladas de Owner/CRM e a arvore `libs` consumida em runtime;
+  - smoke dedicado do artefato (`tools/smoke-platform-api-build.ps1`) validou `/health`, `/owner/` e `/crm/` servidos direto do `dist`;
+  - validacoes verdes: `npx nx run app-platform-api:build`, `pwsh -NoProfile -ExecutionPolicy Bypass -File .\\tools\\smoke-platform-api-build.ps1`, `npx nx run app-platform-api:test`, `npm run preprod:validate -- -SkipOperationalDrills`.
 - 2026-03-06: G4/P1 publicado no AWS dev:
   - commit `163f04f` deployado via `npm run deploy:dev -- -SkipNpmCi`;
   - `/health` publico passou a retornar apenas resumo minimo sem paths internos;
